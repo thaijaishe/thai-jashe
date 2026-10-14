@@ -4,7 +4,7 @@
       window.TJ_FIREBASE_CONFIG = { apiKey: "....", authDomain: "....firebaseapp.com", projectId: "....", storageBucket: "....", messagingSenderId: "....", appId: "...." };
    3) GitHub પર સેવ (Commit) કરો — વેબસાઇટ અને નવી APK આપમેળે અપડેટ થશે.
    null રહે ત્યાં સુધી એપ "ડેમો મોડ" માં ચાલે (ડેટા ફક્ત એ જ ફોનમાં). */
-window.TJ_FIREBASE_CONFIG = const firebaseConfig = {
+window.TJ_FIREBASE_CONFIG = {
   apiKey: "AIzaSyBOweXwkEw8mMv8F7NeYLeYFkgw10J1Wfk",
   authDomain: "thaijashe-44dd2.firebaseapp.com",
   projectId: "thaijashe-44dd2",
