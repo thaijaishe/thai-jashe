@@ -1,0 +1,11 @@
+{
+  "indexes": [
+    {"collectionGroup": "bookings", "queryScope": "COLLECTION", "fields": [{"fieldPath": "status", "order": "ASCENDING"}, {"fieldPath": "cat", "order": "ASCENDING"}]},
+    {"collectionGroup": "karigars", "queryScope": "COLLECTION", "fields": [{"fieldPath": "status", "order": "ASCENDING"}, {"fieldPath": "online", "order": "ASCENDING"}, {"fieldPath": "cat", "order": "ASCENDING"}]}
+  ],
+  "fieldOverrides": [
+    {"collectionGroup": "contact", "fieldPath": "ts", "indexes": [{"order": "ASCENDING", "queryScope": "COLLECTION"}, {"order": "DESCENDING", "queryScope": "COLLECTION"}, {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]},
+    {"collectionGroup": "logins", "fieldPath": "ts", "indexes": [{"order": "ASCENDING", "queryScope": "COLLECTION"}, {"order": "DESCENDING", "queryScope": "COLLECTION"}, {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]},
+    {"collectionGroup": "locations", "fieldPath": "ts", "indexes": [{"order": "ASCENDING", "queryScope": "COLLECTION"}, {"order": "DESCENDING", "queryScope": "COLLECTION"}, {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}]}
+  ]
+}

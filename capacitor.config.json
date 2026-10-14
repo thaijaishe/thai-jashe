@@ -1,0 +1,20 @@
+{
+  "appId": "com.thaijashe.app",
+  "appName": "થઈ જશે!",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#1E2A78"
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": true,
+      "providers": [
+        "google.com"
+      ]
+    }
+  }
+}

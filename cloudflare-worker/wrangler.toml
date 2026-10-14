@@ -1,0 +1,8 @@
+# થઈ જશે! — મફત સર્વર (Cloudflare Worker). GitHub Actions "Cloudflare સર્વર મૂકો" આ ફાઇલ વાપરે છે.
+name = "thaijashe"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+workers_dev = true
+
+[triggers]
+crons = ["45 21 * * *"]   # દરરોજ ભારતમાં રાત્રે 3:15 — 1 વર્ષથી જૂના લૉગ ભૂંસે

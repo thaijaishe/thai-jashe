@@ -1,0 +1,11 @@
+{
+  "name": "thai-jashe-functions",
+  "private": true,
+  "description": "થઈ જશે! — સર્વર કોડ: IP/સમય નોંધ, OTP ચકાસણી, Push સૂચના, રેટિંગ, 1 વર્ષ પછી લૉગ ભૂંસવા",
+  "main": "index.js",
+  "engines": {"node": "22"},
+  "dependencies": {
+    "firebase-admin": "^14.0.0",
+    "firebase-functions": "^7.4.0"
+  }
+}

@@ -1,0 +1,20 @@
+// થઈ જશે! — Firebase Storage નિયમો
+// આધાર / પોલીસ સર્ટિફિકેટના ફોટા: કારીગર પોતે અપલોડ કરે, ફક્ત એડમિન જોઈ શકે (ગ્રાહક ક્યારેય નહીં).
+// પ્રોફાઇલ ફોટો: લૉગિન થયેલ કોઈ પણ જોઈ શકે, ફક્ત પોતાનો જ અપલોડ કરે.
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() { return request.auth != null && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)); }
+    function isImage(maxMb) { return request.resource.size < maxMb * 1024 * 1024 && request.resource.contentType.matches('image/.*'); }
+
+    match /kyc/{uid}/{file} {
+      allow read, delete: if isAdmin();
+      allow create, update: if request.auth != null && request.auth.uid == uid && isImage(5);
+    }
+    match /profile/{file} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && file == request.auth.uid + '.jpg' && isImage(2);
+      allow delete: if request.auth != null && (file == request.auth.uid + '.jpg' || isAdmin());
+    }
+  }
+}

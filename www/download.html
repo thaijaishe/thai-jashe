@@ -1,0 +1,48 @@
+<!doctype html><html lang="gu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>એપ ઇન્સ્ટોલ કરો — થઈ જશે!</title><link rel="stylesheet" href="legal.css"><link rel="icon" href="icons/icon-192.png"><link rel="manifest" href="manifest.webmanifest">
+<script src="config.js"></script>
+<style>[hidden]{display:none!important}.big{display:block;text-align:center;background:#F5B301;color:#1A1300;font-weight:800;font-size:19px;border-radius:14px;padding:15px;text-decoration:none;margin:10px 0;border:0;width:100%;font-family:inherit;cursor:pointer}
+.big.navy{background:#1E2A78;color:#fff}.steps li{margin:6px 0}#qr{display:flex;justify-content:center;padding:12px;background:#fff;border-radius:12px;width:max-content;margin:8px auto}
+.note{background:#FFF4D1;color:#161A33;border-radius:12px;padding:10px 14px;font-size:14px}</style></head>
+<body><main>
+<header><img src="icons/icon-192.png" alt=""><h1>થઈ જશે! એપ ઇન્સ્ટોલ કરો</h1></header>
+<p class="muted">કામ છે? થઈ જશે! — Play Store વગર, બે રીતે ફોનમાં રાખી શકો.</p>
+
+<div class="card"><h2 style="margin-top:0">રીત 1: હોમ સ્ક્રીન એપ (સૌથી સહેલી — Android અને iPhone)</h2>
+<button class="big" id="pwa" hidden>📲 હોમ સ્ક્રીન પર ઉમેરો</button>
+<ol class="steps"><li><b>Android (Chrome):</b> આ વેબસાઇટ ખોલો → ઉપર ⋮ મેનુ → <b>"Add to Home screen"</b> કે <b>"Install app"</b>.</li>
+<li><b>iPhone (Safari):</b> નીચે શેર બટન → <b>"Add to Home Screen"</b>.</li>
+<li>હોમ સ્ક્રીન પર "થઈ જશે!" આઇકન આવી જશે. અપડેટ આપમેળે મળશે — ફરી ઇન્સ્ટોલ કરવાની જરૂર નહીં.</li></ol>
+<a class="big navy" href="index.html">એપ ખોલો</a></div>
+
+<div class="card"><h2 style="margin-top:0">રીત 2: Android APK ફાઇલ</h2>
+<a class="big" id="apk" href="#">⬇️ ThaiJashe.apk ડાઉનલોડ કરો</a>
+<ol class="steps"><li>ડાઉનલોડ પૂરું થાય એટલે ફાઇલ ખોલો.</li>
+<li>ફોન પૂછે તો <b>"Install unknown apps" / "આ સ્રોતમાંથી મંજૂરી"</b> ચાલુ કરો (ફક્ત Chrome કે ફાઇલ મેનેજર માટે).</li>
+<li><b>Install</b> દબાવો. Play Protect ચેતવણી આવે તો <b>"More details → Install anyway"</b> — એપ Play Store પર ન હોવાથી આ ચેતવણી આવે છે.</li>
+<li>નવી આવૃત્તિ આવે ત્યારે આ જ પેજ પરથી ફરી ડાઉનલોડ કરી Install કરો — ડેટા સચવાઈ રહેશે.</li></ol>
+<p class="note">APK ફક્ત આ વેબસાઇટ પરથી જ ડાઉનલોડ કરો. WhatsApp માં ફોરવર્ડ થયેલી અજાણી APK ઇન્સ્ટોલ ન કરો.</p></div>
+
+<div class="card"><h2 style="margin-top:0">બીજાને મોકલો</h2><p>આ પેજની લિંક WhatsApp માં મોકલો, અથવા QR કોડ સ્કેન કરાવો:</p><div id="qr"></div>
+<button class="big navy" id="share">📤 લિંક શેર કરો</button></div>
+
+<p class="muted">મદદ: <a href="contact.html">સંપર્ક કરો</a> • <a href="privacy.html">પ્રાઇવસી પોલિસી</a> • <a href="safety.html">સલામતી</a> • <a href="download-en.html">English</a></p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  var apk = window.TJ_APK_URL;
+  if(!apk){ var host = location.hostname, m = host.match(/^([^.]+)\.github\.io$/), repo = location.pathname.split('/').filter(Boolean)[0];
+    apk = m && repo ? 'https://github.com/' + m[1] + '/' + repo + '/releases/latest/download/ThaiJashe.apk' : 'ThaiJashe.apk'; }
+  document.getElementById('apk').href = apk;
+  var page = location.href.replace(/download(-en)?\.html.*$/, '');
+  try{ new QRCode(document.getElementById('qr'), {text: page, width: 180, height: 180, colorDark: '#1E2A78'}); }catch(e){ document.getElementById('qr').textContent = page; }
+  document.getElementById('share').onclick = function(){ var t = 'થઈ જશે! — ઘરના કોઈ પણ કામ માટે કારીગર બોલાવો. એપ: ' + page;
+    if(navigator.share) navigator.share({title: 'થઈ જશે!', text: t, url: page}).catch(function(){}); else location.href = 'https://wa.me/?text=' + encodeURIComponent(t); };
+  var ev = null, b = document.getElementById('pwa');
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); ev = e; b.hidden = false; });
+  b.onclick = function(){ if(ev){ ev.prompt(); ev = null; b.hidden = true; } };
+  if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function(){});
+})();
+</script>
+</body></html>

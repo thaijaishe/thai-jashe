@@ -1,0 +1,180 @@
+// થઈ જશે! — Firestore સુરક્ષા નિયમો (લાઇવ: Google લૉગિન / વૈકલ્પિક SMS OTP)
+// દરેક વ્યક્તિ ફક્ત પોતાનો ડેટા જુએ; લૉગ/લોકેશન/આધાર ફક્ત એડમિન; કારીગરનો મોબાઇલ/લોકેશન ગ્રાહકને બુકિંગ પછી જ.
+// Deploy: Firebase Console → Firestore → Rules માં આખું પેસ્ટ કરી Publish (અથવા GitHub Actions → "Firebase deploy"). મફત Spark પ્લાનમાં ચાલે છે.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function userRole() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    function isKarigar() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && userRole() == 'karigar'; }
+    function isCustomer() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && userRole() == 'customer'; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function onlyKeys(keys) { return changed().hasOnly(keys); }
+    function myPhone() { return request.auth.token.get('phone_number', '').replace('^[+]91', ''); }
+    // મોબાઇલ: OTP થી લૉગિન હોય તો એ જ નંબર; Google લૉગિન હોય તો 10 આંકડાનો સાચો નંબર
+    function okMobile(m) { return m is string && m.matches('^[6-9][0-9]{9}$') && (myPhone() == '' || m == myPhone()); }
+    function settings() { return get(/databases/$(database)/documents/settings/main).data; }
+    // રેટિંગ (Cloud Function વગર): એક જ બુકિંગ પર એક વાર, 1–5 સ્ટાર, એ જ batch માં બુકિંગમાં રેટિંગ લખાય ત્યારે જ
+    function ratedBy(ptr, field, raterField, targetField, target) {
+      let bid = request.resource.data.get(ptr, '');
+      let after = getAfter(/databases/$(database)/documents/bookings/$(bid)).data;
+      let before = get(/databases/$(database)/documents/bookings/$(bid)).data;
+      let delta = request.resource.data.get('ratingSum', 0) - resource.data.get('ratingSum', 0);
+      return signedIn() && bid != '' && changed().hasOnly(['ratingSum', 'ratingCount', ptr])
+        && request.resource.data.get('ratingCount', 0) == resource.data.get('ratingCount', 0) + 1
+        && before.get(field, null) == null && after.get(field, 0) == delta && delta >= 1 && delta <= 5
+        && after.get(raterField, '') == request.auth.uid && after.get(targetField, '') == target && after.status == 'done';
+    }
+
+    // એપ સેટિંગ (પોલિસી પેજ, ચાલુ/બંધ સ્વિચ) — બધા વાંચી શકે, ફક્ત એડમિન બદલે
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // એડમિન યાદી — Console માંથી જ ઉમેરવી (admins/{UID})
+    match /admins/{id} {
+      allow read: if signedIn() && (me() == id || isAdmin());
+      allow update: if signedIn() && me() == id && onlyKeys(['fcm', 'fcmAt']);
+      allow create, delete: if false;
+    }
+
+    // ભૂમિકા: ગ્રાહક કે કારીગર (બદલી ન શકાય)
+    match /users/{id} {
+      allow read: if signedIn() && (me() == id || isAdmin());
+      allow create: if signedIn() && me() == id && request.resource.data.role in ['customer', 'karigar'] && okMobile(request.resource.data.mobile);
+      allow update: if isAdmin() || (signedIn() && me() == id && onlyKeys(['fcm', 'fcmAt']));
+      allow delete: if signedIn() && (me() == id || isAdmin());
+      // લૉગિન લૉગ: Cloudflare Worker (સર્વર IP, server=true) લખે; Worker ન હોય તો ફોન પોતે (server=false). ફક્ત એડમિન વાંચે
+      match /logins/{lid} {
+        allow read: if isAdmin();
+        allow create: if signedIn() && me() == id && request.resource.data.server == false;
+        allow update, delete: if false;
+      }
+    }
+
+    match /customers/{id} {
+      allow read: if signedIn() && (me() == id || isAdmin());
+      allow create: if signedIn() && me() == id && okMobile(request.resource.data.mobile)
+                    && !request.resource.data.keys().hasAny(['ratingSum', 'ratingCount', 'blocked', 'lastIp']);
+      allow update: if isAdmin() || (signedIn() && me() == id && !changed().hasAny(['ratingSum', 'ratingCount', 'blocked', 'mobile', 'lastIp', 'lastDev', 'lastLogin']))
+        || ratedBy('lastKRating', 'kRating', 'karigarId', 'custId', id);
+      allow delete: if signedIn() && (me() == id || isAdmin());
+    }
+
+    // કારીગરની જાહેર પ્રોફાઇલ (ગ્રાહકો જુએ): નામ, કામ, વિસ્તાર, રેટિંગ, ઓનલાઇન — મોબાઇલ/લોકેશન/આધાર નહીં
+    match /karigars/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && me() == id && isKarigar()
+                    && (request.resource.data.status == 'pending' || (request.resource.data.status == 'approved' && settings().autoApprove == true))
+                    && request.resource.data.get('kycOk', false) == false && request.resource.data.get('policeV', false) == false
+                    && request.resource.data.get('ratingCount', 0) == 0 && request.resource.data.get('ratingSum', 0) == 0;
+      allow update: if isAdmin() || (signedIn() && me() == id && !changed().hasAny(['status', 'kycOk', 'policeV', 'ratingSum', 'ratingCount', 'lastRating']))
+        || ratedBy('lastRating', 'rating', 'custId', 'karigarId', id);
+      allow delete: if signedIn() && (me() == id || isAdmin());
+
+      // ખાનગી: મોબાઇલ, લાઇવ લોકેશન, આધાર (છેલ્લા 4), IP, કમાણી, કમીશન — ફક્ત પોતે અને એડમિન
+      match /private/{doc} {
+        allow read, delete: if signedIn() && (me() == id || isAdmin());
+        allow create: if isAdmin() || (signedIn() && me() == id && request.resource.data.get('commissionPaid', 0) == 0 && !request.resource.data.keys().hasAny(['lastIp', 'adminNote']));
+        allow update: if isAdmin() || (signedIn() && me() == id && !changed().hasAny(['commissionPaid', 'lastIp', 'lastDev', 'lastLogin', 'adminNote', 'policeDate']));
+      }
+      // લોકેશન લૉગ (1 વર્ષ પછી આપમેળે ભૂંસાય) — કારીગર ઉમેરે, ફક્ત એડમિન વાંચે
+      match /locations/{lid} {
+        allow read: if isAdmin();
+        allow create: if signedIn() && me() == id;
+        allow update, delete: if false;
+      }
+    }
+
+    // આધાર/પોલીસ દસ્તાવેજ — ફક્ત એડમિન વાંચે
+    match /kyc/{id} {
+      allow read, delete: if isAdmin();
+      allow create, update: if signedIn() && me() == id && request.resource.data.karigarId == id;
+    }
+
+    match /bookings/{id} {
+      function b() { return resource.data; }
+      function nb() { return request.resource.data; }
+      function approvedKarigar() { return get(/databases/$(database)/documents/karigars/$(request.auth.uid)).data.status == 'approved'; }
+
+      allow read: if signedIn() && (isAdmin() || b().custId == me() || b().karigarId == me() || (b().status == 'searching' && isKarigar()));
+      allow create: if isCustomer() && nb().custId == me() && nb().status in ['searching', 'requested']
+                    && !nb().keys().hasAny(['bill', 'rating', 'commission', 'kRating', 'custMobile', 'address', 'otp']);
+      allow update: if isAdmin()
+        // ગ્રાહક: રદ કરવું, ફરી બધાને મોકલવું, ચૂકવ્યાની જાણ, રેટિંગ, સંદેશ, SOS
+        || (signedIn() && b().custId == me() && nb().custId == me()
+            && onlyKeys(['status', 'timeline', 'cancelReason', 'custPaid', 'rating', 'review', 'chat', 'karigarId', 'mode', 'rejectedBy', 'sos', 'custName'])
+            && (nb().status == b().status || nb().status in ['cancelled', 'searching'])
+            && (nb().get('karigarId', null) == b().get('karigarId', null) || nb().get('karigarId', null) == null)
+            && (!changed().hasAny(['rating']) || b().status == 'done'))
+        // કારીગર: "બધાને" વિનંતી સ્વીકારે (પહેલો જીતે)
+        || (signedIn() && b().status == 'searching' && nb().status == 'accepted' && nb().karigarId == me() && approvedKarigar()
+            && onlyKeys(['status', 'karigarId', 'timeline']))
+        // નક્કી થયેલ કારીગર: રસ્તામાં, પહોંચ્યા, બિલ, પૂરું, ના પાડવી — "કામ ચાલુ" ફક્ત OTP (Cloud Function) થી
+        || (signedIn() && b().karigarId == me() && nb().get('karigarId', null) in [me(), null]
+            && onlyKeys(['status', 'timeline', 'bill', 'chat', 'kRating', 'kReview', 'commission', 'commRate', 'rejectedBy', 'karigarId', 'mode', 'sos'])
+            && (nb().status == b().status || nb().status in ['accepted', 'rejected', 'onway', 'arrived', 'billed', 'done', 'searching', 'cancelled'])
+            && (nb().status != 'billed' || b().status in ['working', 'billed'])
+            && (nb().status != 'done' || b().status in ['billed', 'done']))
+        // OTP (Cloud Function વગર): કારીગર OTP જોઈ શકતો નથી, પણ નિયમ ગ્રાહકનો OTP સરખાવી "કામ ચાલુ" થવા દે
+        || (signedIn() && b().karigarId == me() && b().status == 'arrived' && nb().status == 'working' && onlyKeys(['status', 'timeline', 'otpTry'])
+            && nb().otpTry == get(/databases/$(database)/documents/bookings/$(id)/otp/main).data.otp)
+        // બીજો કારીગર: ફક્ત "ના પાડી" નોંધે
+        || (isKarigar() && b().status == 'searching' && onlyKeys(['rejectedBy']));
+      allow delete: if isAdmin();
+
+      // સંપર્ક: ગ્રાહકનો મોબાઇલ/સરનામું/GPS અને કારીગરનો મોબાઇલ/લાઇવ લોકેશન — ફક્ત એ ગ્રાહક, એ કારીગર અને એડમિન
+      match /contact/{doc} {
+        allow read: if signedIn() && (isAdmin() || resource.data.custId == me()
+                       || get(/databases/$(database)/documents/bookings/$(id)).data.karigarId == me());
+        allow create: if signedIn() && request.resource.data.custId == me();
+        allow update: if isAdmin()
+          || (signedIn() && resource.data.custId == me() && request.resource.data.custId == me())
+          || (signedIn() && get(/databases/$(database)/documents/bookings/$(id)).data.karigarId == me() && onlyKeys(['kMobile', 'kUpi', 'kLoc', 'kLocPrev']));
+        allow delete: if isAdmin();
+      }
+      // OTP: ફક્ત ગ્રાહક જુએ; કારીગર Cloud Function (verifyOtp) થી ચકાસે
+      match /otp/{doc} {
+        allow read: if signedIn() && (isAdmin() || resource.data.custId == me());
+        allow create: if signedIn() && request.resource.data.custId == me();
+        allow update, delete: if false;
+      }
+    }
+
+    match /tickets/{id} {
+      allow read: if signedIn() && (isAdmin() || resource.data.userId == me());
+      allow create: if signedIn() && request.resource.data.userId == me() && request.resource.data.status == 'open';
+      allow update: if isAdmin() || (signedIn() && resource.data.userId == me() && onlyKeys(['msgs', 'status']) && request.resource.data.status in ['open', resource.data.status]);
+      allow delete: if isAdmin();
+    }
+
+    match /alerts/{id} {
+      allow read: if signedIn() && (isAdmin() || resource.data.userId == me());
+      allow create: if signedIn() && request.resource.data.userId == me() && request.resource.data.status == 'open';
+      allow update, delete: if isAdmin();
+    }
+
+    match /payments/{id} {
+      allow read: if signedIn() && (isAdmin() || resource.data.karigarId == me());
+      allow create: if signedIn() && request.resource.data.karigarId == me() && request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
+    // એડમિન લૉગ: કોઈ પણ ઉમેરી શકે (કાર્યવાહીની નોંધ), બદલી/ભૂંસી ન શકે, ફક્ત એડમિન વાંચે
+    match /audit/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+
+    // એડમિન માટે collection-group વાંચન (બધા કારીગરનો ખાનગી ભાગ, સંપર્ક, લૉગ, લોકેશન)
+    match /{path=**}/private/{doc} { allow read: if isAdmin(); }
+    match /{path=**}/contact/{doc} { allow read: if isAdmin(); }
+    match /{path=**}/logins/{doc} { allow read: if isAdmin(); }
+    match /{path=**}/locations/{doc} { allow read: if isAdmin(); }
+  }
+}
