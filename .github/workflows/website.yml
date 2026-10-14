@@ -1,0 +1,39 @@
+# થઈ જશે! — www (ગ્રાહક + કારીગર એપ) અને admin-web (અલગ એડમિન પેનલ, /admin/) ને GitHub Pages પર લાઇવ કરે છે.
+# એક વાર: Settings → Pages → Build and deployment → Source: "GitHub Actions"
+name: વેબસાઇટ લાઇવ કરો
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['www/**', 'admin-web/**', '.github/workflows/website.yml']
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: વેબસાઇટ ફાઇલો ભેગી કરો (એપ / અને એડમિન /admin/)
+        run: |
+          mkdir -p _site/admin
+          cp -r www/. _site/
+          cp -r admin-web/. _site/admin/
+          cp www/config.js _site/admin/config.js   # એપ અને એડમિન એક જ Firebase config વાપરે
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
