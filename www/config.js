@@ -19,4 +19,4 @@ window.TJ_APK_URL = '';
 
 /* મફત સર્વર (Cloudflare Worker) ની લિંક — Push સૂચના, રિંગ, SOS સૂચના અને સાચો IP માટે.
    દા.ત. window.TJ_WORKER_URL = 'https://thaijashe.તમારું-નામ.workers.dev';  ખાલી રહે તો એપ ચાલે, પણ એપ બંધ હોય ત્યારે સૂચના નહીં આવે. */
-window.TJ_WORKER_URL = '';
+window.TJ_WORKER_URL = 'https://thaijashe.thaijaishe.workers.dev/';
