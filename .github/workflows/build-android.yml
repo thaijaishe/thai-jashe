@@ -1,0 +1,150 @@
+# થઈ જશે! — Android APK બનાવે છે અને GitHub Releases માં મૂકે છે (Play Store વગર સીધી ડાઉનલોડ માટે).
+# વેબસાઇટનું download.html પેજ આપમેળે "latest" APK ની લિંક આપે છે: .../releases/latest/download/ThaiJashe.apk
+# KEYSTORE_BASE64 વગેરે secrets હોય તો સહી કરેલી release APK (અપડેટ સીધું ઇન્સ્ટોલ થાય), નહીં તો debug APK.
+# (ભવિષ્યમાં Play Store માટે AAB પણ બને છે.)
+name: Android એપ બનાવો
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'www/**'
+      - 'assets/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'android-extra/**'
+      - '.github/workflows/build-android.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: પેકેજ ઇન્સ્ટોલ
+        run: npm install
+
+      - name: Android પ્રોજેક્ટ બનાવો
+        run: npx cap add android
+
+      - name: રિંગ (60 સેકન્ડ), Push સૂચના, લોકેશન પરમિશન — Android કોડ ઉમેરો
+        run: node android-extra/patch-android.js
+
+      - name: Firebase google-services.json (Push સૂચના માટે)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "⚠️ GOOGLE_SERVICES_JSON secret નથી — ડેમો APK બનશે (Google લૉગિન અને બંધ એપમાં રિંગ નહીં)"
+            npm uninstall @capacitor-firebase/authentication firebase   # Firebase વગર આ plugin એપ ખૂલતાં જ બંધ કરી દે
+            node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));delete c.plugins.FirebaseAuthentication;fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
+            exit 0
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          if ! node -e "JSON.parse(require('fs').readFileSync('android/app/google-services.json','utf8'))" 2>/dev/null; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+          fi
+          node -e "const j=JSON.parse(require('fs').readFileSync('android/app/google-services.json','utf8'));const ok=(j.client||[]).some(c=>c.client_info.android_client_info.package_name==='com.thaijashe.app');console.log('package com.thaijashe.app:',ok?'✔ મળ્યું':'✘ નથી — Firebase માં Android એપ com.thaijashe.app ઉમેરો');if(!ok)process.exit(1)"
+
+      - name: આઇકન અને સ્પ્લેશ બનાવો
+        run: npm run assets
+
+      - name: (વૈકલ્પિક) એપ સીધી વેબસાઇટ ખોલે — APK ફરી ઇન્સ્ટોલ કર્યા વગર અપડેટ
+        if: vars.SITE_URL != ''
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.server=Object.assign({},c.server,{url:process.env.SITE_URL});fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
+          cat capacitor.config.json
+
+      - name: વેબ ફાઇલો Android માં કૉપિ કરો
+        run: npx cap sync android
+
+      - name: વર્ઝન નંબર સેટ કરો
+        run: |
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -n "versionCode\|versionName" android/app/build.gradle
+
+      - name: ટેસ્ટ APK બનાવો (ફોનમાં સીધી ઇન્સ્ટોલ થાય)
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: સહી કરેલી AAB બનાવો (Play Store માટે)
+        if: env.HAS_KEY == 'true'
+        working-directory: android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release.jks
+          cat >> app/build.gradle <<'GRADLE'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('release.jks')
+                      storePassword System.getenv('KS_PASS')
+                      keyAlias System.getenv('KS_ALIAS')
+                      keyPassword System.getenv('KEY_PASS')
+                  }
+              }
+              buildTypes { release { signingConfig signingConfigs.release } }
+          }
+          GRADLE
+          ./gradlew bundleRelease assembleRelease
+
+      - name: ડાઉનલોડ માટે APK તૈયાર કરો
+        run: |
+          mkdir -p dist
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk dist/ThaiJashe.apk; echo "સહી કરેલી release APK"
+          else
+            cp android/app/build/outputs/apk/debug/app-debug.apk dist/ThaiJashe.apk; echo "debug APK (keystore secrets ઉમેરો તો અપડેટ સીધું ઇન્સ્ટોલ થશે)"
+          fi
+          ls -la dist
+
+      - name: GitHub Releases માં મૂકો (વેબસાઇટની ડાઉનલોડ લિંક)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: થઈ જશે! 1.0.${{ github.run_number }}
+          make_latest: true
+          body: |
+            થઈ જશે! Android એપ — આવૃત્તિ 1.0.${{ github.run_number }}
+            ફોનમાં ThaiJashe.apk ડાઉનલોડ કરી ઇન્સ્ટોલ કરો. (Play Store વગર — "Install unknown apps" મંજૂરી આપવી પડે.)
+          files: dist/ThaiJashe.apk
+
+      - name: ટેસ્ટ APK અપલોડ
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThaiJashe-test-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+
+      - name: Play Store AAB અપલોડ
+        if: env.HAS_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThaiJashe-playstore-aab
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/release/*.apk
