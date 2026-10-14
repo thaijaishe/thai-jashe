@@ -1,0 +1,27 @@
+# થઈ જશે! — મફત સર્વર (Cloudflare Worker) મૂકે છે. (વૈકલ્પિક — Cloudflare dashboard માં worker.js હાથે પેસ્ટ પણ કરી શકાય)
+# જરૂરી Secrets: CLOUDFLARE_API_TOKEN ("Edit Cloudflare Workers" template), CLOUDFLARE_ACCOUNT_ID, FIREBASE_SERVICE_ACCOUNT
+name: Cloudflare સર્વર મૂકો
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare-worker/**'
+      - '.github/workflows/cloudflare-worker.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Worker મૂકો
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare-worker
+          secrets: |
+            FIREBASE_SA
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
