@@ -11,19 +11,16 @@
  *  દરેક વિનંતી એપના Firebase ID token થી ચકાસાય છે — કોઈ બહારનો વ્યક્તિ સૂચના મોકલી શકે નહીં.
  */
 
+const catT = c => CAT[c] || (String(c || '').startsWith('x:') ? String(c).slice(2) : '');
 const CAT = {ac:'એસી રિપેર', plumber:'પ્લમ્બર', electrician:'ઇલેક્ટ્રિશિયન', carpenter:'સુથાર', painter:'કલરકામ', cleaning:'ઘર સફાઈ', mason:'કડિયા', welder:'વેલ્ડર',
   mechanic:'બાઇક/કાર મિકેનિક', appliance:'ફ્રિજ/વોશિંગ મશીન', ro:'RO રિપેર', cctv:'CCTV/કમ્પ્યુટર', tailor:'દરજી', cobbler:'મોચી', gardener:'માળી', pest:'પેસ્ટ કંટ્રોલ',
   cook:'રસોઇયા', beauty:'બ્યુટીશિયન', locksmith:'ચાવીવાળો', roofing:'છત/પતરાં', glass:'કાચકામ', tiles:'ટાઇલ્સ', generator:'ઇન્વર્ટર/જનરેટર', solar:'સોલાર',
-  movers:'ઘરવખરી શિફ્ટિંગ', pop:'ઇન્ટિરિયર/POP', maid:'ઘરકામ', driver:'ડ્રાઇવર', other:'અન્ય કામ'};
-const AREAS = {alkapuri:['અલકાપુરી', 22.3106, 73.1700], akota:['અકોટા', 22.2960, 73.1680], sayajigunj:['સયાજીગંજ', 22.3160, 73.1810], fatehgunj:['ફતેહગંજ', 22.3240, 73.1830],
-  karelibaug:['કારેલીબાગ', 22.3200, 73.2040], nizampura:['નિઝામપુરા', 22.3380, 73.1800], gotri:['ગોત્રી', 22.3110, 73.1390], vasna:['વાસણા-ભાયલી', 22.2860, 73.1350],
-  manjalpur:['માંજલપુર', 22.2700, 73.1900], makarpura:['મકરપુરા', 22.2570, 73.1960], waghodia:['વાઘોડિયા રોડ', 22.3000, 73.2270], harni:['હરણી', 22.3450, 73.2120],
-  sama:['સમા', 22.3410, 73.1920], gorwa:['ગોરવા', 22.3310, 73.1530], tarsali:['તરસાલી', 22.2580, 73.2180], ajwa:['આજવા રોડ', 22.3110, 73.2330],
-  subhanpura:['સુભાનપુરા', 22.3250, 73.1570], chhani:['છાણી', 22.3610, 73.1690]};
+  movers:'ઘરવખરી શિફ્ટિંગ', pop:'ઇન્ટિરિયર/POP', maid:'ઘરકામ', driver:'ડ્રાઇવર', other:'અન્ય કામ', agent:'એજન્ટ'};
+/* વિસ્તાર: કોઈ તૈયાર શહેર-યાદી નથી — નકશા/GPS થી પસંદ થયેલ areaGeo વપરાય */
 const CUST_MSG = {accepted:'✅ કારીગરે કામ સ્વીકાર્યું', onway:'🛵 કારીગર રસ્તામાં છે', arrived:'📍 કારીગર પહોંચી ગયા — OTP આપો', billed:'🧾 બિલ તૈયાર છે',
   done:'✔ કામ પૂરું — રેટિંગ આપો', rejected:'કારીગર હાલ આવી શકે તેમ નથી — બીજાને મોકલો', cancelled:'બુકિંગ રદ થયું'};
 const DAY = 86400000;
-const areaLL = a => AREAS[a] ? {lat:AREAS[a][1], lng:AREAS[a][2]} : null;
+const areaLL = g => g && isFinite(g.lat) && isFinite(g.lng) ? {lat:+g.lat, lng:+g.lng} : null;
 function km(a, b){ const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lng - a.lng);
   const q = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(q)); }
 
@@ -105,12 +102,14 @@ async function push(env, list, data, ring){
 }
 async function notifyAdmins(env, data){ const A = await query(env, {from:[{collectionId:'admins'}]}); const list = []; A.forEach(a => (a.fcm || []).forEach(t => list.push({col:'admins', id:a.id, t}))); return push(env, list, data); }
 async function notifyNearby(env, id, b){
-  const st = await getDoc(env, 'settings/main') || {}, R = +st.radiusKm || 25, bp = b.geoR || areaLL(b.area), skip = new Set(b.rejectedBy || []);
-  const ks = await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true), eq('cat', b.cat))});
+  const st = await getDoc(env, 'settings/main') || {}, R = +st.radiusKm || 25, bp = b.geoR || areaLL(b.areaGeo), skip = new Set(b.rejectedBy || []);
+  // "અન્ય કામ" ની વિનંતી: જાતે લખેલા કામ (x:...) વાળા બધા કારીગરોને પણ
+  const ks = b.cat === 'other' ? (await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true))})).filter(k => k.cat === 'other' || String(k.cat || '').startsWith('x:'))
+    : await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true), eq('cat', b.cat))});
   const ids = [];
   for(const k of ks){ if(skip.has(k.id)) continue; const p = await getDoc(env, `karigars/${k.id}/private/main`) || {};
-    const kp = p.loc && Date.now() - p.loc.ts < 30 * 60000 ? p.loc : areaLL(k.area); if(!bp || !kp || km(bp, kp) <= R) ids.push(k.id); }
-  return push(env, await tokensOf(env, 'users', ids), {type:'request', bookingId:id, title:'🔔 નવું કામ: ' + (CAT[b.cat] || 'કામ'), body:`${(AREAS[b.area] || [''])[0]} · ${String(b.problem || '').slice(0, 60)}`}, true);
+    const kp = p.loc && Date.now() - p.loc.ts < 30 * 60000 ? p.loc : areaLL(k.areaGeo); if(!bp || !kp || km(bp, kp) <= R) ids.push(k.id); }
+  return push(env, await tokensOf(env, 'users', ids), {type:'request', bookingId:id, title:'🔔 નવું કામ: ' + (catT(b.cat) || 'કામ'), body:`${String(b.area || '').slice(0, 40)} · ${String(b.problem || '').slice(0, 60)}`}, true);
 }
 
 /* ---------- endpoints ---------- */
@@ -134,11 +133,11 @@ async function doNotify(env, uid, d){
     if(type === 'request'){
       if(b.status === 'searching') return {ok:true, sent:await notifyNearby(env, id, b)};
       if(b.status === 'requested' && b.karigarId) return {ok:true, sent:await push(env, await tokensOf(env, 'users', [b.karigarId]),
-        {type:'request', bookingId:id, title:'🔔 ખાસ તમને વિનંતી: ' + (CAT[b.cat] || 'કામ'), body:`${(AREAS[b.area] || [''])[0]} · ${String(b.problem || '').slice(0, 60)}`}, true)};
+        {type:'request', bookingId:id, title:'🔔 ખાસ તમને વિનંતી: ' + (catT(b.cat) || 'કામ'), body:`${String(b.area || '').slice(0, 40)} · ${String(b.problem || '').slice(0, 60)}`}, true)};
       return {ok:true, sent:0};
     }
     const to = uid === b.karigarId ? b.custId : b.karigarId; const msg = CUST_MSG[b.status]; if(!to || !msg) return {ok:true, sent:0};
-    return {ok:true, sent:await push(env, await tokensOf(env, 'users', [to]), {type:'status', bookingId:id, title:'થઈ જશે! — ' + (CAT[b.cat] || ''), body:msg})};
+    return {ok:true, sent:await push(env, await tokensOf(env, 'users', [to]), {type:'status', bookingId:id, title:'થઈ જશે! — ' + catT(b.cat), body:msg})};
   }
   if(type === 'sos'){ const a = await getDoc(env, 'alerts/' + id); if(!a || a.userId !== uid) throw new Error('not allowed');
     return {ok:true, sent:await notifyAdmins(env, {type:'sos', alertId:id, bookingId:a.bookingId || '', title:'🆘 SOS: ' + (a.name || ''), body:`${a.mobile || ''} · ${a.role === 'karigar' ? 'કારીગર' : 'ગ્રાહક'} — તરત સંપર્ક કરો`})}; }

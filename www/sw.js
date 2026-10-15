@@ -1,5 +1,5 @@
 /* થઈ જશે! — service worker: એપની મુખ્ય ફાઇલો કેશ કરે, બાકીનું નેટવર્કથી */
-const CACHE = 'thaijashe-v5';
+const CACHE = 'thaijashe-v6';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });

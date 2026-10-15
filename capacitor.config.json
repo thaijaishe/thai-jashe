@@ -1,6 +1,6 @@
 {
   "appId": "com.thaijashe.app",
-  "appName": "થઈ જશે!",
+  "appName": "Thai Jashe",
   "webDir": "www",
   "android": {
     "allowMixedContent": false,
@@ -15,6 +15,10 @@
       "providers": [
         "google.com"
       ]
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "style": "DARK"
     }
   }
 }

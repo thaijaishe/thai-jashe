@@ -8,3 +8,8 @@ h1{font-size:26px;color:var(--brand);margin:0}h2{font-size:19px;color:var(--bran
 .muted{color:var(--muted);font-size:14px}a{color:var(--brand)}li{margin:4px 0}
 .fill{background:#FFF4D1;color:#161A33;padding:0 4px;border-radius:4px}
 .lnav{margin-top:32px;padding-top:12px;border-top:1px solid #8883;font-size:14px;line-height:2}
+/* ફોનની ઉપર-નીચેની પટ્ટી */
+:root{--sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))}
+body{padding-top:var(--sat);padding-bottom:var(--sab)}
+body::before,body::after{content:"";position:fixed;left:0;right:0;z-index:3000;pointer-events:none;background:#1E2A78}
+body::before{top:0;height:var(--sat)}body::after{bottom:0;height:var(--sab)}

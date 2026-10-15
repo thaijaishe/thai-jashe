@@ -9,12 +9,13 @@
     "sync": "cap sync android"
   },
   "dependencies": {
+    "@capacitor-firebase/authentication": "^8.5.2",
     "@capacitor/android": "8.5.2",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/core": "8.5.2",
     "@capacitor/filesystem": "^8.1.4",
-    "@capacitor/share": "^8.0.3",
     "@capacitor/push-notifications": "^8.1.3",
-    "@capacitor-firebase/authentication": "^8.5.2",
+    "@capacitor/share": "^8.0.3",
     "firebase": "^12.6.0"
   },
   "devDependencies": {
