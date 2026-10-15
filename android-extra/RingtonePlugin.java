@@ -1,9 +1,10 @@
 package com.thaijashe.app;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.media.AudioAttributes;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -16,12 +17,17 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-/** થઈ જશે! — નવી વિનંતી વખતે ફોનનો પોતાનો રિંગટોન (Settings માં જે હોય તે) 60 સેકન્ડ વગાડે. JS: Capacitor.Plugins.Ringtone.start({seconds:60}) / stop() */
+/**
+ * થઈ જશે! — નવી વિનંતી વખતે એપની પોતાની રિંગ (res/raw/tj_ring) 80% અવાજે, વાઇબ્રેશન વગર.
+ * ફોનનો અવાજ ઓછો હોય તો પણ રિંગ સંભળાય: રિંગ વખતે "એલાર્મ" અવાજ 80% કરે, રિંગ બંધ થાય એટલે પહેલાં જેટલો હતો તેટલો પાછો.
+ * JS: Capacitor.Plugins.Ringtone.start({seconds:60}) / stop()
+ */
 @CapacitorPlugin(name = "Ringtone")
 public class RingtonePlugin extends Plugin {
-    private static Ringtone ring;
+    public static final int VOLUME_PCT = 80;
+    private static MediaPlayer mp;
     private static final Handler handler = new Handler(Looper.getMainLooper());
-    private static Runnable stopper, looper;
+    private static Runnable stopper;
 
     @PluginMethod
     public void start(PluginCall call) {
@@ -36,59 +42,82 @@ public class RingtonePlugin extends Plugin {
         call.resolve();
     }
 
+    /** res/raw/tj_ring નો સરનામો (notification channel અને MediaPlayer બંને માટે) */
+    public static Uri ringUri(Context ctx) {
+        int id = ctx.getResources().getIdentifier("tj_ring", "raw", ctx.getPackageName());
+        return Uri.parse("android.resource://" + ctx.getPackageName() + "/" + id);
+    }
+
+    public static AudioAttributes ringAttrs() {
+        return new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
+    }
+
+    /** એલાર્મ અવાજ 80% — જૂનો અવાજ યાદ રાખે (એપ બંધ થઈ જાય તો પણ, SharedPreferences માં) */
+    public static synchronized void boost(Context ctx) {
+        try {
+            Context app = ctx.getApplicationContext();
+            AudioManager am = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return;
+            SharedPreferences sp = app.getSharedPreferences("tj_ring", Context.MODE_PRIVATE);
+            if (!sp.contains("vol")) sp.edit().putInt("vol", am.getStreamVolume(AudioManager.STREAM_ALARM)).apply();
+            int max = am.getStreamMaxVolume(AudioManager.STREAM_ALARM);
+            am.setStreamVolume(AudioManager.STREAM_ALARM, Math.max(1, Math.round(max * VOLUME_PCT / 100f)), 0);
+        } catch (Exception ignored) {}   // "ખલેલ પાડશો નહીં (DND)" ચાલુ હોય તો ફોન મંજૂરી ન આપે — તો જેમ છે તેમ
+    }
+
+    /** અવાજ પાછો પહેલાં જેટલો */
+    public static synchronized void restore(Context ctx) {
+        try {
+            Context app = ctx.getApplicationContext();
+            SharedPreferences sp = app.getSharedPreferences("tj_ring", Context.MODE_PRIVATE);
+            if (!sp.contains("vol")) return;
+            AudioManager am = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) am.setStreamVolume(AudioManager.STREAM_ALARM, sp.getInt("vol", 0), 0);
+            sp.edit().remove("vol").apply();
+        } catch (Exception ignored) {}
+    }
+
+    public static boolean playing() { return mp != null; }
+
     public static synchronized void startRing(Context ctx, int seconds) {
         stopRing(ctx);
-        Context app = ctx.getApplicationContext();
-        Uri uri = RingtoneManager.getActualDefaultRingtoneUri(app, RingtoneManager.TYPE_RINGTONE);
-        if (uri == null) uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-        ring = RingtoneManager.getRingtone(app, uri);
-        if (ring != null) {
-            ring.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
-            if (Build.VERSION.SDK_INT >= 28) ring.setLooping(true);
-            ring.play();
-            if (Build.VERSION.SDK_INT < 28) {
-                looper = new Runnable() {
-                    public void run() {
-                        if (ring != null && !ring.isPlaying()) ring.play();
-                        handler.postDelayed(this, 1000);
-                    }
-                };
-                handler.postDelayed(looper, 1000);
-            }
+        final Context app = ctx.getApplicationContext();
+        boost(app);
+        try {
+            mp = new MediaPlayer();
+            mp.setAudioAttributes(ringAttrs());
+            mp.setDataSource(app, ringUri(app));
+            mp.setLooping(true);
+            mp.setVolume(1f, 1f);
+            mp.prepare();
+            mp.start();
+        } catch (Exception e) {
+            if (mp != null) { try { mp.release(); } catch (Exception ignored) {} }
+            mp = null;
         }
-        // વાઇબ્રેશન નહીં — ફક્ત રિંગ
         stopper = new Runnable() { public void run() { stopRing(app); } };
         handler.postDelayed(stopper, seconds * 1000L);
     }
 
     public static synchronized void stopRing(Context ctx) {
-        if (ring != null) { try { ring.stop(); } catch (Exception ignored) {} ring = null; }
-        if (looper != null) handler.removeCallbacks(looper);
+        if (mp != null) { try { mp.stop(); } catch (Exception ignored) {} try { mp.release(); } catch (Exception ignored) {} mp = null; }
         if (stopper != null) handler.removeCallbacks(stopper);
-        looper = null; stopper = null;
-        // વાઇબ્રેશન પૂરેપૂરું બંધ: બધા vibrator + રિંગ વાળી સૂચના પણ હટાવો
+        stopper = null;
+        restore(ctx);
+        // જૂની APK નું વાઇબ્રેશન ચાલુ રહી ગયું હોય તો તે પણ બંધ + રિંગ વાળી સૂચના હટાવો
         try {
             if (Build.VERSION.SDK_INT >= 31) {
                 VibratorManager vm = (VibratorManager) ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
                 if (vm != null) vm.cancel();
+            } else {
+                Vibrator v = (Vibrator) ctx.getSystemService(Context.VIBRATOR_SERVICE);
+                if (v != null) v.cancel();
             }
         } catch (Exception ignored) {}
-        Vibrator v = vib(ctx);
-        if (v != null) { try { v.cancel(); } catch (Exception ignored) {} }
         try {
             android.app.NotificationManager nm = (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.cancelAll();
         } catch (Exception ignored) {}
     }
-
-    private static Vibrator vib(Context ctx) {
-        if (Build.VERSION.SDK_INT >= 31) {
-            VibratorManager vm = (VibratorManager) ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-            return vm != null ? vm.getDefaultVibrator() : null;
-        }
-        return (Vibrator) ctx.getSystemService(Context.VIBRATOR_SERVICE);
-    }
-
 }

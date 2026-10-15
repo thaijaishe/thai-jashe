@@ -23,6 +23,7 @@ public class MainActivity extends BridgeActivity {
         visible = true;
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) nm.cancelAll();   // એપ ખૂલી — સૂચનાની રિંગ બંધ, વિનંતી એપમાં જ દેખાશે
+        if (!RingtonePlugin.playing()) RingtonePlugin.restore(this);   // સૂચનાની રિંગ માટે વધારેલો અવાજ પાછો
     }
 
     @Override

@@ -3,10 +3,12 @@ const fs = require('fs'), path = require('path');
 const A = 'android/app', JAVA = path.join(A, 'src/main/java/com/thaijashe/app');
 fs.mkdirSync(JAVA, {recursive:true});
 for(const f of ['RingtonePlugin.java', 'TJMessagingService.java', 'MainActivity.java']) fs.copyFileSync(path.join(__dirname, f), path.join(JAVA, f));
+// થઈ જશે! ની પોતાની રિંગ → res/raw/tj_ring.ogg
+const RAW = path.join(A, 'src/main/res/raw'); fs.mkdirSync(RAW, {recursive:true}); fs.copyFileSync(path.join(__dirname, 'tj_ring.ogg'), path.join(RAW, 'tj_ring.ogg'));
 // AndroidManifest
 const MP = path.join(A, 'src/main/AndroidManifest.xml'); let m = fs.readFileSync(MP, 'utf8');
 if(!/xmlns:tools=/.test(m)) m = m.replace('<manifest ', '<manifest xmlns:tools="http://schemas.android.com/tools" ');
-const perms = ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS', 'VIBRATE', 'WAKE_LOCK', 'USE_FULL_SCREEN_INTENT'];
+const perms = ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS', 'VIBRATE', 'WAKE_LOCK', 'USE_FULL_SCREEN_INTENT', 'MODIFY_AUDIO_SETTINGS'];
 const add = perms.filter(p => !m.includes('android.permission.' + p)).map(p => `    <uses-permission android:name="android.permission.${p}" />`).join('\n');
 if(add) m = m.replace('</manifest>', add + '\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />\n</manifest>');
 if(!m.includes('TJMessagingService')) m = m.replace('</application>', `
