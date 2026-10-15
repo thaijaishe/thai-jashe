@@ -859,7 +859,7 @@ const Store = {
         await loadFirebase();
         this.app = firebase.initializeApp(cfg, APP_MODE === 'admin' ? 'tjadmin' : '[DEFAULT]'); // એડમિનનું લૉગિન અલગ રહે
         /* App Check: ફક્ત તમારી સાચી વેબસાઇટ/એપ જ Firebase ડેટા સુધી પહોંચી શકે (બીજી સાઇટ, સ્ક્રિપ્ટ કે બોટ નહીં) */
-        if(window.TJ_APPCHECK_KEY && firebase.appCheck){ try{ firebase.appCheck(this.app).activate(new firebase.appCheck.ReCaptchaV3Provider(window.TJ_APPCHECK_KEY), true); }catch(e){ console.warn('appcheck', e); } }
+        if(window.TJ_APPCHECK_KEY && firebase.appCheck){ try{ const AC = firebase.appCheck, prov = window.TJ_APPCHECK_TYPE === 'v3' ? new AC.ReCaptchaV3Provider(window.TJ_APPCHECK_KEY) : new AC.ReCaptchaEnterpriseProvider(window.TJ_APPCHECK_KEY); firebase.appCheck(this.app).activate(prov, true); }catch(e){ console.warn('appcheck', e); } }
         this.fs = this.app.firestore(); this.auth = this.app.auth(); this.mode = 'firebase';
         try{ this.auth.useDeviceLanguage(); }catch(e){}
         await new Promise(res => { const un = this.auth.onAuthStateChanged(() => { un(); res(); }); setTimeout(res, 7000); });
