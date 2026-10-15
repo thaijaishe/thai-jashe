@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https: wss:; frame-src https://*.firebaseapp.com https://accounts.google.com https://www.google.com https://www.recaptcha.net; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="preload" as="script" href="lib/firebase-app-compat.js"><link rel="preload" as="script" href="lib/firebase-auth-compat.js"><link rel="preload" as="script" href="lib/firebase-firestore-compat.js"><link rel="preload" as="script" href="lib/firebase-app-check-compat.js">
+<link rel="preconnect" href="https://firestore.googleapis.com"><link rel="preconnect" href="https://www.google.com"><link rel="preconnect" href="https://www.gstatic.com">
 <meta name="description" content="થઈ જશે! — એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન સહિત ઘરના કોઈ પણ કામ માટે નજીકનો કારીગર બોલાવો. કામ છે? થઈ જશે!">
 <link rel="manifest" href="manifest.webmanifest">
 <script src="config.js"></script>
@@ -14,7 +16,8 @@
 <title>Thai Jashe!</title>
 <meta name="theme-color" content="#1E2A78">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhai+2:wght@600;700;800&family=Hind+Vadodara:wght@400;500;600;700&family=Hind:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhai+2:wght@600;700;800&family=Hind+Vadodara:wght@400;500;600;700&family=Hind:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Layout: mobile app shell (max 520px), sticky top bar, fixed bottom nav per role. Turmeric yellow + indigo ink. */
 :root{
@@ -669,8 +672,10 @@ async function loadFirebase(){
   /* મફત (Spark) પ્લાન: Storage/Functions વગર */
   /* સુરક્ષા: Firebase ની ફાઇલો પોતાની વેબસાઇટ (lib/) પરથી — બહારની CDN પર આધાર નહીં; ન મળે તો જ Google (gstatic) પરથી */
   const mods = ['app', 'auth', 'firestore']; if(window.TJ_APPCHECK_KEY) mods.push('app-check');
-  for(const m of mods){ const f = `firebase-${m}-compat.js`;
-    try{ await loadScript(`lib/${f}`); }catch(e){ await loadScript(`https://www.gstatic.com/firebasejs/${FB_V}/${f}`); } }
+  /* ઝડપ: બધી ફાઇલો એકસાથે ડાઉનલોડ (ક્રમ સચવાય), એક પછી એક નહીં */
+  const one = (src) => new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = src; sc.async = false; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+  try{ await Promise.all(mods.map(m => one(`lib/firebase-${m}-compat.js`))); }
+  catch(e){ for(const m of mods){ const f = `firebase-${m}-compat.js`; if(!(window.firebase && (m === 'app' || firebase[m === 'app-check' ? 'appCheck' : m]))) await loadScript(`https://www.gstatic.com/firebasejs/${FB_V}/${f}`); } }
 }
 /* ખાનગી ફીલ્ડ અલગ દસ્તાવેજમાં: ગ્રાહકને કારીગરનો મોબાઇલ/લોકેશન/આધાર/IP ક્યારેય ન દેખાય */
 const PRIVATE_K = ['mobile', 'pin', 'loc', 'locHist', 'locErr', 'lastIp', 'lastDev', 'lastLogin', 'logins', 'aadhaar4', 'aadhaarMasked', 'policeNo', 'policeDate', 'adminNote',
@@ -861,10 +866,14 @@ const Store = {
         /* App Check: ફક્ત તમારી સાચી વેબસાઇટ/એપ જ Firebase ડેટા સુધી પહોંચી શકે (બીજી સાઇટ, સ્ક્રિપ્ટ કે બોટ નહીં) */
         if(window.TJ_APPCHECK_KEY && firebase.appCheck){ try{ const AC = firebase.appCheck, prov = window.TJ_APPCHECK_TYPE === 'v3' ? new AC.ReCaptchaV3Provider(window.TJ_APPCHECK_KEY) : new AC.ReCaptchaEnterpriseProvider(window.TJ_APPCHECK_KEY); firebase.appCheck(this.app).activate(prov, true); }catch(e){ console.warn('appcheck', e); } }
         this.fs = this.app.firestore(); this.auth = this.app.auth(); this.mode = 'firebase';
+        /* ઝડપ: ફોનમાં જ ડેટાનો કેશ — બીજી વાર એપ ખૂલે ત્યારે તરત દેખાય, પછી નવું ડેટા આવે */
+        try{ await this.fs.enablePersistence({synchronizeTabs:true}); }catch(e){ console.warn('persist', e && e.code); }
         try{ this.auth.useDeviceLanguage(); }catch(e){}
         await new Promise(res => { const un = this.auth.onAuthStateChanged(() => { un(); res(); }); setTimeout(res, 7000); });
-        try{ await this.auth.getRedirectResult(); }catch(e){ console.warn(e); }
-        await fbRestoreSession(); await FB.subscribe();
+        if(LS.get('tj_gintent', null)){ try{ await this.auth.getRedirectResult(); }catch(e){ console.warn(e); } } // ફક્ત Google redirect લૉગિન પછી
+        await fbRestoreSession();
+        this.syncing = true; const sub = FB.subscribe().then(() => { this.syncing = false; this.changed(); });
+        await Promise.race([sub, new Promise(r => setTimeout(r, 2500))]); // ધીમું નેટ હોય તો પણ 2.5 સેકન્ડમાં એપ ખૂલે; ડેટા પાછળથી આવે
         const gi = LS.get('tj_gintent', null); if(gi && this.auth.currentUser && !S.session){ LS.del('tj_gintent'); setTimeout(() => fbAfterLogin(gi), 300); }
         this.ready = true; return;
       }catch(e){ console.error(e); toast('Firebase જોડાણ ન થયું — ડેમો મોડ ચાલુ'); this.mode = 'local'; }
@@ -1162,7 +1171,7 @@ async function custLogin(){
 }
 
 VIEWS.c_home = () => {
-  const c = me(); if(!c){ setSession(null); return VIEWS.welcome(); }
+  const c = me(); if(!c){ if(Store.syncing) return `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`; setSession(null); return VIEWS.welcome(); }
   const st = Store.settings(); const act = bookingsOf(c.id).filter(b => ACTIVE.includes(b.status));
   const top = Store.all('karigars').filter(k => k.status === 'approved' && k.online).sort((a, b) => distKm(c.area, a.area) - distKm(c.area, b.area)).slice(0, 4);
   const coupon = couponOn() && (st.coupons || [])[0];
@@ -1468,7 +1477,7 @@ async function karRegister(){
 }
 
 VIEWS.k_home = () => {
-  const k = me(); if(!k){ setSession(null); return VIEWS.welcome(); }
+  const k = me(); if(!k){ if(Store.syncing) return `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`; setSession(null); return VIEWS.welcome(); }
   const st = Store.settings(); const reqs = openRequestsFor(k); const act = activeJobOf(k.id);
   const sched = jobsOf(k.id).filter(b => b.status === 'accepted' && b.when !== 'now');
   const today = jobsOf(k.id).filter(b => b.status === 'done' && new Date((b.timeline || {}).done || 0).toDateString() === new Date().toDateString());
@@ -3002,7 +3011,7 @@ if(APP_MODE === 'admin') VIEWS.welcome = () => VIEWS.a_login();
 (async function(){
   $('#app').innerHTML = `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`;
   initBack(); initAutoUpdate(); initIdleGuard(); await Store.init(); demoEnrich();
-  if(S.session && S.session.role !== 'admin' && !me()) setSession(null);
+  if(S.session && S.session.role !== 'admin' && !me() && !Store.syncing) setSession(null);
   home(); if(S.session){ logAccess('open'); if(window.Push) Push.init(); }
 })();
 </script>
