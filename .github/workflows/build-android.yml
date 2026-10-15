@@ -8,8 +8,10 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    # વેબ ભાગ (www) હવે વેબસાઇટ પરથી સીધો ખૂલે છે — તેના ફેરફારમાં નવી APK ની જરૂર નથી.
+    # નવી APK ફક્ત ત્યારે બને જ્યારે APK નો અંદરનો ભાગ બદલાય (નીચેની ફાઇલો).
     paths:
-      - 'www/**'
+      - 'www/offline.html'
       - 'assets/**'
       - 'capacitor.config.json'
       - 'package.json'
