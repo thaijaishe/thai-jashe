@@ -157,6 +157,7 @@ textarea{min-height:76px;resize:vertical}
 
 /* home */
 .offer{background:var(--bar);color:var(--bar-ink);border-radius:18px;padding:16px;display:flex;gap:12px;align-items:center;overflow:hidden;position:relative}
+#offerbox{transition:opacity .25s,transform .25s}#offerbox.ofade{opacity:0;transform:translateX(-12px)}.odots{display:flex;gap:5px;margin-top:8px}.odots i{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.35}.odots i.on{opacity:1;width:18px;border-radius:4px}
 .offer .code{font-family:var(--f-display);font-weight:800;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:2px 8px;letter-spacing:1px}
 .quick{background:var(--accent);color:var(--accent-ink);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px;text-align:left;width:100%}
 .quick b{font-family:var(--f-display);font-size:18px;display:block}
@@ -628,6 +629,13 @@ const KEEP_LOGOS = ['tjf', 'kc4', 'house', 'hp1', 'hp2', 'hp3', 'hp4', 'hp5', 'h
 for(let i = LOGOS.length - 1; i >= 0; i--) if(!KEEP_LOGOS.includes(LOGOS[i].id.replace(/^(kc\d)q$/, '$1'))) LOGOS.splice(i, 1);
 const logoSvg = (l, size) => `<svg width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="${l.name}">${l.svg}</svg>`;
 function curLogo(){ const id = (Store.ready && Store.settings().logo) || 'tjf'; return LOGOS.find(l => l.id === id) || LOGOS[0]; }
+/* કૂપન બેનર: દર 5 સેકન્ડે બીજું કૂપન, છેલ્લા પછી ફરી પહેલું */
+function offerInner(c, n, i){ return `<div style="font-size:30px">🎁</div><div class="grow"><b style="font-family:var(--f-display);font-size:17px">${h(tr(c.note || ''))}</b><div class="small" style="margin-top:4px">${tr('કોડ વાપરો')}: <span class="code">${h(c.code)}</span></div>
+  ${n > 1 ? `<div class="odots">${Array.from({length:n}, (_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div>`; }
+setInterval(() => { const el = document.getElementById('offerbox'); if(!el || !Store.ready || !couponOn()) return;
+  const CPS = (Store.settings().coupons || []).filter(c => c && c.code); if(CPS.length < 2) return;
+  S.ci = ((S.ci || 0) + 1) % CPS.length; el.classList.add('ofade');
+  setTimeout(() => { el.innerHTML = offerInner(CPS[S.ci], CPS.length, S.ci); el.classList.remove('ofade'); }, 250); }, 5000);
 const isKarigarView = () => (S.session && S.session.role === 'karigar') || /^k_/.test(S.view || '');
 function logoSVG(size = 40, forceKarigar){ let l = curLogo();
   if((forceKarigar || isKarigarView()) && l.pair && !/q$/.test(l.id)){ const p = LOGOS.find(x => x.id === l.pair); if(p) l = p; }
@@ -1239,7 +1247,7 @@ VIEWS.c_home = () => {
   const c = me(); if(!c){ if(Store.syncing) return `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`; setSession(null); return VIEWS.welcome(); }
   const st = Store.settings(); const act = bookingsOf(c.id).filter(b => ACTIVE.includes(b.status));
   const top = Store.all('karigars').filter(k => k.status === 'approved' && k.online).sort((a, b) => distKm(c.area, a.area) - distKm(c.area, b.area)).slice(0, 4);
-  const coupon = couponOn() && (st.coupons || [])[0];
+  const CPS = couponOn() ? (st.coupons || []).filter(c => c && c.code) : [], coupon = CPS.length ? CPS[(S.ci || 0) % CPS.length] : null;
   return topbar(APP.name, {right:`<button class="chip" onclick="go('c_profile')">📍 ${h(areaName(c.area))}</button>`}) + `<div class="wrap">
     <div><p class="muted small">નમસ્તે, ${h(c.name)}</p><h2>આજે કયું કામ કરાવવું છે?</h2></div>
     ${act.map(b => `<button class="card" style="text-align:left;border:2px solid var(--accent)" onclick="go('c_track',{id:'${b.id}'})">
@@ -1247,7 +1255,7 @@ VIEWS.c_home = () => {
       <span class="small muted">ચાલુ બુકિંગ · ટ્રેક કરવા ટેપ કરો</span></button>`).join('')}
     <div class="search"><span>🔍</span><input id="c_q" placeholder="કામ શોધો — દા.ત. એસી, નળ, પંખો" oninput="filterCats(this.value)"></div>
     <button class="quick" onclick="go('c_quick')"><span style="font-size:30px">⚡</span><div><b>ઝડપી બોલાવો</b><span class="small">કામ પસંદ કરો — નજીકના બધા કારીગરોને એકસાથે વિનંતી જશે</span></div></button>
-    ${coupon ? `<div class="offer"><div style="font-size:30px">🎁</div><div class="grow"><b style="font-family:var(--f-display);font-size:17px">${h(coupon.note)}</b><div class="small" style="margin-top:4px">કોડ વાપરો: <span class="code">${h(coupon.code)}</span></div></div></div>` : ''}
+    ${coupon ? `<div class="offer" id="offerbox">${offerInner(coupon, CPS.length, (S.ci || 0) % CPS.length)}</div>` : ''}
     <div class="between"><h3>બધા કામ</h3><span class="tiny muted">${catList().length} પ્રકાર</span></div>
     <div class="grid" id="catgrid">${catList().map(x => `<button class="cat" data-n="${h(x.name + ' ' + x.id)}" onclick="go('c_cat',{cat:'${x.id}'})"><span class="e">${x.icon}</span>${h(x.name)}</button>`).join('')}</div>
     ${(c.favs || []).length ? `<h3>❤️ મારા મનપસંદ કારીગરો</h3><div class="stack">${(c.favs || []).map(id => Store.get('karigars', id)).filter(k => k && k.status === 'approved').map(k => kCard(k, c.area)).join('')}</div>` : ''}
