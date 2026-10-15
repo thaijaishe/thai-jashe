@@ -171,6 +171,11 @@ textarea{min-height:76px;resize:vertical}
 .av.lg{width:76px;height:76px;font-size:30px;border-radius:20px}
 .on-dot{position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
 .kitem{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%}
+.amap-sq{width:100%}.amap-sq .lmap-in{height:clamp(340px,62vh,680px)}@media (max-width:600px){.amap-sq .lmap-in{height:clamp(300px,55vh,520px)}}.amap-h{margin:14px 2px 8px}
+.kgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kgrid>.card{margin:0}
+@media (min-width:900px){.kgrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}}@media (max-width:380px){.kgrid{grid-template-columns:1fr}}
+.kbox{display:flex;flex-direction:column;gap:6px;min-width:0;border-top:4px solid var(--line,#ddd)}.kbox.on{border-top-color:#1A9E5A}.kbox b{word-break:break-word}
+.kbox-top{display:flex;gap:10px;align-items:center;min-width:0}.kbox-st{display:flex;flex-wrap:wrap;gap:6px}.kbox-btn{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}.kbox-btn .btn{flex:1 1 auto;min-width:0}
 .kitem .nm{font-weight:700;font-size:16px}
 .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;color:var(--muted)}
 .star{color:var(--warn);font-weight:700}
@@ -2574,10 +2579,16 @@ VIEWS.a_map = () => { if(!isAdmin()) return VIEWS.welcome();
   const K = Store.all('karigars').filter(k => k.status === 'approved').sort((a, b) => (b.online - a.online) || ((b.loc || {}).ts || 0) - ((a.loc || {}).ts || 0));
   const act = Store.all('bookings').filter(b => ACTIVE.includes(b.status));
   const pts = [...K.map(k => k.loc ? (k.online ? {...k.loc, kind:'bike', deg:(k.locHist || [])[1] ? bearing(k.locHist[1], k.loc) : 0, label:k.name, showLabel:false} : {...k.loc, c:'#9AA1BD', r:5, label:k.name, showLabel:false}) : null), ...act.map(b => ({...(b.geo || areaLL(b.area, b.areaGeo)), kind:'home', label:'બુકિંગ ' + bNo(b), showLabel:false}))];
-  return topbar('લાઇવ નકશો', {back:true}) + `<div class="wrap"><div class="card">${mapBox('amap', pts)}<div class="meta"><span>🛵 ઓનલાઇન કારીગર</span><span><b style="color:#9AA1BD">●</b> ઓફલાઇન (છેલ્લું લોકેશન)</span><span>🏠 ચાલુ બુકિંગ</span></div></div>
-    <h3>${K.filter(k => k.online).length} ઓનલાઇન / ${K.length} મંજૂર</h3>
-    ${K.map(k => `<div class="card kitem" style="flex-direction:row;align-items:center">${avatar(k)}<div class="grow"><b>${h(k.name)}</b><div class="meta"><span>${h(kCatTxt(k))}</span><span>${k.loc ? '📍 ' + ago(k.loc.ts) : 'લોકેશન નથી'}</span>${activeJobOf(k.id) ? '<span class="pill acc">કામ પર</span>' : ''}</div></div>
-      <div class="stack" style="gap:4px">${k.loc ? `<a class="btn sm" target="_blank" rel="noopener" href="${mapsUrl(k.loc)}" title="Google Maps માં કારીગરનું હાલનું લોકેશન ખોલો">🗺️ Google નકશો</a>` : ''}<button class="btn sm" title="કારીગરની પૂરી વિગત અને લોકેશન ઇતિહાસ" onclick="go('a_karigar',{id:'${k.id}',t:'loc'})">વિગત ›</button></div></div>`).join('')}</div>` + aNav(); };
+  const on = K.filter(k => k.online).length;
+  return topbar('લાઇવ નકશો', {back:true}) + `<div class="wrap amap-page"><div class="card amap-card"><div class="amap-sq">${mapBox('amap', pts)}</div><div class="meta" style="justify-content:center"><span>🛵 ઓનલાઇન કારીગર</span><span><b style="color:#9AA1BD">●</b> ઓફલાઇન (છેલ્લું લોકેશન)</span><span>🏠 ચાલુ બુકિંગ</span></div></div>
+    <h3 class="amap-h">👷 ${on} ઓનલાઇન / ${K.length} મંજૂર</h3>
+    <div class="kgrid">${K.map(k => { const job = activeJobOf(k.id); return `<div class="card kbox ${k.online ? 'on' : ''}">
+      <div class="kbox-top">${avatar(k)}<div class="grow"><b>${h(k.name)}</b><div class="small muted">${h(kCatTxt(k))}</div></div></div>
+      <div class="kbox-st"><span class="pill ${k.online ? 'ok' : ''}">${k.online ? '🟢 ઓનલાઇન' : '⚪ ઓફલાઇન'}</span>${job ? '<span class="pill acc">🔧 કામ પર</span>' : ''}</div>
+      <div class="small muted">${k.mobile ? '📞 ' + h(k.mobile) : ''}</div>
+      <div class="small muted">${k.loc ? '📍 ' + ago(k.loc.ts) : '📍 લોકેશન નથી'}${k.area ? ' · ' + h(k.area) : ''}</div>
+      <div class="kbox-btn">${k.loc ? `<button class="btn sm" title="આ કારીગરને ઉપરના નકશામાં બતાવો" onclick="amapFocus(${+k.loc.lat},${+k.loc.lng})">📍 નકશામાં</button><a class="btn sm" target="_blank" rel="noopener" href="${mapsUrl(k.loc)}" title="Google Maps માં કારીગરનું હાલનું લોકેશન ખોલો">🗺️ Google</a>` : ''}<button class="btn sm ink" title="કારીગરની પૂરી વિગત અને લોકેશન ઇતિહાસ" onclick="go('a_karigar',{id:'${k.id}',t:'loc'})">વિગત ›</button></div></div>`; }).join('') || '<div class="card" style="text-align:center;color:var(--muted)">કોઈ મંજૂર કારીગર નથી.</div>'}</div></div>` + aNav(); };
+function amapFocus(lat, lng){ const M = MAPS.amap; window.scrollTo({top:0, behavior:'smooth'}); if(!M || M.dead) return; M.user = true; try{ M.map.setView([lat, lng], 16); }catch(e){} }
 VIEWS.a_reports = () => { if(!isAdmin()) return VIEWS.welcome(); const B = Store.all('bookings'), D = 86400000, d0 = new Date(); d0.setHours(0, 0, 0, 0);
   let [ra, rb] = rangeOf(); if(!isFinite(rb)) rb = d0.getTime() + D; if(!ra) ra = Math.min(rb - 7 * D, ...B.map(b => b.createdAt || rb)); ra = new Date(ra).setHours(0, 0, 0, 0);
   const monthly = rb - ra > 62 * D, buckets = [];

@@ -171,6 +171,11 @@ textarea{min-height:76px;resize:vertical}
 .av.lg{width:76px;height:76px;font-size:30px;border-radius:20px}
 .on-dot{position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
 .kitem{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%}
+.amap-sq{width:100%}.amap-sq .lmap-in{height:clamp(340px,62vh,680px)}@media (max-width:600px){.amap-sq .lmap-in{height:clamp(300px,55vh,520px)}}.amap-h{margin:14px 2px 8px}
+.kgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kgrid>.card{margin:0}
+@media (min-width:900px){.kgrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}}@media (max-width:380px){.kgrid{grid-template-columns:1fr}}
+.kbox{display:flex;flex-direction:column;gap:6px;min-width:0;border-top:4px solid var(--line,#ddd)}.kbox.on{border-top-color:#1A9E5A}.kbox b{word-break:break-word}
+.kbox-top{display:flex;gap:10px;align-items:center;min-width:0}.kbox-st{display:flex;flex-wrap:wrap;gap:6px}.kbox-btn{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}.kbox-btn .btn{flex:1 1 auto;min-width:0}
 .kitem .nm{font-weight:700;font-size:16px}
 .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;color:var(--muted)}
 .star{color:var(--warn);font-weight:700}
