@@ -623,6 +623,9 @@ const LOGOS5 = [
             <rect x="22" y="26" width="36" height="28" rx="10" fill="${K_N}"/><path d="M48 52 L54 61 L40 53 Z" fill="${K_N}"/>${k_excl(40, 30, 20, K_Y)}`}`)
 ];
 LOGOS.unshift({id:'tjf', name:'થઈ જશે! (ઘરમાં ✔)', why:'વાદળી ખાનું, પીળું ઘર અને ✔ — "ઘરનું કામ થઈ જશે".', svg:'<rect width="64" height="64" rx="16" fill="#1E2A78"/><path d="M8 31.04 L32 8 L56 31.04 L49.28 31.04 L49.28 52.16 L14.72 52.16 L14.72 31.04 Z" fill="#F5B301" stroke="#F5B301" stroke-width="2.5" stroke-linejoin="round"/><polyline points="23,39 29.5,45.5 41.5,33" fill="none" stroke="#1E2A78" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'}, ...LOGOS5, ...LOGOS4, ...LOGOS3, ...LOGOS2);
+/* એડમિન સેટિંગમાં ફક્ત ઘર વાળા લોગો (બાકીના કાઢ્યા) */
+const KEEP_LOGOS = ['tjf', 'kc4', 'house', 'hp1', 'hp2', 'hp3', 'hp4', 'hp5', 'hp6', 'hp7', 'hp8', 'hp9', 'hp10'];
+for(let i = LOGOS.length - 1; i >= 0; i--) if(!KEEP_LOGOS.includes(LOGOS[i].id.replace(/^(kc\d)q$/, '$1'))) LOGOS.splice(i, 1);
 const logoSvg = (l, size) => `<svg width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="${l.name}">${l.svg}</svg>`;
 function curLogo(){ const id = (Store.ready && Store.settings().logo) || 'tjf'; return LOGOS.find(l => l.id === id) || LOGOS[0]; }
 const isKarigarView = () => (S.session && S.session.role === 'karigar') || /^k_/.test(S.view || '');

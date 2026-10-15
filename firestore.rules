@@ -147,7 +147,8 @@ service cloud.firestore {
                        || get(/databases/$(database)/documents/bookings/$(id)).data.custId == me());
         allow create: if signedIn() && request.resource.data.custId == me()
                       && getAfter(/databases/$(database)/documents/bookings/$(id)).data.custId == me();
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isAdmin();   // એડમિન બુકિંગ ડિલીટ કરે ત્યારે
       }
     }
 
@@ -171,6 +172,11 @@ service cloud.firestore {
     }
 
     // એડમિન લૉગ: કોઈ પણ ઉમેરી શકે (કાર્યવાહીની નોંધ), બદલી/ભૂંસી ન શકે, ફક્ત એડમિન વાંચે
+    // ડિલીટ થયેલ બુકિંગની પૂરી નકલ (લૉગ) — ફક્ત એડમિન, બદલી/કાઢી ન શકાય
+    match /deletedBookings/{id} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
     match /audit/{id} {
       allow read: if isAdmin();
       allow create: if signedIn();
