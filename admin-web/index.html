@@ -2,7 +2,7 @@
 <html lang="gu">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https: wss:; frame-src https://*.firebaseapp.com https://accounts.google.com https://www.google.com https://www.recaptcha.net; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="robots" content="noindex, nofollow">
@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="config.js"></script>
 <link rel="icon" type="image/png" href="icons/icon-192.png">
-<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>body{margin:0}html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-y:none}[hidden]{display:none!important}img{max-width:100%}</style>
 <title>Thai Jashe! Admin</title>
 <meta name="theme-color" content="#0F1640">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -236,6 +236,28 @@ details.faq{border-bottom:1px solid var(--line)}details.faq:last-child{border-bo
 .foot{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;font-size:13px;padding:6px 0 18px}.foot button{color:var(--brand);font-weight:600;text-decoration:underline}
 /* એડમિન પેનલ: ઘાટો ઉપરનો પટ્ટો જેથી ગ્રાહક એપથી અલગ ઓળખાય */
 .top{border-bottom:3px solid #F5B301}.top .t::after{content:" · ADMIN";font-size:11px;font-weight:700;color:#FFD34D;letter-spacing:.06em;margin-left:4px}
+/* કમ્પ્યુટર/લેપટોપ પર આખી સ્ક્રીન: ડાબી બાજુ મેનુ, વચ્ચે પહોળું પેજ */
+@media (min-width:900px){
+#app{max-width:none;margin:0;padding:0 0 24px 232px;min-height:100vh}
+.top{padding:12px 28px}
+.wrap{max-width:1500px;margin:0 auto;padding:22px 28px;gap:16px}
+.bnav{top:0;bottom:0;left:0;right:auto;width:232px;border-top:0;border-right:1px solid var(--line);padding:calc(var(--sat) + 76px) 10px 16px;z-index:21;overflow:auto}
+.bnav::before{content:"થઈ જશે! · ADMIN";position:absolute;top:calc(var(--sat) + 22px);left:20px;font-family:var(--f-display);font-weight:800;font-size:18px;color:var(--brand)}
+.bnav .in{grid-auto-flow:row;grid-auto-columns:auto;max-width:none;gap:4px}
+.bnav button{flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;font-size:15px;border-radius:12px}
+.bnav button .i{font-size:20px}
+.bnav button.on{background:var(--surface2)}
+.stats{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.stats div{padding:14px 16px}.stats b{font-size:26px}.stats span{font-size:13px}
+.menu{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.wrap > .stack,#klist{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px;align-items:start}
+.two{gap:14px}
+#modal,#overlay{align-items:center}
+#modal .sheet,#overlay .sheet{max-width:640px}
+#toast{bottom:28px}
+.card .bill{grid-template-columns:minmax(160px,240px) 1fr;column-gap:24px}.card .bill > span:nth-child(even){text-align:left}
+}
+@media (min-width:1500px){.wrap > .stack,#klist{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
