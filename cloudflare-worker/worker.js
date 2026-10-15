@@ -15,7 +15,7 @@ const catT = c => CAT[c] || (String(c || '').startsWith('x:') ? String(c).slice(
 const CAT = {ac:'એસી રિપેર', plumber:'પ્લમ્બર', electrician:'ઇલેક્ટ્રિશિયન', carpenter:'સુથાર', painter:'કલરકામ', cleaning:'ઘર સફાઈ', mason:'કડિયા', welder:'વેલ્ડર',
   mechanic:'બાઇક/કાર મિકેનિક', appliance:'ફ્રિજ/વોશિંગ મશીન', ro:'RO રિપેર', cctv:'CCTV/કમ્પ્યુટર', tailor:'દરજી', cobbler:'મોચી', gardener:'માળી', pest:'પેસ્ટ કંટ્રોલ',
   cook:'રસોઇયા', beauty:'બ્યુટીશિયન', locksmith:'ચાવીવાળો', roofing:'છત/પતરાં', glass:'કાચકામ', tiles:'ટાઇલ્સ', generator:'ઇન્વર્ટર/જનરેટર', solar:'સોલાર',
-  movers:'ઘરવખરી શિફ્ટિંગ', pop:'ઇન્ટિરિયર/POP', maid:'ઘરકામ', driver:'ડ્રાઇવર', other:'અન્ય કામ', agent:'એજન્ટ'};
+  movers:'ઘરવખરી શિફ્ટિંગ', pop:'ઇન્ટિરિયર/POP', maid:'ઘરકામ', driver:'ડ્રાઇવર', other:'અન્ય કામ', agent:'એજન્ટ', puncture:'ઘર બેઠા પંચર'};
 /* વિસ્તાર: કોઈ તૈયાર શહેર-યાદી નથી — નકશા/GPS થી પસંદ થયેલ areaGeo વપરાય */
 const CUST_MSG = {accepted:'✅ કારીગરે કામ સ્વીકાર્યું', onway:'🛵 કારીગર રસ્તામાં છે', arrived:'📍 કારીગર પહોંચી ગયા — OTP આપો', billed:'🧾 બિલ તૈયાર છે',
   done:'✔ કામ પૂરું — રેટિંગ આપો', rejected:'કારીગર હાલ આવી શકે તેમ નથી — બીજાને મોકલો', cancelled:'બુકિંગ રદ થયું'};
@@ -77,6 +77,7 @@ const docsBase = env => `https://firestore.googleapis.com/v1/projects/${PID(env)
 const docName = (env, path) => `projects/${PID(env)}/databases/(default)/documents/${path}`;
 async function fsFetch(env, url, opt = {}){ const r = await fetch(url, {...opt, headers:{'Content-Type':'application/json', Authorization:'Bearer ' + await accessToken(env)}});
   if(r.status === 404) return null; const j = await r.json(); if(!r.ok) throw new Error('firestore ' + r.status + ': ' + JSON.stringify(j).slice(0, 300)); return j; }
+async function getDocU(env, path){ const j = await fsFetch(env, docsBase(env) + '/' + path); return j ? {id:path.split('/').pop(), name:j.name, updateTime:j.updateTime, d:fromF(j.fields)} : null; }
 async function getDoc(env, path){ const j = await fsFetch(env, docsBase(env) + '/' + path); return j ? {id:path.split('/').pop(), ...fromF(j.fields)} : null; }
 async function addDoc(env, col, data){ return fsFetch(env, docsBase(env) + '/' + col, {method:'POST', body:JSON.stringify({fields:toF(data)})}); }
 async function setMerge(env, path, data){ const mask = Object.keys(data).map(k => 'updateMask.fieldPaths=' + encodeURIComponent(k)).join('&');
@@ -104,9 +105,9 @@ async function push(env, list, data, ring, validateOnly){
 async function notifyAdmins(env, data){ const A = await query(env, {from:[{collectionId:'admins'}]}); const list = []; A.forEach(a => (a.fcm || []).forEach(t => list.push({col:'admins', id:a.id, t}))); return push(env, list, data); }
 async function notifyNearby(env, id, b){
   const st = await getDoc(env, 'settings/main') || {}, R = +st.radiusKm || 25, bp = b.geoR || areaLL(b.areaGeo), skip = new Set(b.rejectedBy || []);
-  // "અન્ય કામ" ની વિનંતી: જાતે લખેલા કામ (x:...) વાળા બધા કારીગરોને પણ
-  const ks = b.cat === 'other' ? (await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true))})).filter(k => k.cat === 'other' || String(k.cat || '').startsWith('x:'))
-    : await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true), eq('cat', b.cat))});
+  // કારીગરના એક થી વધુ કામ (cats); "અન્ય કામ" ની વિનંતી જાતે લખેલા કામ (x:...) વાળાને પણ
+  const has = k => (Array.isArray(k.cats) && k.cats.length ? k.cats : [k.cat]).some(c => c === b.cat || (b.cat === 'other' && (c === 'other' || String(c || '').startsWith('x:'))));
+  const ks = (await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true))})).filter(has);
   const ids = [];
   for(const k of ks){ if(skip.has(k.id)) continue; const p = await getDoc(env, `karigars/${k.id}/private/main`) || {};
     const kp = p.loc && Date.now() - p.loc.ts < 30 * 60000 ? p.loc : areaLL(k.areaGeo); if(!bp || !kp || km(bp, kp) <= R) ids.push(k.id); }
@@ -139,6 +140,31 @@ async function doNotify(env, uid, d, ctx){
     }
     const to = uid === b.karigarId ? b.custId : b.karigarId; const msg = CUST_MSG[b.status]; if(!to || !msg) return {ok:true, sent:0};
     return {ok:true, sent:await push(env, await tokensOf(env, 'users', [to]), {type:'status', bookingId:id, title:'થઈ જશે! — ' + catT(b.cat), body:msg})};
+  }
+  if(type === 'refer'){   // રેફર એન્ડ અર્ન: કામ પૂરું થાય ત્યારે ઇનામ (ફક્ત સર્વર લખી શકે — કોઈ ગ્રાહક જાતે બેલેન્સ વધારી ન શકે)
+    const b = await getDoc(env, 'bookings/' + id); if(!b) return {ok:false};
+    if(uid !== b.custId && uid !== b.karigarId) throw new Error('not allowed');
+    if(b.status !== 'done') return {ok:true, skip:'not done'};
+    const st = await getDoc(env, 'settings/main') || {}, out = {};
+    const inc = (path, field, n) => ({transform:{document:docName(env, path), fieldTransforms:[{fieldPath:field, increment:toV(n)}]}});
+    const upd = (path, data, ut) => ({update:{name:docName(env, path), fields:toF(data)}, updateMask:{fieldPaths:Object.keys(data)}, ...(ut ? {currentDocument:{updateTime:ut}} : {})});
+    // ૧) બુકિંગમાં વાપરેલું બેલેન્સ ઓછું કરો (એક જ વાર)
+    const bu = await getDocU(env, 'bookings/' + id);
+    if(b.coupon && b.coupon.ref === 'bal' && !b.balUsed){ const c = await getDoc(env, 'customers/' + b.custId) || {}; const use = Math.min(+(b.bill && b.bill.discount) || 0, +c.refBal || 0);
+      try{ await commit(env, [upd('bookings/' + id, {balUsed:true}, bu.updateTime), ...(use > 0 ? [inc('customers/' + b.custId, 'refBal', -use)] : [])]); out.balUsed = use; }catch(e){ out.balErr = String(e.message).slice(0, 80); } }
+    // ૨) ગ્રાહક રેફરલ: મિત્રનું પહેલું કામ પૂરું → મોકલનારને બેલેન્સ
+    const cu = await getDocU(env, 'customers/' + b.custId);
+    if(st.refOn !== false && cu && cu.d.referredBy && !cu.d.refDone && cu.d.referredBy !== b.custId){ const amt = Math.max(0, +(st.refMe ?? 50));
+      const ref = await getDoc(env, 'customers/' + cu.d.referredBy);
+      try{ await commit(env, [upd('customers/' + b.custId, {refDone:true}, cu.updateTime), ...(ref && amt ? [inc('customers/' + cu.d.referredBy, 'refBal', amt)] : []),
+        upd('referrals/' + b.custId, {status:'rewarded', amt:ref ? amt : 0, doneAt:Date.now(), bookingId:id})]); out.custReward = ref ? amt : 0; }catch(e){ out.custErr = String(e.message).slice(0, 80); } }
+    // ૩) કારીગર રેફરલ: નવો કારીગર N કામ પૂરાં કરે → જૂના કારીગરનું કમીશન માફ
+    const ku = b.karigarId ? await getDocU(env, 'karigars/' + b.karigarId) : null, need = Math.max(1, +(st.kRefJobs ?? 5));
+    if(st.kRefOn !== false && ku && ku.d.referredBy && !ku.d.refDone && (+ku.d.jobs || 0) >= need && ku.d.referredBy !== b.karigarId){ const amt = Math.max(0, +(st.kRefWaive ?? 100));
+      const ref = await getDoc(env, `karigars/${ku.d.referredBy}/private/main`);
+      try{ await commit(env, [upd('karigars/' + b.karigarId, {refDone:true}, ku.updateTime), ...(ref && amt ? [inc(`karigars/${ku.d.referredBy}/private/main`, 'commissionDue', -amt)] : []),
+        upd('referrals/' + b.karigarId, {status:'rewarded', amt:ref ? amt : 0, doneAt:Date.now(), bookingId:id})]); out.kWaive = ref ? amt : 0; }catch(e){ out.kErr = String(e.message).slice(0, 80); } }
+    return {ok:true, ...out};
   }
   if(type === 'test'){   // સૂચના ચકાસણી: પહેલા token ચકાસે, પછી 8 સેકન્ડ પછી ખરેખર મોકલે (એપ બંધ કરવાનો સમય)
     const role = d.role === 'admin' ? 'admins' : 'users'; const u = await getDoc(env, `${role}/${uid}`); const list = (u && u.fcm || []).map(t => ({col:role, id:uid, t}));

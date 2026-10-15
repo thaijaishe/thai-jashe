@@ -172,6 +172,18 @@ textarea{min-height:76px;resize:vertical}
 .av.lg{width:76px;height:76px;font-size:30px;border-radius:20px}
 .on-dot{position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
 .kitem{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%}
+.rf-ban{display:flex;gap:12px;align-items:center;border-radius:18px;padding:14px 16px;background:linear-gradient(135deg,#0F7A45,#16A05C);color:#fff;border:0;width:100%;text-align:left;font:inherit;cursor:pointer}
+.rf-ban b{font-family:var(--f-display);font-size:17px;display:block}.rf-ban .small{opacity:.92;display:block}
+.rf-hero{text-align:center;padding:22px 16px;border-radius:20px;background:linear-gradient(160deg,#1E2A78,#2E3DA8);color:#fff}.rf-hero h2{color:#fff;margin:6px 0}
+.rf-amt{display:flex;gap:10px;justify-content:center;margin-top:12px}.rf-amt div{background:rgba(255,255,255,.13);border-radius:14px;padding:10px 14px;min-width:120px}.rf-amt b{display:block;font-size:24px;color:#FFD84D;font-family:var(--f-display)}
+.rf-code{display:flex;align-items:center;justify-content:space-between;border:2px dashed var(--accent);border-radius:14px;padding:12px 16px;background:var(--accent-soft)}.rf-code b{font-size:24px;letter-spacing:3px;font-family:var(--f-display)}
+.rf-steps{display:grid;gap:10px}.rf-steps div{display:flex;gap:12px;align-items:center}.rf-steps i{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#141C55;font-style:normal;font-weight:800;display:flex;align-items:center;justify-content:center}
+.rf-bal{display:flex;justify-content:space-between;align-items:center}.rf-bal b{font-size:26px;color:var(--ok);font-family:var(--f-display)}
+.btn.wa{background:#1FAF55;color:#fff;border-color:#1FAF55}
+.rf-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line,#e5e7ef)}.rf-row:last-child{border:0}
+.cpgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media (min-width:700px){.cpgrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.cpb{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;border:2px solid var(--line,#e2e5ee);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;line-height:1.25;text-align:center;cursor:pointer}
+.cpb .e{font-size:22px}.cpb.on{border-color:var(--accent);background:var(--accent-soft);font-weight:700}.cpb i{position:absolute;top:3px;right:4px;font-style:normal;font-size:10px;background:var(--accent);color:#141C55;border-radius:8px;padding:0 5px;font-weight:800}
 .pkrow{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;margin:6px 0;font-size:14px;line-height:1.45}.pkrow b{flex:none}.pkrow.ok{background:var(--ok-soft);color:var(--ok)}.pkrow.bad{background:var(--bad-soft);color:var(--bad)}.pkrow.warn{background:var(--warn-soft);color:var(--ink)}.pkrow code{word-break:break-all;font-size:12px}
 .amap-sq{width:100%}.amap-sq .lmap-in{height:clamp(340px,62vh,680px)}@media (max-width:600px){.amap-sq .lmap-in{height:clamp(300px,55vh,520px)}}.amap-h{margin:14px 2px 8px}
 .kgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kgrid>.card{margin:0}
@@ -649,7 +661,7 @@ const CATS = [
   ['tailor','દરજી','🧵',99],['cobbler','મોચી','👞',49],['gardener','માળી','🌱',199],['pest','પેસ્ટ કંટ્રોલ','🐜',499],
   ['cook','રસોઇયા','🍳',399],['beauty','બ્યુટીશિયન','💄',299],['locksmith','ચાવીવાળો','🔑',149],['roofing','છત/પતરાં','🏠',299],
   ['glass','કાચકામ','🪟',249],['tiles','ટાઇલ્સ','🔲',299],['generator','ઇન્વર્ટર/જનરેટર','🔋',249],['solar','સોલાર','☀️',399],
-  ['movers','ઘરવખરી શિફ્ટિંગ','🚚',999],['pop','ઇન્ટિરિયર/POP','🛋️',499],['maid','ઘરકામ','🧽',199],['driver','ડ્રાઇવર','🚗',399],['agent','એજન્ટ','🤝',199],['other','અન્ય કામ','➕',199]
+  ['movers','ઘરવખરી શિફ્ટિંગ','🚚',999],['pop','ઇન્ટિરિયર/POP','🛋️',499],['maid','ઘરકામ','🧽',199],['driver','ડ્રાઇવર','🚗',399],['puncture','ઘર બેઠા પંચર','🛵',149],['agent','એજન્ટ','🤝',199],['other','અન્ય કામ','➕',199]
 ].map(([id, name, icon, visit]) => ({id, name, icon, visit}));
 const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
 /* "અન્ય કામ" માં કારીગરે લખેલું કામ = નવો પ્રકાર (id "x:લખેલું નામ") — ગ્રાહકની યાદીમાં આપમેળે ઉમેરાય */
@@ -658,9 +670,12 @@ const catName = id => CAT[id] ? CAT[id].name : isXCat(id) ? id.slice(2) : CAT.ot
 const catIcon = id => CAT[id] ? CAT[id].icon : '🛠️';
 const catVisit = id => (CAT[id] || CAT.other).visit;
 const catMatch = (kc, bc) => kc === bc || (bc === 'other' && isXCat(kc)); // "અન્ય કામ" ની વિનંતી બધા જાતે-લખેલા કામવાળાને પણ જાય
-const kCatTxt = k => catName(k && k.cat) + (k && k.agentFor ? ' — ' + k.agentFor : '');
+/* કારીગરના એક થી વધુ કામ: cats = [મુખ્ય, ...]; જૂના કારીગરમાં ફક્ત cat */
+const kCats = k => (k && Array.isArray(k.cats) && k.cats.length ? k.cats : [k && k.cat]).filter(Boolean);
+const kHas = (k, bc) => kCats(k).some(c => catMatch(c, bc));
+const kCatTxt = k => kCats(k).map(catName).join(', ') + (k && k.agentFor ? ' — ' + k.agentFor : '');
 const normWork = t => String(t || '').replace(/['"<>\\`]/g, '').trim().replace(/\s+/g, ' ').slice(0, 30);
-function xCats(){ return [...new Set(Store.all('karigars').filter(k => isXCat(k.cat) && k.status === 'approved').map(k => k.cat))].sort(); }
+function xCats(){ return [...new Set(Store.all('karigars').filter(k => k.status === 'approved').flatMap(k => kCats(k).filter(isXCat)))].sort(); }
 function catList(){ return [...CATS.filter(c => c.id !== 'other'), ...xCats().map(id => ({id, name:catName(id), icon:catIcon(id), visit:CAT.other.visit, x:true})), CAT.other]; }
 
 /* વિસ્તાર હવે જાતે લખાય અથવા નકશા/GPS થી પસંદ થાય — કોઈ શહેરની તૈયાર યાદી નથી */
@@ -687,12 +702,12 @@ const STEPL = ['સ્વીકાર્યું','રસ્તામાં','�
 const ACTIVE = ['searching','requested','accepted','onway','arrived','working','billed'];
 const statusPill = s => `<span class="pill ${s === 'done' ? 'ok' : (s === 'cancelled' || s === 'rejected') ? 'bad' : (s === 'searching' || s === 'requested') ? 'warn' : 'acc'}">${STATUS[s] || s}</span>`;
 
-const DEFAULT_SETTINGS = {otpOn:false, commOn:false, upiOn:false, couponOn:false, radiusKm:25, commRate:10, dueLimit:500, adminUpi:'', adminPin:'1234', autoApprove:false, supportPhone:'', supportEmail:'', whatsapp:'', bizName:'થઈ જશે! (Thai Jashe!) સર્વિસીસ', bizAddr:'ગુજરાત', gstin:'',
+const DEFAULT_SETTINGS = {refOn:true, refFriend:50, refMe:50, refMax:50, refMin:199, kRefOn:true, kRefJobs:5, kRefWaive:100, otpOn:false, commOn:false, upiOn:false, couponOn:false, radiusKm:25, commRate:10, dueLimit:500, adminUpi:'', adminPin:'1234', autoApprove:false, supportPhone:'', supportEmail:'', whatsapp:'', bizName:'થઈ જશે! (Thai Jashe!) સર્વિસીસ', bizAddr:'ગુજરાત', gstin:'',
   groName:'ફરિયાદ અધિકારી, થઈ જશે!', groEmail:'', hours:'સવારે 8 થી રાત્રે 9 (સોમ–રવિ)', city:'ગુજરાત', policyDate:'13 ઑક્ટોબર 2026',
   logo:'tjf', coupons:[{code:'FIRST50', amount:50, cat:'', note:'કોઈ પણ કામ પર ₹50 ની છૂટ'}, {code:'AC100', amount:100, cat:'ac', note:'એસી સર્વિસ પર ₹100 ની છૂટ'}]};
 
 /* ---------- data store (local demo OR Firebase) ---------- */
-const COLS = ['karigars','customers','bookings','payments','settings','tickets','alerts','audit','kyc'];
+const COLS = ['karigars','customers','bookings','payments','settings','tickets','alerts','audit','kyc','referrals'];
 const DBKEY = 'karigo_db_v1';
 function loadScript(src){ return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
 /* ================= FIREBASE (લાઇવ): Authentication (SMS OTP / એડમિન ઈમેલ), "ફક્ત મારો ડેટા" queries, Storage, Functions ================= */
@@ -778,9 +793,9 @@ const FB = {
     }
     return Promise.all(waits); },
   /* કારીગરના કામના પ્રકારની નવી વિનંતીઓ (status = searching) */
-  watchReq(){ const k = me(); if(!k || !k.cat || k.cat === this.reqCat) return; this.reqCat = k.cat;
+  watchReq(){ const k = me(); const cs = kCats(k); if(!k || !cs.length) return; const want = [...new Set([...cs, ...(cs.some(isXCat) ? ['other'] : [])])].slice(0, 30); const key = want.join('|'); if(key === this.reqCat) return; this.reqCat = key;
     if(this.dyn.__req) this.dyn.__req(); delete (this.q.bookings || {}).req;
-    this.dyn.__req = this.col('bookings').where('status', '==', 'searching').where('cat', ...(isXCat(k.cat) ? ['in', [k.cat, 'other']] : ['==', k.cat]))
+    this.dyn.__req = this.col('bookings').where('status', '==', 'searching').where('cat', ...(want.length > 1 ? ['in', want] : ['==', want[0]]))
       .onSnapshot(snap => { const map = {}; snap.forEach(d => map[d.id] = {...d.data(), id:d.id}); this.setQ('bookings', 'req', map); }, e => console.warn('req', e.code)); },
   /* મારા બુકિંગના સંપર્ક/OTP દસ્તાવેજ (ફક્ત ગ્રાહક, નક્કી થયેલ કારીગર અને એડમિન વાંચી શકે) */
   syncDyn(){ const s = S.session; if(!s || s.role === 'admin') return; const want = new Set();
@@ -898,7 +913,8 @@ async function fbAfterLogin(role, extra = {}){
     if(role === 'karigar'){ go('k_register'); return true; }
     if(!extra.name || !/^[6-9]\d{9}$/.test(mob)){ if(S.view !== 'c_login') go('c_login'); else render(); toast('નામ અને મોબાઇલ નંબર લખી "આગળ વધો" દબાવો'); return false; }
     await Store.fs.doc('users/' + u.uid).set({role, mobile:mob, email:u.email || '', createdAt:Date.now()});
-    await Store.fs.doc('customers/' + u.uid).set({name:extra.name, mobile:mob, email:u.email || '', area:extra.area || '', areaGeo:extra.areaGeo || null, address:extra.address || '', createdAt:Date.now()}); S.pendingAuth = null; }
+    await Store.fs.doc('customers/' + u.uid).set({name:extra.name, mobile:mob, email:u.email || '', area:extra.area || '', areaGeo:extra.areaGeo || null, address:extra.address || '', createdAt:Date.now(), ...(extra.rf ? {referredBy:extra.rf.uid, refBy:extra.rf.code} : {})}); S.pendingAuth = null;
+    if(extra.rf) refJoin(u.uid, extra.name, extra.rf, 'customer'); }
   setSession({role, id:u.uid}); await FB.subscribe(); const d = me();
   if(d && (d.blocked || d.status === 'blocked') && role === 'customer'){ toast('આ ખાતું બંધ છે — મદદ માટે હેલ્પલાઇન પર સંપર્ક કરો'); await doLogout(); return false; }
   home(); logAccess('login'); if(window.Push) Push.init(); return true; }
@@ -1036,6 +1052,49 @@ const activeJobOf = kid => jobsOf(kid).find(b => ['accepted','onway','arrived','
 const commOn = () => !!Store.settings().commOn;
 const upiOn = () => !!Store.settings().upiOn;
 const couponOn = () => !!Store.settings().couponOn;
+/* ---------- રેફર એન્ડ અર્ન ---------- */
+const refOn = role => { const st = Store.settings(); return role === 'karigar' ? st.kRefOn !== false : st.refOn !== false; };
+try{ const q = new URLSearchParams(location.search).get('ref'); if(q){ S.refIn = q.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12); LS.set('tj_ref', S.refIn); } else S.refIn = LS.get('tj_ref', ''); }catch(e){}
+const shareBase = () => /^https?:/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.host) ? location.origin + location.pathname.replace(/[^/]*$/, '') : 'https://thaijaishe.github.io/thai-jashe/';
+function refMakeCode(role, mob){ const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; return (role === 'karigar' ? 'KG' : 'TJ') + String(mob || '').replace(/\D/g, '').slice(-4).padStart(4, '0') + L[Math.floor(Math.random() * 24)] + L[Math.floor(Math.random() * 24)]; }
+async function ensureRefCode(){ const u = me(), role = S.session && S.session.role; if(!u || !role || u.refCode) return u && u.refCode; const col = role === 'karigar' ? 'karigars' : 'customers';
+  for(let i = 0; i < 4; i++){ const code = refMakeCode(role, u.mobile);
+    if(Store.mode === 'firebase'){ try{ await Store.fs.doc('refCodes/' + code).set({uid:u.id, role, name:u.name || '', ts:Date.now()}); }catch(e){ continue; } }
+    else if(Store.all('customers').concat(Store.all('karigars')).some(x => x.refCode === code)) continue;
+    Store.patch(col, u.id, {refCode:code}); return code; }
+  return ''; }
+/* કોડ ચકાસો: '' = કોડ નથી (બરાબર), false = ખોટો, {uid, code, name} = સાચો */
+async function refCheck(raw, role){ const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if(!code || !refOn(role)) return '';
+  let r = null;
+  if(Store.mode === 'firebase'){ try{ const d = await Store.fs.doc('refCodes/' + code).get(); if(d.exists) r = d.data(); }catch(e){} }
+  else { const x = (role === 'karigar' ? Store.all('karigars') : Store.all('customers')).find(y => y.refCode === code); if(x) r = {uid:x.id, role, name:x.name}; }
+  if(!r || r.role !== role){ toast(role === 'karigar' ? 'રેફરલ કોડ ખોટો છે (કારીગરનો કોડ KG થી શરૂ થાય)' : 'રેફરલ કોડ ખોટો છે'); return false; }
+  if(S.session && r.uid === S.session.id){ toast('પોતાનો કોડ ન વાપરી શકાય'); return false; }
+  return {uid:r.uid, code, name:r.name || ''}; }
+function refJoin(id, name, rf, role){ const d = {id, referrer:rf.uid, friend:id, friendName:name || '', role, code:rf.code, status:'joined', ts:Date.now()};
+  if(Store.mode === 'firebase'){ const {id:_, ...rest} = d; Store.fs.doc('referrals/' + id).set(rest).catch(e => console.warn('ref', e)); }
+  else { Store.cache.referrals[id] = d; Store.saveLocal(); }
+  try{ LS.del('tj_ref'); }catch(e){} S.refIn = ''; }
+/* કામ પૂરું થાય ત્યારે: ઇનામ — લાઇવમાં Cloudflare સર્વર (સુરક્ષિત), ડેમોમાં અહીં જ */
+function refAfterDone(bid){ if(Store.mode === 'firebase'){ Promise.resolve(Store.lastWrite).catch(() => {}).then(() => FB.worker('notify', {type:'refer', id:bid})).catch(e => console.warn('refer', e)); return; }
+  const b = Store.get('bookings', bid), st = Store.settings(); if(!b || b.status !== 'done') return;
+  if(b.coupon && b.coupon.ref === 'bal' && !b.balUsed){ const c = Store.get('customers', b.custId); if(c) Store.patch('customers', c.id, {refBal:Math.max(0, (c.refBal || 0) - ((b.bill && b.bill.discount) || 0))}); Store.patch('bookings', b.id, {balUsed:true}); }
+  const c = Store.get('customers', b.custId);
+  if(c && c.referredBy && !c.refDone && st.refOn !== false){ const r = Store.get('customers', c.referredBy); Store.patch('customers', c.id, {refDone:true});
+    if(r) Store.patch('customers', r.id, {refBal:(r.refBal || 0) + (+st.refMe || 0)}); const rr = Store.cache.referrals[c.id]; if(rr) Object.assign(rr, {status:'rewarded', amt:+st.refMe || 0, doneAt:Date.now()}); Store.saveLocal(); }
+  const k = Store.get('karigars', b.karigarId);
+  if(k && k.referredBy && !k.refDone && st.kRefOn !== false && (k.jobs || 0) >= (+st.kRefJobs || 5)){ const r = Store.get('karigars', k.referredBy); Store.patch('karigars', k.id, {refDone:true});
+    if(r) Store.patch('karigars', r.id, {commissionDue:(r.commissionDue || 0) - (+st.kRefWaive || 0)}); const rr = Store.cache.referrals[k.id]; if(rr) Object.assign(rr, {status:'rewarded', amt:+st.kRefWaive || 0, doneAt:Date.now()}); Store.saveLocal(); } }
+async function loadRefs(){ if(Store.mode !== 'firebase' || !S.session) return; const now = Date.now(); if(now - (S.refsAt || 0) < 15000) return; S.refsAt = now;
+  try{ const q = isAdmin() ? Store.fs.collection('referrals') : Store.fs.collection('referrals').where('referrer', '==', S.session.id); const sn = await q.get(); const m = {};
+    sn.forEach(d => m[d.id] = {...d.data(), id:d.id}); Store.cache.referrals = m; Store.changed(); }catch(e){ console.warn('refs', e); } }
+function refShareMsg(code, role){ const st = Store.settings(), link = shareBase() + '?ref=' + code;
+  return role === 'karigar' ? `🤝 "થઈ જશે!" એપમાં કારીગર તરીકે જોડાઓ — તમારા વિસ્તારમાં જ નવું કામ મળશે.\nનોંધણી વખતે મારો કોડ લખો: *${code}*\n👉 ${link}`
+    : `🎁 ઘરનું કોઈ પણ કામ — એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન… *થઈ જશે!*\nમારા કોડથી જોડાઓ અને પહેલા કામ પર *₹${st.refFriend} છૂટ* મેળવો.\nકોડ: *${code}*\n👉 ${link}`; }
+function refShareWA(code, role){ const a = document.createElement('a'); a.href = 'https://wa.me/?text=' + encodeURIComponent(refShareMsg(code, role)); a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
+async function refShareLink(code, role){ const t = refShareMsg(code, role); try{ if(navigator.share){ await navigator.share({text:t}); return; } }catch(e){ return; } copyText(t); }
+function refBanner(){ const st = Store.settings(); if(!refOn('customer')) return '';
+  return `<button class="rf-ban" onclick="go('c_refer')"><span style="font-size:34px">🎁</span><span class="grow"><b>મિત્રને બોલાવો, ₹${st.refMe} કમાઓ</b><span class="small">મિત્રને પણ પહેલા કામ પર ₹${st.refFriend} છૂટ</span></span><span style="font-size:22px">›</span></button>`; }
 const effRate = () => commOn() ? Math.max(0, +Store.settings().commRate || 0) : 0;
 const payWord = () => upiOn() ? 'રોકડા / UPI' : 'રોકડા';
 function upiLink(pa, name, amt, note){ return 'upi://pay?pa=' + encodeURIComponent(pa) + '&pn=' + encodeURIComponent(name || 'Thai Jashe') + (amt ? '&am=' + (+amt).toFixed(2) : '') + '&cu=INR&tn=' + encodeURIComponent(note || 'Thai Jashe'); }
@@ -1050,7 +1109,7 @@ function openRequestsFor(k){
   const busy = !!activeJobOf(k.id);
   return Store.all('bookings').filter(b =>
     (b.status === 'requested' && b.karigarId === k.id) ||
-    (!busy && b.status === 'searching' && catMatch(k.cat, b.cat) && !(b.rejectedBy || []).includes(k.id) && inRadius(k, b))
+    (!busy && b.status === 'searching' && kHas(k, b.cat) && !(b.rejectedBy || []).includes(k.id) && inRadius(k, b))
   ).sort((a, b) => a.createdAt - b.createdAt);
 }
 function avatar(k, cls = ''){
@@ -1060,7 +1119,7 @@ function avatar(k, cls = ''){
 }
 function setStatus(b, s, extra = {}){ Store.patch('bookings', b.id, {...extra, status:s, timeline:{...(b.timeline || {}), [s]:Date.now()}});
   if(Store.mode === 'firebase') FB.notify(s === 'searching' ? 'request' : 'status', b.id, Store.lastWrite); }
-function finishJob(b){
+function finishJob(b){ setTimeout(() => refAfterDone(b.id), 0);
   const st = Store.settings(), bill = b.bill || {gross:0, discount:0, payable:0};
   const rate = effRate(), comm = Math.round(bill.gross * rate / 100);
   setStatus(b, 'done', {commission:comm, commRate:rate});
@@ -1212,6 +1271,7 @@ VIEWS.c_login = () => Store.mode === 'firebase' ? cLoginFB() : topbar('ગ્ર
     <label class="f">મોબાઇલ નંબર<input id="cl_mob" inputmode="numeric" maxlength="10" placeholder="10 આંકડા"></label>
     ${areaField('cl_area', '')}
     <label class="f">સરનામું<textarea id="cl_addr" placeholder="મકાન નં., સોસાયટી, લેન્ડમાર્ક"></textarea></label>
+    ${refOn('customer') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — મિત્રએ આપ્યો હોય તો, પહેલા કામ પર ₹${Store.settings().refFriend} છૂટ</span><input id="cl_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^TJ/.test(S.refIn) ? S.refIn : '')}"></label>` : ''}
     ${Store.mode === 'firebase' ? otpBox() + `<button class="btn pri block" onclick="custLogin()">${S.otpMob ? 'OTP ચકાસો અને આગળ વધો' : '📩 OTP મોકલો'}</button>` : `<button class="btn pri block" onclick="custLogin()">આગળ વધો</button>`}
     <p class="tiny muted">આગળ વધીને તમે <a href="#" onclick="go('info',{page:'terms'});return false">ઉપયોગની શરતો</a> અને <a href="#" onclick="go('info',{page:'privacy'});return false">પ્રાઇવસી પોલિસી</a> સ્વીકારો છો. સલામતી માટે લૉગિન વખતે IP અને ડિવાઇસની વિગત નોંધાય છે.</p></div></div>`;
 function cLoginFB(){ const pa = S.pendingAuth && Store.auth.currentUser ? S.pendingAuth : null;
@@ -1222,6 +1282,7 @@ function cLoginFB(){ const pa = S.pendingAuth && Store.auth.currentUser ? S.pend
     <label class="f">મોબાઇલ નંબર <span class="h">કારીગર તમને આ નંબર પર કૉલ કરશે</span><input id="cl_mob" inputmode="numeric" maxlength="10" placeholder="10 આંકડા" value="${h(pa.mobile || '')}" ${pa.phoneV ? 'disabled' : ''}></label>
     ${areaField('cl_area', '')}
     <label class="f">સરનામું<textarea id="cl_addr" placeholder="મકાન નં., સોસાયટી, લેન્ડમાર્ક"></textarea></label>
+    ${refOn('customer') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — મિત્રએ આપ્યો હોય તો, પહેલા કામ પર ₹${Store.settings().refFriend} છૂટ</span><input id="cl_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^TJ/.test(S.refIn) ? S.refIn : '')}"></label>` : ''}
     <button class="btn pri block" onclick="custLogin()">આગળ વધો</button><button class="btn sm" onclick="doLogout().then(()=>{S.pendingAuth=null;render()})">બીજું ખાતું વાપરો</button>${terms}</div></div>`;
   return topbar('ગ્રાહક લૉગિન', {back:true}) + `<div class="wrap"><div class="card"><h2>લૉગિન / નવું ખાતું</h2><p class="small muted">તમારા Gmail ખાતાથી એક ટેપમાં — કોઈ પાસવર્ડ કે SMS નહીં. નવા હશો તો પછી નામ અને મોબાઇલ પૂછશે.</p>
     ${gBtn('customer')}
@@ -1231,13 +1292,15 @@ async function custLogin(){
   if(Store.mode === 'firebase'){ const v = id => $('#' + id) ? $('#' + id).value.trim() : '';
     if(S.pendingAuth && Store.auth.currentUser){ const mob = v('cl_mob').replace(/\D/g, '') || S.pendingAuth.mobile; if(!v('cl_name')) return toast('નામ લખો'); if(!/^[6-9]\d{9}$/.test(mob)) return toast('10 આંકડાનો સાચો મોબાઇલ નંબર લખો');
       if(!areaVal('cl_area')) return toast('વિસ્તાર લખો અથવા નકશા પરથી પસંદ કરો');
-      return fbAfterLogin('customer', {name:v('cl_name'), mobile:mob, area:areaVal('cl_area'), areaGeo:areaGeoVal('cl_area'), address:v('cl_addr')}); }
+      const rf = await refCheck(v('cl_ref'), 'customer'); if(rf === false) return;
+      return fbAfterLogin('customer', {name:v('cl_name'), mobile:mob, area:areaVal('cl_area'), areaGeo:areaGeoVal('cl_area'), address:v('cl_addr'), rf}); }
     if(!S.otpMob) return sendOtp(v('cl_mob')); const u = await confirmOtp(); if(u) await fbAfterLogin('customer'); return; }
   const name = $('#cl_name').value.trim(), mob = $('#cl_mob').value.replace(/\D/g, ''), area = areaVal('cl_area'), areaGeo = areaGeoVal('cl_area'), address = $('#cl_addr').value.trim();
   if(mob.length !== 10) return toast('10 આંકડાનો મોબાઇલ નંબર લખો');
 
   let c = Store.all('customers').find(x => x.mobile === mob);
-  if(!c){ if(!name) return toast('નામ લખો'); if(!area) return toast('વિસ્તાર લખો અથવા નકશા પરથી પસંદ કરો'); c = {id:uid('c_'), name, mobile:mob, area, areaGeo, address, createdAt:Date.now()}; Store.put('customers', c); }
+  if(!c){ if(!name) return toast('નામ લખો'); if(!area) return toast('વિસ્તાર લખો અથવા નકશા પરથી પસંદ કરો'); const rf = await refCheck($('#cl_ref') ? $('#cl_ref').value : '', 'customer'); if(rf === false) return;
+    c = {id:uid('c_'), name, mobile:mob, area, areaGeo, address, createdAt:Date.now(), ...(rf ? {referredBy:rf.uid, refBy:rf.code} : {})}; Store.put('customers', c); if(rf) refJoin(c.id, name, rf, 'customer'); }
   else if(c.blocked) return toast('આ ખાતું બંધ છે — મદદ માટે હેલ્પલાઇન પર સંપર્ક કરો');
   else if(address) Store.patch('customers', c.id, {address, area});
   setSession({role:'customer', id:c.id}); home(); logAccess('login');
@@ -1256,6 +1319,7 @@ VIEWS.c_home = () => {
     <div class="search"><span>🔍</span><input id="c_q" placeholder="કામ શોધો — દા.ત. એસી, નળ, પંખો" oninput="filterCats(this.value)"></div>
     <button class="quick" onclick="go('c_quick')"><span style="font-size:30px">⚡</span><div><b>ઝડપી બોલાવો</b><span class="small">કામ પસંદ કરો — નજીકના બધા કારીગરોને એકસાથે વિનંતી જશે</span></div></button>
     ${coupon ? `<div class="offer" id="offerbox">${offerInner(coupon, CPS.length, (S.ci || 0) % CPS.length)}</div>` : ''}
+    ${refBanner()}
     <div class="between"><h3>બધા કામ</h3><span class="tiny muted">${catList().length} પ્રકાર</span></div>
     <div class="grid" id="catgrid">${catList().map(x => `<button class="cat" data-n="${h(x.name + ' ' + x.id)}" onclick="go('c_cat',{cat:'${x.id}'})"><span class="e">${x.icon}</span>${h(x.name)}</button>`).join('')}</div>
     ${(c.favs || []).length ? `<h3>❤️ મારા મનપસંદ કારીગરો</h3><div class="stack">${(c.favs || []).map(id => Store.get('karigars', id)).filter(k => k && k.status === 'approved').map(k => kCard(k, c.area)).join('')}</div>` : ''}
@@ -1272,12 +1336,12 @@ function kCard(k, area){
 }
 
 VIEWS.c_quick = () => topbar('ઝડપી બોલાવો') + `<div class="wrap"><p class="muted">કયું કામ છે? પસંદ કરતાં જ નજીકના બધા ઓનલાઇન કારીગરોને વિનંતી જશે, જે પહેલો સ્વીકારે તે આવશે.</p>
-  <div class="grid">${catList().map(x => { const n = Store.all('karigars').filter(k => catMatch(k.cat, x.id) && k.online && k.status === 'approved').length;
+  <div class="grid">${catList().map(x => { const n = Store.all('karigars').filter(k => kHas(k, x.id) && k.online && k.status === 'approved').length;
     return `<button class="cat" onclick="go('c_book',{cat:'${x.id}',mode:'broadcast'})"><span class="e">${x.icon}</span>${h(x.name)}<span class="tiny ${n ? '' : 'muted'}" style="color:${n ? 'var(--ok)' : ''}">${n} ઓનલાઇન</span></button>`; }).join('')}</div></div>` + cNav();
 
 VIEWS.c_cat = p => {
   const c = me(); const sort = p.sort || 'near';
-  let ks = Store.all('karigars').filter(k => catMatch(k.cat, p.cat) && k.status === 'approved');
+  S.lastCat = p.cat; let ks = Store.all('karigars').filter(k => kHas(k, p.cat) && k.status === 'approved');
   const f = {near:(a, b) => (b.online - a.online) || distKm(c.area, a.area) - distKm(c.area, b.area), rating:(a, b) => avg(b) - avg(a), price:(a, b) => a.visit - b.visit};
   ks.sort(f[sort]);
   const online = ks.filter(k => k.online).length;
@@ -1293,6 +1357,7 @@ VIEWS.c_cat = p => {
 
 VIEWS.c_karigar = p => {
   const k = Store.get('karigars', p.id), c = me(); if(!k) return topbar('કારીગર') + '<div class="wrap">મળ્યા નહીં</div>';
+  const KC = kCats(k), bc = p.bc && KC.includes(p.bc) ? p.bc : (S.lastCat && kHas(k, S.lastCat) ? (KC.includes(S.lastCat) ? S.lastCat : KC.find(x => catMatch(x, S.lastCat))) : k.cat);
   const km = distKm(c.area, k.area);
   const revs = jobsOf(k.id).filter(b => b.rating).slice(0, 8);
   const fav = (c.favs || []).includes(k.id);
@@ -1304,11 +1369,12 @@ VIEWS.c_karigar = p => {
       <div class="flat between"><span>વિઝિટ ચાર્જ</span><b class="num">${rs(k.visit)}</b></div>
       <p class="tiny muted">અંતિમ બિલ કામ જોઈને કારીગર નક્કી કરશે. કામ ન કરાવો તો ફક્ત વિઝિટ ચાર્જ.</p></div>
     ${k.skills ? `<div class="card"><h3>કયા કામ કરે છે</h3><div class="chips">${k.skills.split(',').map(s => s.trim()).filter(Boolean).map(s => `<span class="pill">${h(s)}</span>`).join('')}</div>${k.about ? `<p class="small muted">${h(k.about)}</p>` : ''}</div>` : ''}
-    ${rateCard(k.cat)}
+    ${KC.length > 1 ? `<div class="card"><h3>કયા કામ માટે બોલાવવા છે?</h3><div class="chips">${KC.map(x => `<button class="chipb ${x === bc ? 'on' : ''}" onclick="S.p.bc='${x}';render()">${catIcon(x)} ${h(catName(x))}</button>`).join('')}</div></div>` : ''}
+    ${rateCard(bc)}
     <div class="card"><h3>ગ્રાહકોના રિવ્યૂ</h3>${revs.length ? revs.map(b => `<div class="stack" style="gap:2px"><div class="between"><b class="small">${h(b.custName)}</b><span class="star small">${'★'.repeat(b.rating)}</span></div>${b.review ? `<p class="small">${h(b.review)}</p>` : ''}<span class="tiny muted">${ago(b.timeline && b.timeline.done)}</span></div>`).join('<hr>') : '<p class="small muted">હજુ કોઈ રિવ્યૂ નથી.</p>'}</div>
     <div class="two">
-      <button class="btn pri" ${k.online ? '' : 'disabled'} onclick="go('c_book',{cat:'${k.cat}',kid:'${k.id}',mode:'direct',when:'now'})">હમણાં બોલાવો</button>
-      <button class="btn ink" onclick="go('c_book',{cat:'${k.cat}',kid:'${k.id}',mode:'direct',when:'later'})">સમય નક્કી કરો</button>
+      <button class="btn pri" ${k.online ? '' : 'disabled'} onclick="go('c_book',{cat:'${bc}',kid:'${k.id}',mode:'direct',when:'now'})">હમણાં બોલાવો</button>
+      <button class="btn ink" onclick="go('c_book',{cat:'${bc}',kid:'${k.id}',mode:'direct',when:'later'})">સમય નક્કી કરો</button>
     </div>${k.online ? '' : '<p class="tiny muted">આ કારીગર હાલ ઓફલાઇન છે — સમય નક્કી કરીને બુક કરી શકો.</p>'}
   </div>` + cNav();
 };
@@ -1338,6 +1404,7 @@ VIEWS.c_book = p => {
       <label class="row small"><input type="checkbox" id="bk_save" style="width:auto"> આ સરનામું સેવ કરો<input id="bk_lbl" placeholder="નામ: ઘર / ઓફિસ" style="flex:1;min-width:0"></label>
     </div>
     <div class="card">
+      ${refBookBox(me())}
       ${couponOn() ? `<label class="f">કૂપન કોડ<div class="row"><input id="bk_cpn" placeholder="દા.ત. FIRST50" style="text-transform:uppercase"><button class="btn sm" onclick="checkCoupon('${p.cat}')">લાગુ કરો</button></div></label>
       <div id="bk_cpnmsg" class="small"></div>` : ''}
       <div class="bill"><span>વિઝિટ ચાર્જ (અંદાજે)</span><b class="num">${rs(visit)}</b><span class="muted small">અંતિમ બિલ</span><span class="muted small">કામ પછી</span></div>
@@ -1347,6 +1414,11 @@ VIEWS.c_book = p => {
   </div>`;
 };
 function addProb(t){ const el = $('#bk_prob'); el.value = (el.value ? el.value + ', ' : '') + t; }
+function refFirst(c){ return refOn('customer') && c && c.referredBy && !c.refDone && !bookingsOf(c.id).some(x => x.status !== 'cancelled'); }
+function refBookBox(c){ if(!c || !refOn('customer')) return ''; const st = Store.settings();
+  if(refFirst(c)) return `<div class="banner ok" style="background:var(--ok-soft);color:var(--ok)">🎉 <div><b>મિત્રના કોડથી પહેલા કામ પર ₹${st.refFriend} છૂટ</b>આપોઆપ લાગશે (બિલ ₹${st.refMin} કે વધુ હોય તો). એક બુકિંગ પર એક જ છૂટ.</div></div>`;
+  if((c.refBal || 0) > 0) return `<label class="flat between" style="cursor:pointer"><span><input type="checkbox" id="bk_rbal" checked style="width:22px;height:22px;vertical-align:middle"> 🎁 રેફરલ બેલેન્સ વાપરો <span class="tiny muted">(${rs(c.refBal)} છે — આ કામમાં ${rs(Math.min(c.refBal, +st.refMax || 50))} છૂટ)</span></span></label>`;
+  return ''; }
 function findCoupon(code, cat){ const st = Store.settings(); code = (code || '').trim().toUpperCase();
   return (st.coupons || []).find(x => x.code.toUpperCase() === code && (!x.cat || x.cat === cat)); }
 function checkCoupon(cat){ const cp = findCoupon($('#bk_cpn').value, cat); const m = $('#bk_cpnmsg');
@@ -1362,10 +1434,12 @@ function placeBooking(){
   if(p.kid && !later){ const k = Store.get('karigars', p.kid); if(!k.online) return toast('કારીગર ઓફલાઇન છે — સમય નક્કી કરો'); }
   const cpRaw = couponOn() && $('#bk_cpn') ? $('#bk_cpn').value.trim() : ''; const cp = cpRaw ? findCoupon(cpRaw, p.cat) : null;
   if(cpRaw && !cp) return toast('કૂપન કોડ ખોટો છે');
-  const now = Date.now();
+  const now = Date.now(); let cpn = cp ? {code:cp.code, amount:cp.amount} : null; const rst = Store.settings();
+  if(refFirst(c)){ if(!cpn || cpn.amount < +rst.refFriend) cpn = {code:'મિત્રનો કોડ', amount:+rst.refFriend, ref:'friend'}; }
+  else if($('#bk_rbal') && $('#bk_rbal').checked && (c.refBal || 0) > 0 && refOn('customer')){ const a = Math.min(c.refBal, +rst.refMax || 50); if(!cpn || cpn.amount < a) cpn = {code:'રેફરલ બેલેન્સ', amount:a, ref:'bal'}; }
   const b = {id:uid('b_'), custId:c.id, custName:c.name, custMobile:c.mobile, area, areaGeo, address, cat:p.cat, problem:prob, when:later ? dt : 'now',
     mode:p.mode, karigarId:p.kid || null, status:p.kid ? 'requested' : 'searching', otp:String(1000 + Math.floor(Math.random() * 9000)),
-    coupon:cp ? {code:cp.code, amount:cp.amount} : null, geo:S.bkGeo || null, geoR:S.bkGeo ? {lat:+(+S.bkGeo.lat).toFixed(2), lng:+(+S.bkGeo.lng).toFixed(2)} : null, cRate:{s:c.ratingSum || 0, n:c.ratingCount || 0}, createdAt:now, timeline:{created:now, [p.kid ? 'requested' : 'searching']:now}, chat:[], rejectedBy:[]};
+    coupon:cpn, geo:S.bkGeo || null, geoR:S.bkGeo ? {lat:+(+S.bkGeo.lat).toFixed(2), lng:+(+S.bkGeo.lng).toFixed(2)} : null, cRate:{s:c.ratingSum || 0, n:c.ratingCount || 0}, createdAt:now, timeline:{created:now, [p.kid ? 'requested' : 'searching']:now}, chat:[], rejectedBy:[]};
   Store.put('bookings', b); FB.notify('request', b.id, Store.lastWrite);
   if(!c.address) Store.patch('customers', c.id, {address, area, areaGeo});
   if($('#bk_save').checked && !(c.addrs || []).some(a => a.address === address)) Store.patch('customers', c.id, {addrs:[...(me().addrs || []), {label:$('#bk_lbl').value.trim() || 'સરનામું', area, areaGeo, address, geo:S.bkGeo || null}].slice(-6)});
@@ -1406,6 +1480,7 @@ VIEWS.c_track = p => {
       <button class="btn block" onclick="go('c_book',{cat:'${b.cat}',kid:'${b.karigarId}',mode:'direct'})">આ જ કારીગરને ફરી બોલાવો</button></div>`
     : `<div class="card"><h3>${k ? h(k.name) : 'કારીગર'} નું કામ કેવું લાગ્યું?</h3><div class="stars" id="rate_stars">${[1,2,3,4,5].map(n => `<button aria-label="${n} સ્ટાર" onclick="pickStar(${n})">★</button>`).join('')}</div>
       <textarea id="rv_text" placeholder="બે શબ્દ લખો (વૈકલ્પિક)"></textarea><button class="btn pri block" onclick="submitRating('${b.id}')">રેટિંગ મોકલો</button></div>`;
+  if(b.status === 'done' && refOn('customer')) body += `<button class="rf-ban" onclick="go('c_refer')"><span style="font-size:34px">🎁</span><span class="grow"><b>કામ ગમ્યું? મિત્રને કહો!</b><span class="small">મિત્રને ₹${Store.settings().refFriend} છૂટ, તમને ₹${Store.settings().refMe}${me() && me().refCode ? ' — કોડ ' + h(me().refCode) : ''}</span></span><span style="font-size:22px">›</span></button>`;
   if(b.status === 'cancelled') body += `<div class="banner bad">✕ <div><b>બુકિંગ રદ થયું</b>${h(b.cancelReason || '')}</div></div><button class="btn pri block" onclick="go('c_book',{cat:'${b.cat}',mode:'broadcast'})">ફરી બુક કરો</button>`;
   if(k && ['accepted','onway','arrived','working','billed'].includes(b.status)) body += chatCard(b, 'customer');
   body += `<div class="card"><h3>બુકિંગ વિગત</h3><div class="bill small"><span class="muted">કામનો પ્રકાર</span><span>${h(catName(b.cat))}</span><span class="muted">તકલીફ</span><span>${h(b.problem)}</span>
@@ -1463,6 +1538,17 @@ VIEWS.c_bookings = () => { const c = me(); const list = bookingsOf(c.id);
       <div class="meta"><span>${k ? h(k.name) : 'કારીગર શોધાય છે'}</span><span>${ago(b.createdAt)}</span>${b.bill && b.status === 'done' ? `<b class="num">${rs(b.bill.payable)}</b>` : ''}</div></button>`; }).join('')
     : `<div class="card" style="text-align:center;align-items:center"><div style="font-size:40px">📋</div><b>હજુ કોઈ બુકિંગ નથી</b><button class="btn pri" onclick="tab('c_home')">કામ બુક કરો</button></div>`}</div>` + cNav(); };
 
+VIEWS.c_refer = () => { const c = me(), st = Store.settings(); if(!c) return VIEWS.welcome(); if(!c.refCode) ensureRefCode().then(() => render()); loadRefs();
+  const L = Store.all('referrals').filter(r => r.referrer === c.id).sort((a, b) => b.ts - a.ts);
+  return topbar('મિત્રને બોલાવો, કમાઓ', {back:true}) + `<div class="wrap">
+  <div class="rf-hero"><div style="font-size:44px">🎁</div><h2>મિત્રને "થઈ જશે!" બતાવો</h2><div class="small" style="opacity:.9">મિત્રનું પહેલું કામ પૂરું થાય એટલે બંનેને ફાયદો</div>
+   <div class="rf-amt"><div>મિત્રને<b>₹${st.refFriend} છૂટ</b><span class="tiny">પહેલા કામ પર</span></div><div>તમને<b>₹${st.refMe}</b><span class="tiny">રેફરલ બેલેન્સ</span></div></div></div>
+  <div class="card"><div class="small muted">તમારો રેફરલ કોડ</div><div class="rf-code"><b>${h(c.refCode || '…')}</b><button class="btn sm" onclick="copyText('${h(c.refCode || '')}')">📋 કૉપિ</button></div>
+   <button class="btn block wa" style="margin-top:10px" ${c.refCode ? '' : 'disabled'} onclick="refShareWA('${h(c.refCode || '')}','customer')">🟢 WhatsApp પર મોકલો</button><button class="btn block" ${c.refCode ? '' : 'disabled'} onclick="refShareLink('${h(c.refCode || '')}','customer')">🔗 લિંક શેર કરો</button></div>
+  <div class="card"><div class="rf-bal"><div><div class="small muted">રેફરલ બેલેન્સ</div><b>${rs(c.refBal || 0)}</b></div><div class="tiny muted" style="text-align:right">બુકિંગ વખતે<br>"બેલેન્સ વાપરો" થી છૂટ</div></div></div>
+  <div class="card"><h3>કેવી રીતે?</h3><div class="rf-steps"><div><i>1</i><span>કોડ કે લિંક મિત્રને WhatsApp પર મોકલો</span></div><div><i>2</i><span>મિત્ર એપમાં જોડાય — પહેલા કામ પર ₹${st.refFriend} છૂટ</span></div><div><i>3</i><span>મિત્રનું પહેલું કામ પૂરું થાય એટલે તમને ₹${st.refMe}</span></div></div></div>
+  <div class="card"><h3>તમારા મિત્રો (${L.length})</h3>${L.map(r => `<div class="rf-row"><div><b>${h(r.friendName || 'મિત્ર')}</b><div class="tiny muted">જોડાયા ${dt(r.ts)}</div></div>${r.status === 'rewarded' ? `<span class="pill ok">✔ ${rs(r.amt || 0)} મળ્યા</span>` : '<span class="pill warn">⏳ પહેલું કામ બાકી</span>'}</div>`).join('') || '<p class="small muted">હજુ કોઈ મિત્ર જોડાયા નથી — ઉપરથી કોડ મોકલો.</p>'}</div>
+  <p class="tiny muted" style="text-align:center">નિયમ: એક મોબાઇલ પર એક જ વાર. બેલેન્સ રોકડમાં નહીં, ફક્ત કામના બિલમાં છૂટ (એક બુકિંગમાં વધુમાં વધુ ₹${st.refMax}). ઓછામાં ઓછું બિલ ₹${st.refMin}.</p></div>` + cNav(); };
 VIEWS.c_profile = () => { const c = me(); const st = Store.settings();
   return topbar('પ્રોફાઇલ') + `<div class="wrap"><div class="card">
     <label class="f">ફોટો <span class="h">વૈકલ્પિક — કાપીને ગોઠવી શકાય</span><input type="file" id="cp_photo" accept="image/*" onchange="readPhoto(this)"></label><div id="cp_prev">${c.photo ? `<img src="${c.photo}" style="width:72px;height:72px;border-radius:16px;object-fit:cover" alt="">` : ''}</div>
@@ -1470,7 +1556,7 @@ VIEWS.c_profile = () => { const c = me(); const st = Store.settings();
     <label class="f">મોબાઇલ<input value="${h(c.mobile)}" disabled></label>
     ${areaField('cp_area', c.area, c.areaGeo)}
     <label class="f">સરનામું<textarea id="cp_addr">${h(c.address || '')}</textarea></label>
-    <button class="btn pri block" onclick="saveCProfile()">સેવ કરો</button></div>${pushCard()}
+    <button class="btn pri block" onclick="saveCProfile()">સેવ કરો</button></div>${refBanner()}${pushCard()}
     ${addrCard(c)}
     ${helpCard()}
     <button class="btn bad block" onclick="logout()">લૉગ આઉટ</button>
@@ -1503,7 +1589,8 @@ VIEWS.k_register = () => (Store.mode === 'firebase' && !S.pendingAuth) ? (setTim
     <label class="f">ફોટો <span class="h">ગ્રાહકને વિશ્વાસ આવે તે માટે</span><input type="file" id="kr_photo" accept="image/*" onchange="readPhoto(this)"></label>
     <div id="kr_prev"></div></div>
   <div class="card"><h3>તમારું કામ</h3>
-    <label class="f">કામનો પ્રકાર<select id="kr_cat" onchange="krCatChange()">${catOptions(S.krCat || 'ac')}</select></label><div id="kr_catx">${krCatBox(S.krCat)}</div>
+    <label class="f">કામનો પ્રકાર <span class="h">એક થી વધુ પસંદ કરી શકો — પછી પ્રોફાઇલમાંથી બદલી શકાશે</span></label>${catPicker('kr', S.cp_kr || [])}
+    ${refOn('karigar') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — કોઈ કારીગર મિત્રએ આપ્યો હોય તો</span><input id="kr_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^KG/.test(S.refIn) ? S.refIn : '')}"></label>` : ''}
     <label class="f">કયા કામ કરો છો <span class="h">અલ્પવિરામથી અલગ લખો</span><input id="kr_skills" placeholder="દા.ત. એસી સર્વિસ, ગેસ ભરવો, ઇન્સ્ટોલેશન"></label>
     <div class="two"><label class="f">અનુભવ (વર્ષ)<input id="kr_exp" inputmode="numeric" value="2"></label><label class="f">વિઝિટ ચાર્જ ₹<input id="kr_visit" inputmode="numeric" value="249"></label></div>
     ${areaField('kr_area', '', null, 'તમારો વિસ્તાર')}
@@ -1517,11 +1604,30 @@ VIEWS.k_register = () => (Store.mode === 'firebase' && !S.pendingAuth) ? (setTim
   <button class="btn pri block" style="padding:14px" onclick="karRegister()">નોંધણી કરો</button></div>`;
 /* "અન્ય કામ" → જાતે લખો; "એજન્ટ" → શેના માટે એજન્ટ (ફરજિયાત) */
 const AGENT_TYPES = ['દાડિયા / મજૂર', 'વર્કર / કારીગર સપ્લાય', 'જમીન-મકાન લે-વેચ', 'ભાડે મકાન / દુકાન'];
+/* કામ પસંદગી (બહુ-પસંદગી) — નોંધણી (kr) અને પ્રોફાઇલ (kp) બંનેમાં */
+function catPicker(pf, sel, other = '', agent = ''){ S['cp_' + pf] = (sel || []).slice(); S['cpo_' + pf] = S['cpo_' + pf] || other; S['cpa_' + pf] = S['cpa_' + pf] || agent;
+  return `<div class="catpick" id="${pf}_cp">${catPickInner(pf)}</div>`; }
+function catPickInner(pf){ const sel = S['cp_' + pf] || [];
+  return `<div class="cpgrid">${CATS.map(c => `<button type="button" class="cpb ${sel.includes(c.id) ? 'on' : ''}" onclick="catToggle('${pf}','${c.id}')"><span class="e">${c.icon}</span><span>${h(c.name)}</span>${sel.includes(c.id) ? `<i>${sel.indexOf(c.id) === 0 ? 'મુખ્ય' : '✔'}</i>` : ''}</button>`).join('')}</div>
+    <p class="tiny muted" style="margin:6px 0 0">${sel.length ? `✔ ${sel.length} કામ પસંદ કર્યા — પહેલું પસંદ કરેલું "મુખ્ય" ગણાશે` : 'ઓછામાં ઓછું એક કામ પસંદ કરો'}</p>
+    ${sel.includes('other') ? `<label class="f">"અન્ય કામ" — તમારું કામ લખો <span class="h">ફરજિયાત — આ નામથી ગ્રાહકની યાદીમાં કામ ઉમેરાશે</span><input id="${pf}_other" maxlength="30" value="${h(S['cpo_' + pf] || '')}" oninput="S['cpo_${pf}']=this.value" placeholder="દા.ત. ડીશ ટીવી ફિટિંગ"></label>` : ''}
+    ${sel.includes('agent') ? `<label class="f">શેના માટે એજન્ટ છો? <span class="h">ફરજિયાત</span><input id="${pf}_agent" maxlength="60" value="${h(S['cpa_' + pf] || '')}" oninput="S['cpa_${pf}']=this.value" placeholder="દા.ત. દાડિયા / મજૂર, જમીન-મકાન લે-વેચ"></label>
+      <div class="chips">${AGENT_TYPES.map(t => `<button type="button" class="chipb" onclick="agentPick(this,'${pf}');S['cpa_${pf}']=$('#${pf}_agent').value">${t}</button>`).join('')}</div>` : ''}`; }
+function catToggle(pf, id){ const sel = S['cp_' + pf] = S['cp_' + pf] || []; const i = sel.indexOf(id); if(i >= 0) sel.splice(i, 1); else sel.push(id);
+  const box = $('#' + pf + '_cp'); if(box){ box.innerHTML = catPickInner(pf); trTree(box); } }
+function catCollect(pf){ const sel = (S['cp_' + pf] || []).slice(); if(!sel.length){ toast('ઓછામાં ઓછું એક કામ પસંદ કરો'); return null; }
+  let agentFor = '';
+  const cats = []; for(const c of sel){ if(c === 'other'){ const w = normWork(S['cpo_' + pf]); if(w.length < 2){ toast('"અન્ય કામ" માં તમારું કામ લખો'); return null; }
+      const same = CATS.find(x => x.name === w || tr(x.name) === w); cats.push(same && same.id !== 'other' ? same.id : 'x:' + w); }
+    else cats.push(c); }
+  if(sel.includes('agent')){ agentFor = String(S['cpa_' + pf] || '').replace(/['"<>\\`]/g, '').replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ').trim().slice(0, 60); if(agentFor.length < 3){ toast('શેના માટે એજન્ટ છો તે લખો — ફરજિયાત'); return null; } }
+  const u = [...new Set(cats)]; return {cats:u, cat:u[0], agentFor}; }
+function kPickSel(k){ const KC = kCats(k); return {sel:[...new Set(KC.map(c => isXCat(c) ? 'other' : c))], other:(KC.find(isXCat) || '').slice(2)}; }
 function krCatChange(){ const c = $('#kr_cat').value, box = $('#kr_catx'); S.krCat = c; if(!box) return; box.innerHTML = krCatBox(c); trTree(box); }
 function krCatBox(c){ return c === 'other' ? `<label class="f">તમારું કામ લખો <span class="h">ફરજિયાત — આ નામથી ગ્રાહકની કામની યાદીમાં નવું કામ ઉમેરાશે</span><input id="kr_other" maxlength="30" placeholder="દા.ત. ચોકીદાર, ફોટોગ્રાફર, ડેકોરેશન"></label>`
     : c === 'agent' ? `<label class="f">શેના માટે એજન્ટ છો? <span class="h">ફરજિયાત</span><input id="kr_agent" maxlength="60" placeholder="દા.ત. દાડિયા / મજૂર, જમીન-મકાન લે-વેચ"></label>
       <div class="chips">${AGENT_TYPES.map(t => `<button type="button" class="chipb" onclick="agentPick(this)">${t}</button>`).join('')}</div>` : ''; }
-function agentPick(b){ const i = $('#kr_agent'); if(!i) return; const t = b.textContent.trim(), cur = i.value.split(',').map(x => x.trim()).filter(Boolean);
+function agentPick(b, pf = 'kr'){ const i = $('#' + pf + '_agent'); if(!i) return; const t = b.textContent.trim(), cur = i.value.split(',').map(x => x.trim()).filter(Boolean);
   if(!cur.includes(t)) cur.push(t); i.value = cur.join(', ').slice(0, 60); b.classList.add('on'); }
 /* ---------- ફોટો કાપો (Crop): આંગળીથી ખસેડો, બે આંગળીથી/સ્લાઇડરથી મોટો-નાનો, ફેરવો ---------- */
 const CROP = {};
@@ -1578,19 +1684,18 @@ async function karRegister(){
   if(FBM && !/^[6-9]\d{9}$/.test(mob)) return toast('10 આંકડાનો સાચો મોબાઇલ નંબર લખો');
   if(!v('kr_name')) return toast('નામ લખો'); if(!areaVal('kr_area')) return toast('વિસ્તાર લખો અથવા નકશા પરથી પસંદ કરો'); if(mob.length !== 10) return toast('10 આંકડાનો મોબાઇલ લખો'); if(!FBM && !/^\d{4}$/.test(pin)) return toast('4 આંકડાનો PIN લખો');
   if(!FBM && Store.all('karigars').some(k => k.mobile === mob)) return toast('આ નંબર પહેલેથી નોંધાયેલ છે — લૉગિન કરો');
-  let cat = v('kr_cat'), agentFor = '';
-  if(cat === 'other'){ const w = normWork(v('kr_other')); if(w.length < 2) return toast('"અન્ય કામ" માં તમારું કામ લખો');
-    const same = CATS.find(c => c.name === w || tr(c.name) === w); cat = same && same.id !== 'other' ? same.id : 'x:' + w; }
-  if(cat === 'agent'){ agentFor = v('kr_agent').replace(/['"<>\\`]/g, '').replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ').trim().slice(0, 60); if(agentFor.length < 3) return toast('શેના માટે એજન્ટ છો તે લખો — ફરજિયાત'); }
+  const CC = catCollect('kr'); if(!CC) return; const {cat, cats, agentFor} = CC;
+  const rf = await refCheck(v('kr_ref'), 'karigar'); if(rf === false) return;
   const kyc = await kycCollect('kr'); if(!kyc) return;
   if(!$('#kr_ok').checked) return toast('શરતો અને પ્રાઇવસી પોલિસી સ્વીકારો');
   const st = Store.settings(); const kid = FBM ? S.pendingAuth.uid : uid('k_');
   if(FBM){ toast('નોંધણી થઈ રહી છે… ફોટા અપલોડ થાય છે'); try{ await Store.fs.doc('users/' + kid).set({role:'karigar', mobile:mob, email:S.pendingAuth.email || '', createdAt:Date.now()}); }catch(e){ return toast(authErr(e)); }
  }
-  const k = {id:kid, name:v('kr_name'), mobile:mob, pin, cat, agentFor, skills:v('kr_skills'), exp:+v('kr_exp') || 0, visit:+v('kr_visit') || catVisit(cat),
+  const k = {id:kid, name:v('kr_name'), mobile:mob, pin, cat, cats, agentFor, ...(rf ? {referredBy:rf.uid, refBy:rf.code} : {}), skills:v('kr_skills'), exp:+v('kr_exp') || 0, visit:+v('kr_visit') || catVisit(cat),
     area:areaVal('kr_area'), areaGeo:areaGeoVal('kr_area', 2), about:v('kr_about'), photo:photoData || '', status:st.autoApprove ? 'approved' : 'pending', online:false, ratingSum:0, ratingCount:0, jobs:0,
     earnings:0, commissionDue:0, commissionPaid:0, createdAt:Date.now(), aadhaar4:kyc.last4, aadhaarMasked:kyc.masked, kycDocs:kyc.docs, upi:v('kr_upi'), policeNo:kyc.policeNo, kycOk:false, consentAt:Date.now()};
-  Store.put('karigars', k); try{ await Store.saveKyc(k.id, kyc.priv); }catch(e){} photoData = ''; setSession({role:'karigar', id:k.id}); S.pendingAuth = null;
+  Store.put('karigars', k); try{ await Store.saveKyc(k.id, kyc.priv); }catch(e){} photoData = ''; S.cp_kr = null; S.cpo_kr = S.cpa_kr = '';
+  if(rf) refJoin(k.id, k.name, rf, 'karigar'); setSession({role:'karigar', id:k.id}); S.pendingAuth = null;
   if(FBM) await FB.subscribe(); toast('નોંધણી થઈ ગઈ!'); home(); logAccess('register');
 }
 
@@ -1678,7 +1783,7 @@ async function verifyOtp(id){ const b = Store.get('bookings', id);
     try{ await Store.fs.collection('bookings').doc(id).set({status:'working', otpTry:otp, timeline:{...(b.timeline || {}), working:Date.now()}}, {merge:true}); toast('કામ શરૂ!'); }
     catch(e){ toast(e.code === 'permission-denied' ? 'OTP ખોટો છે — ગ્રાહકને ફરી પૂછો' : 'OTP ચકાસી ન શકાયો: ' + e.message); } return; } if($('#kj_otp').value.trim() !== b.otp) return toast('OTP ખોટો છે — ગ્રાહકને ફરી પૂછો'); setStatus(b, 'working'); toast('કામ શરૂ!'); }
 function makeBill(id){ const b = Store.get('bookings', id); const labour = Math.max(0, +$('#kj_lab').value || 0), parts = Math.max(0, +$('#kj_parts').value || 0);
-  const gross = labour + parts; if(!gross) return toast('રકમ લખો'); const discount = Math.min(gross, b.coupon ? b.coupon.amount : 0);
+  const gross = labour + parts; if(!gross) return toast('રકમ લખો'); const discount = Math.min(gross, b.coupon && !(b.coupon.ref && gross < (+Store.settings().refMin || 0)) ? b.coupon.amount : 0);
   setStatus(b, 'billed', {bill:{labour, parts, note:$('#kj_note').value.trim(), gross, discount, payable:gross - discount}}); toast('બિલ મોકલ્યું'); }
 function cashReceived(id){ finishJob(Store.get('bookings', id)); toast(commOn() ? 'કામ પૂરું! કમીશન ખાતામાં ઉમેરાયું' : 'કામ પૂરું! પૂરી કમાણી તમારી'); }
 function karCancel(id){ const b = Store.get('bookings', id); const k = me(); S.ignored.add(id); Store.patch('karigars', k.id, {cancels:(k.cancels || 0) + 1});
@@ -1720,12 +1825,13 @@ VIEWS.k_profile = () => { const k = me();
   return topbar('મારી પ્રોફાઇલ') + `<div class="wrap"><div class="card"><div class="row">${avatar(k, 'lg')}<div class="grow"><h2>${h(k.name)}</h2><div class="small muted">${h(k.mobile)} · ${h(kCatTxt(k))}</div>
     <span class="pill ${k.status === 'approved' ? 'ok' : k.status === 'pending' ? 'warn' : 'bad'}">${k.status === 'approved' ? '✔ મંજૂર' : k.status === 'pending' ? 'મંજૂરી બાકી' : 'બંધ'}</span></div></div>
     <label class="f">ફોટો બદલો<input type="file" id="kp_photo" accept="image/*" onchange="readPhoto(this)"></label><div id="kp_prev"></div>
+    <label class="f">કામનો પ્રકાર <span class="h">એક થી વધુ પસંદ કરો / બદલો</span></label>${(ps => catPicker('kp', S.cp_kp || ps.sel, ps.other, k.agentFor || ''))(kPickSel(k))}
     <label class="f">કયા કામ કરો છો<input id="kp_skills" value="${h(k.skills || '')}"></label>
     <div class="two"><label class="f">વિઝિટ ચાર્જ ₹<input id="kp_visit" inputmode="numeric" value="${k.visit}"></label><label class="f">અનુભવ (વર્ષ)<input id="kp_exp" inputmode="numeric" value="${k.exp}"></label></div>
     ${areaField('kp_area', k.area, k.areaGeo)}
     <label class="f">તમારા વિશે<textarea id="kp_about">${h(k.about || '')}</textarea></label>
     ${upiOn() ? `<label class="f">UPI ID <span class="h">ગ્રાહક પાસેથી UPI થી પૈસા મેળવવા</span><input id="kp_upi" value="${h(k.upi || '')}" placeholder="name@upi"></label>` : ''}
-    <button class="btn pri block" onclick="saveKProfile()">સેવ કરો</button></div>${pushCard()}
+    <button class="btn pri block" onclick="saveKProfile()">સેવ કરો</button></div>${kRefCard(k)}${pushCard()}
     ${!(k.kycDocs && k.kycDocs.aad) ? `<div class="card" style="border:2px solid var(--warn)"><h3>⚠️ આધાર અપલોડ બાકી</h3><p class="small muted">નવા નિયમ મુજબ આધાર નંબર અને ફોટો ફરજિયાત છે. ફક્ત એડમિન જોઈ શકે.</p>${kycFields('kp')}<button class="btn pri block" onclick="kycUpdate()">KYC મોકલો</button></div>` : ''}
     <div class="card"><h3>ચકાસણી (KYC)</h3><div class="meta"><span>આધાર: ${k.aadhaarMasked ? h(k.aadhaarMasked) : k.aadhaar4 ? 'XXXX XXXX ' + h(k.aadhaar4) : 'બાકી'}</span>${k.kycDocs && k.kycDocs.aad ? '<span class="pill ok">📎 આધાર ફોટો મોકલ્યો</span>' : ''}${k.kycDocs && k.kycDocs.pol ? '<span class="pill ok">📎 પોલીસ સર્ટિ. મોકલ્યું</span>' : ''}<span>પોલીસ વેરિફિકેશન: ${k.policeNo ? h(k.policeNo) : 'બાકી'}</span>${policeOk(k) ? '<span class="pill ok">🛡️ ચકાસાયેલ</span>' : '<span class="pill warn">એડમિન ચકાસણી બાકી</span>'}</div>
       <p class="tiny muted">પોલીસ વેરિફિકેશન નજીકના પોલીસ સ્ટેશન / Gujarat Police Citizen First એપમાંથી કઢાવી એડમિનને બતાવો.</p></div>
@@ -1735,9 +1841,16 @@ VIEWS.k_profile = () => { const k = me();
 async function kycUpdate(){ const k = me(); const kyc = await kycCollect('kp'); if(!kyc) return;
   await Store.saveKyc(k.id, kyc.priv); Store.patch('karigars', k.id, {aadhaar4:kyc.last4, aadhaarMasked:kyc.masked, kycDocs:kyc.docs, policeNo:kyc.policeNo || k.policeNo || '', kycOk:false});
   audit('કારીગરે KYC મોકલ્યું', k.id); toast('KYC મોકલ્યું — એડમિન ચકાસશે'); }
-async function saveKProfile(){ const k = me();
-  const p = {skills:$('#kp_skills').value.trim(), visit:+$('#kp_visit').value || k.visit, exp:+$('#kp_exp').value || 0, area:areaVal('kp_area') || k.area, areaGeo:areaGeoVal('kp_area', 2), about:$('#kp_about').value.trim()}; if($('#kp_upi')) p.upi = $('#kp_upi').value.trim();
-  if(photoData){ p.photo = photoData; photoData = ''; } Store.patch('karigars', k.id, p); toast('સેવ થયું'); }
+function kRefCard(k){ if(!refOn('karigar') || !k || k.status !== 'approved') return ''; const st = Store.settings(); if(!k.refCode) ensureRefCode().then(() => render()); loadRefs();
+  const L = Store.all('referrals').filter(r => r.referrer === k.id), got = L.filter(r => r.status === 'rewarded').reduce((a, r) => a + (r.amt || 0), 0);
+  return `<div class="card" style="border:2px solid #16A05C"><h3>🤝 કારીગર મિત્રને જોડો</h3>
+    <p class="small muted">તમારા ઓળખીતા કારીગરને "થઈ જશે!" માં જોડો. તે ${st.kRefJobs} કામ પૂરાં કરે એટલે તમારું <b>${rs(st.kRefWaive)} કમીશન માફ</b>.</p>
+    <div class="rf-code"><b>${h(k.refCode || '…')}</b><button class="btn sm" onclick="copyText('${h(k.refCode || '')}')">📋 કૉપિ</button></div>
+    <button class="btn block wa" style="margin-top:10px" ${k.refCode ? '' : 'disabled'} onclick="refShareWA('${h(k.refCode || '')}','karigar')">🟢 WhatsApp પર મોકલો</button>
+    <div class="tiny muted" style="margin-top:6px">જોડાયેલા: ${L.length}${L.length ? ' (' + L.map(r => h(r.friendName || '') + (r.status === 'rewarded' ? ' ✔' : ' ⏳')).join(', ') + ')' : ''} · કમીશન માફી મળી: ${rs(got)}</div></div>`; }
+async function saveKProfile(){ const k = me(); const CC = catCollect('kp'); if(!CC) return;
+  const p = {cat:CC.cat, cats:CC.cats, agentFor:CC.agentFor, skills:$('#kp_skills').value.trim(), visit:+$('#kp_visit').value || k.visit, exp:+$('#kp_exp').value || 0, area:areaVal('kp_area') || k.area, areaGeo:areaGeoVal('kp_area', 2), about:$('#kp_about').value.trim()}; if($('#kp_upi')) p.upi = $('#kp_upi').value.trim();
+  if(photoData){ p.photo = photoData; photoData = ''; } Store.patch('karigars', k.id, p); S.cp_kp = null; S.cpo_kp = S.cpa_kp = ''; FB.reqCat = null; if(Store.mode === 'firebase') FB.watchReq(); toast('સેવ થયું'); render(); }
 
 /* ================= LOGGING: IP, device, location, audit ================= */
 const DID = (() => { let d = LS.get('karigo_did', null); if(!d){ d = 'D' + Math.random().toString(36).slice(2, 10).toUpperCase(); LS.set('karigo_did', d); } return d; })();
@@ -3132,7 +3245,7 @@ function botTick(){
   for(const b of Store.all('bookings')){
     const t = (b.timeline || {})[b.status] || b.createdAt, age = now - t;
     if(b.status === 'searching' && age > 5000){
-      const c = Store.all('karigars').filter(k => k.bot && k.online && k.status === 'approved' && catMatch(k.cat, b.cat) && k.id !== sid && !activeJobOf(k.id) && !(b.rejectedBy || []).includes(k.id) && inRadius(k, b))
+      const c = Store.all('karigars').filter(k => k.bot && k.online && k.status === 'approved' && kHas(k, b.cat) && k.id !== sid && !activeJobOf(k.id) && !(b.rejectedBy || []).includes(k.id) && inRadius(k, b))
         .sort((x, y) => distKm(b.area, x.area) - distKm(b.area, y.area));
       if(c.length) Store.claim(b.id, c[0].id); continue;
     }

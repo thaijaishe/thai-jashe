@@ -59,8 +59,10 @@ service cloud.firestore {
     match /customers/{id} {
       allow read: if signedIn() && (me() == id || isAdmin());
       allow create: if signedIn() && me() == id && okMobile(request.resource.data.mobile)
-                    && !request.resource.data.keys().hasAny(['ratingSum', 'ratingCount', 'blocked', 'lastIp']);
-      allow update: if isAdmin() || (signedIn() && me() == id && !changed().hasAny(['ratingSum', 'ratingCount', 'blocked', 'mobile', 'lastIp', 'lastDev', 'lastLogin']))
+                    && !request.resource.data.keys().hasAny(['ratingSum', 'ratingCount', 'blocked', 'lastIp', 'refBal', 'refDone'])
+                    && request.resource.data.get('referredBy', '') != me();
+      // રેફરલ બેલેન્સ/ઇનામ ફક્ત સર્વર (Cloudflare) બદલે — ગ્રાહક જાતે નહીં
+      allow update: if isAdmin() || (signedIn() && me() == id && !changed().hasAny(['ratingSum', 'ratingCount', 'blocked', 'mobile', 'lastIp', 'lastDev', 'lastLogin', 'refBal', 'refDone', 'referredBy', 'refBy']))
         || ratedBy('lastKRating', 'kRating', 'karigarId', 'custId', id);
       allow delete: if signedIn() && (me() == id || isAdmin());
     }
@@ -71,8 +73,9 @@ service cloud.firestore {
       allow create: if signedIn() && me() == id && isKarigar()
                     && (request.resource.data.status == 'pending' || (request.resource.data.status == 'approved' && settings().autoApprove == true))
                     && request.resource.data.get('kycOk', false) == false && request.resource.data.get('policeV', false) == false
-                    && request.resource.data.get('ratingCount', 0) == 0 && request.resource.data.get('ratingSum', 0) == 0;
-      allow update: if isAdmin() || (signedIn() && me() == id && !changed().hasAny(['status', 'kycOk', 'policeV', 'ratingSum', 'ratingCount', 'lastRating']))
+                    && request.resource.data.get('ratingCount', 0) == 0 && request.resource.data.get('ratingSum', 0) == 0
+                    && request.resource.data.get('refDone', false) == false && request.resource.data.get('referredBy', '') != me();
+      allow update: if isAdmin() || (signedIn() && me() == id && !changed().hasAny(['status', 'kycOk', 'policeV', 'ratingSum', 'ratingCount', 'lastRating', 'refDone', 'referredBy', 'refBy']))
         || ratedBy('lastRating', 'rating', 'custId', 'karigarId', id);
       allow delete: if signedIn() && (me() == id || isAdmin());
 
@@ -172,6 +175,25 @@ service cloud.firestore {
     }
 
     // એડમિન લૉગ: કોઈ પણ ઉમેરી શકે (કાર્યવાહીની નોંધ), બદલી/ભૂંસી ન શકે, ફક્ત એડમિન વાંચે
+    // રેફરલ કોડ → કોનો કોડ (નોંધણી વખતે ચકાસવા)
+    match /refCodes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == me() && request.resource.data.role in ['customer', 'karigar'];
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+    // કોણે કોને જોડ્યા — નવો વ્યક્તિ "joined" લખે; ઇનામ ફક્ત સર્વર (Cloudflare) લખે
+    match /referrals/{id} {
+      allow read: if isAdmin() || (signedIn() && (me() == id || resource.data.referrer == me()));
+      allow create: if signedIn() && me() == id && request.resource.data.friend == me() && request.resource.data.status == 'joined'
+                    && request.resource.data.referrer != me() && !request.resource.data.keys().hasAny(['amt', 'doneAt']);
+      allow update, delete: if isAdmin();
+    }
+    // ડિલીટ થયેલ કારીગર/ગ્રાહકની નકલ (લૉગ)
+    match /deletedUsers/{id} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
     // ડિલીટ થયેલ બુકિંગની પૂરી નકલ (લૉગ) — ફક્ત એડમિન, બદલી/કાઢી ન શકાય
     match /deletedBookings/{id} {
       allow read, create: if isAdmin();
