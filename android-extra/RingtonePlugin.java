@@ -32,6 +32,7 @@ public class RingtonePlugin extends Plugin {
     @PluginMethod
     public void start(PluginCall call) {
         int sec = call.getInt("seconds", 60);
+        RingService.stop(getContext());   // એપ ખૂલી ગઈ — બહારની (service) રિંગ બંધ, એપ પોતે વગાડશે
         startRing(getContext(), Math.max(3, Math.min(sec, 120)));
         call.resolve();
     }
@@ -81,7 +82,7 @@ public class RingtonePlugin extends Plugin {
     public static boolean playing() { return mp != null; }
 
     public static synchronized void startRing(Context ctx, int seconds) {
-        stopRing(ctx);
+        halt(ctx);
         final Context app = ctx.getApplicationContext();
         boost(app);
         try {
@@ -100,11 +101,18 @@ public class RingtonePlugin extends Plugin {
         handler.postDelayed(stopper, seconds * 1000L);
     }
 
-    public static synchronized void stopRing(Context ctx) {
+    /** ફક્ત અવાજ બંધ + અવાજ પાછો (service અને સૂચનાને અડે નહીં) */
+    public static synchronized void halt(Context ctx) {
         if (mp != null) { try { mp.stop(); } catch (Exception ignored) {} try { mp.release(); } catch (Exception ignored) {} mp = null; }
         if (stopper != null) handler.removeCallbacks(stopper);
         stopper = null;
         restore(ctx);
+    }
+
+    /** બધું બંધ: રિંગ, service, સૂચના */
+    public static synchronized void stopRing(Context ctx) {
+        halt(ctx);
+        RingService.stop(ctx);
         // જૂની APK નું વાઇબ્રેશન ચાલુ રહી ગયું હોય તો તે પણ બંધ + રિંગ વાળી સૂચના હટાવો
         try {
             if (Build.VERSION.SDK_INT >= 31) {

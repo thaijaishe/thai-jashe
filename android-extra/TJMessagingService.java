@@ -25,7 +25,7 @@ import java.util.Map;
  * બાકીના સંદેશ Capacitor PushNotifications plugin ને આગળ મોકલાય છે.
  */
 public class TJMessagingService extends MessagingService {
-    public static final String RING_CH = "tj_ring_v3";   // v3: એપની પોતાની રિંગ (tj_ring), 80% અવાજ, વાઇબ્રેશન વગર — Android માં જૂની ચેનલ બદલાતી નથી, એટલે નવી
+    public static final String RING_CH = "tj_ring_v4";   // v3: એપની પોતાની રિંગ (tj_ring), 80% અવાજ, વાઇબ્રેશન વગર — Android માં જૂની ચેનલ બદલાતી નથી, એટલે નવી
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage msg) {
@@ -38,11 +38,11 @@ public class TJMessagingService extends MessagingService {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return;
-        for (String old : new String[]{"tj_ring_v1", "tj_ring_v2"}) { try { nm.deleteNotificationChannel(old); } catch (Exception ignored) {} }
+        for (String old : new String[]{"tj_ring_v1", "tj_ring_v2", "tj_ring_v3"}) { try { nm.deleteNotificationChannel(old); } catch (Exception ignored) {} }
         if (nm.getNotificationChannel(RING_CH) != null) return;
         NotificationChannel ch = new NotificationChannel(RING_CH, "નવી વિનંતી (રિંગ)", NotificationManager.IMPORTANCE_HIGH);
         ch.setDescription("નવા કામની વિનંતી — થઈ જશે! રિંગ 1 મિનિટ, 80% અવાજ (વાઇબ્રેશન વગર)");
-        ch.setSound(RingtonePlugin.ringUri(ctx), RingtonePlugin.ringAttrs());   // એલાર્મ અવાજ પર — ફોન સાઇલન્ટ/ધીમો હોય તો પણ સંભળાય
+        ch.setSound(null, null);   // v4: સૂચના પોતે શાંત — રિંગ RingService (MediaPlayer, એલાર્મ અવાજ 80%) વગાડે, જેથી ફોન સૂચનાનો અવાજ બંધ કરે તો પણ રિંગ વાગે
         ch.enableVibration(false);
         ch.setVibrationPattern(null);
         ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
@@ -51,9 +51,10 @@ public class TJMessagingService extends MessagingService {
 
     static void showRing(Context ctx, Map<String, String> d) {
         ensureChannel(ctx);
-        RingtonePlugin.boost(ctx);   // અવાજ 80%
-        final Context app = ctx.getApplicationContext();
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() { public void run() { if (!RingtonePlugin.playing()) RingtonePlugin.restore(app); } }, 62000);
+        String t0 = d.containsKey("title") ? d.get("title") : "નવું કામ — થઈ જશે!", b0 = d.containsKey("body") ? d.get("body") : "નજીકમાં નવી વિનંતી";
+        try { RingService.start(ctx, t0, b0, d.get("bookingId")); return; }   // મુખ્ય રીત: service પોતે રિંગ વગાડે
+        catch (Exception e) { /* ફોને service ન ચલાવવા દીધી — નીચે સૂચના + સીધી રિંગ */ }
+        RingtonePlugin.startRing(ctx, 60);
         Intent i = new Intent(ctx, MainActivity.class);
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         i.putExtra("bookingId", d.get("bookingId"));
@@ -66,13 +67,12 @@ public class TJMessagingService extends MessagingService {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setAutoCancel(true).setContentIntent(pi).setFullScreenIntent(pi, true)
-                .setSound(RingtonePlugin.ringUri(ctx), android.media.AudioManager.STREAM_ALARM)
+                .setSilent(true)
                 .setVibrate(null)
                 .setDefaults(0)
                 .setTimeoutAfter(60000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         Notification n = b.build();
-        n.flags |= Notification.FLAG_INSISTENT;   // સૂચના ખોલો/હટાવો ત્યાં સુધી (મહત્તમ 60 સેકન્ડ) રિંગ ચાલુ
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         String id = d.get("bookingId");
         try { nm.notify(id != null ? id.hashCode() : 1001, n); } catch (SecurityException ignored) {}
