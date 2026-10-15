@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
 
@@ -59,7 +58,7 @@ public class RingtonePlugin extends Plugin {
                 handler.postDelayed(looper, 1000);
             }
         }
-        vibrate(app);
+        // વાઇબ્રેશન નહીં — ફક્ત રિંગ
         stopper = new Runnable() { public void run() { stopRing(app); } };
         handler.postDelayed(stopper, seconds * 1000L);
     }
@@ -92,11 +91,4 @@ public class RingtonePlugin extends Plugin {
         return (Vibrator) ctx.getSystemService(Context.VIBRATOR_SERVICE);
     }
 
-    private static void vibrate(Context ctx) {
-        Vibrator v = vib(ctx);
-        if (v == null || !v.hasVibrator()) return;
-        long[] p = {0, 800, 600};
-        if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createWaveform(p, 1));
-        else v.vibrate(p, 1);
-    }
 }

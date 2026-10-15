@@ -25,7 +25,7 @@ import java.util.Map;
  * બાકીના સંદેશ Capacitor PushNotifications plugin ને આગળ મોકલાય છે.
  */
 public class TJMessagingService extends MessagingService {
-    public static final String RING_CH = "tj_ring_v1";
+    public static final String RING_CH = "tj_ring_v2";   // v2: વાઇબ્રેશન વગર (Android માં જૂની ચેનલનું વાઇબ્રેશન બદલાતું નથી, એટલે નવી ચેનલ)
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage msg) {
@@ -37,14 +37,16 @@ public class TJMessagingService extends MessagingService {
     static void ensureChannel(Context ctx) {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
-        if (nm == null || nm.getNotificationChannel(RING_CH) != null) return;
+        if (nm == null) return;
+        try { nm.deleteNotificationChannel("tj_ring_v1"); } catch (Exception ignored) {}
+        if (nm.getNotificationChannel(RING_CH) != null) return;
         NotificationChannel ch = new NotificationChannel(RING_CH, "નવી વિનંતી (રિંગ)", NotificationManager.IMPORTANCE_HIGH);
-        ch.setDescription("નવા કામની વિનંતી — ફોનની રિંગ 1 મિનિટ");
+        ch.setDescription("નવા કામની વિનંતી — ફોનની રિંગ 1 મિનિટ (વાઇબ્રેશન વગર)");
         Uri u = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
         ch.setSound(u, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
-        ch.enableVibration(true);
-        ch.setVibrationPattern(new long[]{0, 800, 600, 800, 600});
+        ch.enableVibration(false);
+        ch.setVibrationPattern(null);
         ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         nm.createNotificationChannel(ch);
     }
@@ -64,7 +66,8 @@ public class TJMessagingService extends MessagingService {
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setAutoCancel(true).setContentIntent(pi).setFullScreenIntent(pi, true)
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))
-                .setVibrate(new long[]{0, 800, 600, 800, 600})
+                .setVibrate(null)
+                .setDefaults(0)
                 .setTimeoutAfter(60000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         Notification n = b.build();

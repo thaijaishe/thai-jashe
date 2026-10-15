@@ -89,13 +89,14 @@ async function commit(env, writes){ if(!writes.length) return; return fsFetch(en
 
 /* ---------- FCM (HTTP v1) ---------- */
 async function tokensOf(env, col, ids){ const out = []; for(const id of [...new Set(ids)].filter(Boolean)){ const d = await getDoc(env, `${col}/${id}`); (d && d.fcm || []).forEach(t => out.push({col, id, t})); } return out; }
-async function push(env, list, data, ring){
-  const str = {}; for(const k in data) str[k] = String(data[k] == null ? '' : data[k]); let sent = 0; const dead = [];
+let LASTERR = '';
+async function push(env, list, data, ring, validateOnly){
+  const str = {}; for(const k in data) str[k] = String(data[k] == null ? '' : data[k]); let sent = 0; const dead = []; LASTERR = '';
   for(const x of list){
     const message = ring ? {token:x.t, data:str, android:{priority:'HIGH', ttl:'60s'}}   // data-only: એપનો TJMessagingService 60 સેકન્ડ ફોનની રિંગ વગાડે
       : {token:x.t, data:str, notification:{title:str.title, body:str.body}, android:{priority:'HIGH', notification:{channel_id:'tj_alert', sound:'default'}}};
-    const r = await fetch(`https://fcm.googleapis.com/v1/projects/${PID(env)}/messages:send`, {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer ' + await accessToken(env)}, body:JSON.stringify({message})});
-    if(r.ok) sent++; else { const j = await r.json().catch(() => ({})); if(r.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(JSON.stringify(j))) dead.push(x); }
+    const r = await fetch(`https://fcm.googleapis.com/v1/projects/${PID(env)}/messages:send`, {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer ' + await accessToken(env)}, body:JSON.stringify(validateOnly ? {message, validate_only:true} : {message})});
+    if(r.ok) sent++; else { const j = await r.json().catch(() => ({})); LASTERR = r.status + ' ' + String((j.error && (j.error.status + ': ' + j.error.message)) || '').slice(0, 300); if(r.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(JSON.stringify(j))) dead.push(x); }
   }
   if(dead.length) await commit(env, dead.map(x => ({transform:{document:docName(env, `${x.col}/${x.id}`), fieldTransforms:[{fieldPath:'fcm', removeAllFromArray:{values:[toV(x.t)]}}]}}))).catch(() => {});
   return sent;
@@ -125,8 +126,8 @@ async function doLog(env, uid, d, req){
   if(role === 'admin' && e.ev !== 'open') await addDoc(env, 'audit', {action:'એડમિન લૉગિન', target:'', note:`IP ${ip} · ${e.dev}`, ts:now, server:true});
   return {ok:true, ip};
 }
-async function doNotify(env, uid, d){
-  const {type, id} = d || {}; if(!id || !/^[\w-]{1,80}$/.test(id)) throw new Error('bad id');
+async function doNotify(env, uid, d, ctx){
+  const {type, id} = d || {}; if(type !== 'test' && (!id || !/^[\w-]{1,80}$/.test(id))) throw new Error('bad id');
   if(type === 'request' || type === 'status'){
     const b = await getDoc(env, 'bookings/' + id); if(!b) return {ok:false};
     const party = uid === b.custId || uid === b.karigarId || (b.rejectedBy || []).includes(uid); if(!party) throw new Error('not allowed');
@@ -138,6 +139,14 @@ async function doNotify(env, uid, d){
     }
     const to = uid === b.karigarId ? b.custId : b.karigarId; const msg = CUST_MSG[b.status]; if(!to || !msg) return {ok:true, sent:0};
     return {ok:true, sent:await push(env, await tokensOf(env, 'users', [to]), {type:'status', bookingId:id, title:'થઈ જશે! — ' + catT(b.cat), body:msg})};
+  }
+  if(type === 'test'){   // સૂચના ચકાસણી: પહેલા token ચકાસે, પછી 8 સેકન્ડ પછી ખરેખર મોકલે (એપ બંધ કરવાનો સમય)
+    const role = d.role === 'admin' ? 'admins' : 'users'; const u = await getDoc(env, `${role}/${uid}`); const list = (u && u.fcm || []).map(t => ({col:role, id:uid, t}));
+    if(!list.length) return {ok:false, tokens:0, error:'ફોનનો token સર્વર પર નથી'};
+    const ring = d.ring === true, msg = ring ? {type:'request', bookingId:'test', title:'🔔 ટેસ્ટ રિંગ — થઈ જશે!', body:'સૂચના બરાબર ચાલે છે ✔'} : {type:'status', bookingId:'', title:'🔔 ટેસ્ટ — થઈ જશે!', body:'સૂચના બરાબર ચાલે છે ✔'};
+    const ok = await push(env, list, msg, ring, true); const err = LASTERR;
+    if(ok && ctx) ctx.waitUntil(new Promise(r => setTimeout(r, 8000)).then(() => push(env, list, msg, ring)));
+    return {ok:ok > 0, tokens:list.length, valid:ok, error:ok ? '' : err};
   }
   if(type === 'sos'){ const a = await getDoc(env, 'alerts/' + id); if(!a || a.userId !== uid) throw new Error('not allowed');
     return {ok:true, sent:await notifyAdmins(env, {type:'sos', alertId:id, bookingId:a.bookingId || '', title:'🆘 SOS: ' + (a.name || ''), body:`${a.mobile || ''} · ${a.role === 'karigar' ? 'કારીગર' : 'ગ્રાહક'} — તરત સંપર્ક કરો`})}; }
@@ -165,7 +174,7 @@ const CORS = () => ({'Access-Control-Allow-Origin':ORIGIN || 'https://thaijaishe
 const json = (o, s = 200) => new Response(JSON.stringify(o), {status:s, headers:{...CORS(), 'Content-Type':'application/json; charset=utf-8'}});
 
 export default {
-  async fetch(req, env){
+  async fetch(req, env, ctx){
     ORIGIN = allowOrigin(req, env); const hasOrigin = !!req.headers.get('Origin');
     if(req.method === 'OPTIONS') return new Response(null, {status:ORIGIN ? 204 : 403, headers:CORS()});
     if(req.method === 'POST' && hasOrigin && !ORIGIN) return json({error:'origin not allowed'}, 403); // બીજી વેબસાઇટ પરથી આવેલી વિનંતી બંધ
@@ -177,7 +186,7 @@ export default {
     let body = {}; try{ body = await req.json(); }catch(e){}
     try{
       if(path === '/log') return json(await doLog(env, uid, body, req));
-      if(path === '/notify') return json(await doNotify(env, uid, body));
+      if(path === '/notify') return json(await doNotify(env, uid, body, ctx));
       return json({error:'not found'}, 404);
     }catch(e){ return json({error:String(e.message || e)}, /not allowed|bad/.test(e.message) ? 403 : 500); }
   },

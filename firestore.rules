@@ -130,7 +130,8 @@ service cloud.firestore {
 
       // સંપર્ક: ગ્રાહકનો મોબાઇલ/સરનામું/GPS અને કારીગરનો મોબાઇલ/લાઇવ લોકેશન — ફક્ત એ ગ્રાહક, એ કારીગર અને એડમિન
       match /contact/{doc} {
-        allow read: if signedIn() && (isAdmin() || resource.data.custId == me()
+        allow read: if signedIn() && (isAdmin() || (resource != null && resource.data.custId == me())
+                       || get(/databases/$(database)/documents/bookings/$(id)).data.custId == me()
                        || get(/databases/$(database)/documents/bookings/$(id)).data.karigarId == me());
         allow create: if signedIn() && request.resource.data.custId == me()
                       && getAfter(/databases/$(database)/documents/bookings/$(id)).data.custId == me(); // ફક્ત પોતાના બુકિંગમાં
@@ -141,7 +142,9 @@ service cloud.firestore {
       }
       // OTP: ફક્ત ગ્રાહક જુએ; કારીગર Cloud Function (verifyOtp) થી ચકાસે
       match /otp/{doc} {
-        allow read: if signedIn() && (isAdmin() || resource.data.custId == me());
+        // ગ્રાહક પોતાના બુકિંગનો OTP વાંચે (દસ્તાવેજ હજુ ન લખાયો હોય ત્યારે પણ listener બંધ ન થાય)
+        allow read: if signedIn() && (isAdmin() || (resource != null && resource.data.custId == me())
+                       || get(/databases/$(database)/documents/bookings/$(id)).data.custId == me());
         allow create: if signedIn() && request.resource.data.custId == me()
                       && getAfter(/databases/$(database)/documents/bookings/$(id)).data.custId == me();
         allow update, delete: if false;
