@@ -103,6 +103,7 @@ service cloud.firestore {
 
       allow read: if signedIn() && (isAdmin() || b().custId == me() || b().karigarId == me() || (b().status == 'searching' && isKarigar()));
       allow create: if isCustomer() && nb().custId == me() && nb().status in ['searching', 'requested']
+                    && get(/databases/$(database)/documents/customers/$(me())).data.get('blocked', false) != true // બ્લોક કરેલ ગ્રાહક બુકિંગ ન કરી શકે
                     && !nb().keys().hasAny(['bill', 'rating', 'commission', 'kRating', 'custMobile', 'address', 'otp']);
       allow update: if isAdmin()
         // ગ્રાહક: રદ કરવું, ફરી બધાને મોકલવું, ચૂકવ્યાની જાણ, રેટિંગ, સંદેશ, SOS
@@ -131,7 +132,8 @@ service cloud.firestore {
       match /contact/{doc} {
         allow read: if signedIn() && (isAdmin() || resource.data.custId == me()
                        || get(/databases/$(database)/documents/bookings/$(id)).data.karigarId == me());
-        allow create: if signedIn() && request.resource.data.custId == me();
+        allow create: if signedIn() && request.resource.data.custId == me()
+                      && getAfter(/databases/$(database)/documents/bookings/$(id)).data.custId == me(); // ફક્ત પોતાના બુકિંગમાં
         allow update: if isAdmin()
           || (signedIn() && resource.data.custId == me() && request.resource.data.custId == me())
           || (signedIn() && get(/databases/$(database)/documents/bookings/$(id)).data.karigarId == me() && onlyKeys(['kMobile', 'kUpi', 'kLoc', 'kLocPrev']));
@@ -140,7 +142,8 @@ service cloud.firestore {
       // OTP: ફક્ત ગ્રાહક જુએ; કારીગર Cloud Function (verifyOtp) થી ચકાસે
       match /otp/{doc} {
         allow read: if signedIn() && (isAdmin() || resource.data.custId == me());
-        allow create: if signedIn() && request.resource.data.custId == me();
+        allow create: if signedIn() && request.resource.data.custId == me()
+                      && getAfter(/databases/$(database)/documents/bookings/$(id)).data.custId == me();
         allow update, delete: if false;
       }
     }

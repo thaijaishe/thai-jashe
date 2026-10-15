@@ -3,8 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https: wss:; frame-src https://*.firebaseapp.com https://accounts.google.com https://www.google.com https://www.recaptcha.net; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="admin.webmanifest">
+<meta name="robots" content="noindex, nofollow">
 <script src="config.js"></script>
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
@@ -666,8 +669,10 @@ function loadScript(src){ return new Promise((ok, no) => { const s = document.cr
 const FB_V = '10.12.2', FB_REGION = 'asia-south1';
 async function loadFirebase(){
   /* મફત (Spark) પ્લાન: Storage/Functions વગર */
-  for(const m of ['app', 'auth', 'firestore']){ const f = `firebase-${m}-compat.js`;
-    try{ await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FB_V}/${f}`); }catch(e){ await loadScript(`https://www.gstatic.com/firebasejs/${FB_V}/${f}`); } }
+  /* સુરક્ષા: Firebase ની ફાઇલો પોતાની વેબસાઇટ (lib/) પરથી — બહારની CDN પર આધાર નહીં; ન મળે તો જ Google (gstatic) પરથી */
+  const mods = ['app', 'auth', 'firestore']; if(window.TJ_APPCHECK_KEY) mods.push('app-check');
+  for(const m of mods){ const f = `firebase-${m}-compat.js`;
+    try{ await loadScript(`lib/${f}`); }catch(e){ await loadScript(`https://www.gstatic.com/firebasejs/${FB_V}/${f}`); } }
 }
 /* ખાનગી ફીલ્ડ અલગ દસ્તાવેજમાં: ગ્રાહકને કારીગરનો મોબાઇલ/લોકેશન/આધાર/IP ક્યારેય ન દેખાય */
 const PRIVATE_K = ['mobile', 'pin', 'loc', 'locHist', 'locErr', 'lastIp', 'lastDev', 'lastLogin', 'logins', 'aadhaar4', 'aadhaarMasked', 'policeNo', 'policeDate', 'adminNote',
@@ -690,10 +695,9 @@ const FB = {
     out.main = obj; return out; },
   clean(o){ const r = {}; for(const k in o) if(o[k] !== undefined) r[k] = o[k]; return r; },
   write(c, id, obj, merge){ const {main, extra} = this.split(c, id, obj); const err = e => { console.error(e); toast('સેવ ન થયું: ' + (e.code === 'permission-denied' ? 'મંજૂરી નથી' : e.message)); };
-    const ps = [];
-    if(Object.keys(main).length || !merge) ps.push(Store.fs.collection(c).doc(id).set(this.clean(main), merge ? {merge:true} : {}).catch(err));
-    extra.forEach(([p, d]) => ps.push(Store.fs.doc(p).set(this.clean(d), {merge:true}).catch(err)));
-    return Promise.all(ps); },
+    /* પહેલા મુખ્ય દસ્તાવેજ, પછી ખાનગી ભાગ — સુરક્ષા નિયમ ચકાસે છે કે ખાનગી ભાગ ફક્ત પોતાના બુકિંગમાં જ લખાય */
+    const first = (Object.keys(main).length || !merge) ? Store.fs.collection(c).doc(id).set(this.clean(main), merge ? {merge:true} : {}).catch(err) : Promise.resolve();
+    return first.then(() => Promise.all(extra.map(([p, d]) => Store.fs.doc(p).set(this.clean(d), {merge:true}).catch(err)))); },
   /* cache = બધા listener ના પરિણામ + ખાનગી ભાગ ભેગા */
   recompute(c){ const m = {}; for(const k in (this.q[c] || {})) Object.assign(m, this.q[c][k]);
     const sd = this.side[c] || {}; for(const id in m) if(sd[id]) m[id] = {...m[id], ...sd[id]};
@@ -856,6 +860,8 @@ const Store = {
       try{
         await loadFirebase();
         this.app = firebase.initializeApp(cfg, APP_MODE === 'admin' ? 'tjadmin' : '[DEFAULT]'); // એડમિનનું લૉગિન અલગ રહે
+        /* App Check: ફક્ત તમારી સાચી વેબસાઇટ/એપ જ Firebase ડેટા સુધી પહોંચી શકે (બીજી સાઇટ, સ્ક્રિપ્ટ કે બોટ નહીં) */
+        if(window.TJ_APPCHECK_KEY && firebase.appCheck){ try{ firebase.appCheck(this.app).activate(new firebase.appCheck.ReCaptchaV3Provider(window.TJ_APPCHECK_KEY), true); }catch(e){ console.warn('appcheck', e); } }
         this.fs = this.app.firestore(); this.auth = this.app.auth(); this.mode = 'firebase';
         try{ this.auth.useDeviceLanguage(); }catch(e){}
         await new Promise(res => { const un = this.auth.onAuthStateChanged(() => { un(); res(); }); setTimeout(res, 7000); });
@@ -1035,6 +1041,10 @@ function initAutoUpdate(){ const App = window.Capacitor && Capacitor.Plugins && 
       else apkUpdateCheck(); }); return; }
   document.addEventListener('visibilitychange', () => { if(document.hidden){ bgAt = Date.now(); return; } const away = bgAt ? Date.now() - bgAt : 0; bgAt = 0;
     if(away > 30 * 60000 && ['welcome', 'c_home', 'k_home'].includes(S.view)) location.reload(); }); }
+/* એડમિન: 30 મિનિટ કંઈ ન કરો તો આપમેળે લૉગઆઉટ (કોઈ બીજું ખુલ્લું પેનલ ન વાપરી શકે) */
+let idleAt = Date.now();
+function initIdleGuard(){ if(APP_MODE !== 'admin') return; ['pointerdown', 'keydown', 'scroll'].forEach(ev => addEventListener(ev, () => { idleAt = Date.now(); }, {passive:true}));
+  setInterval(() => { if(S.session && S.session.role === 'admin' && Date.now() - idleAt > 30 * 60000){ idleAt = Date.now(); logout(); toast('સુરક્ષા માટે આપમેળે લૉગઆઉટ — ફરી લૉગિન કરો'); } }, 30000); }
 function setSession(s){ S.session = s; if(s) LS.set(SESSION_KEY, s); else LS.del(SESSION_KEY); }
 function delAccountCard(){
   return S.delAsk ? `<div class="card" style="border:2px solid var(--bad)"><h3>ખાતું કાયમ માટે ડિલીટ કરવું છે?</h3>
@@ -1841,7 +1851,7 @@ const HOME_SVG = () => `<svg viewBox="0 0 28 32" width="34" height="38">${HOME_S
 function bearing(a, b){ if(!a || !b) return 0; const r = x => x * Math.PI / 180, y = Math.sin(r(b.lng - a.lng)) * Math.cos(r(b.lat)),
   x = Math.cos(r(a.lat)) * Math.sin(r(b.lat)) - Math.sin(r(a.lat)) * Math.cos(r(b.lat)) * Math.cos(r(b.lng - a.lng)); return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; }
 /* ---------- real map: Leaflet + OpenStreetMap tiles; SVG map stays as offline fallback ---------- */
-const LEAF_SRC = ['lib/leaflet.js', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
+const LEAF_SRC = ['lib/leaflet.js', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
 let LEAF_P = null, LEAF_BAD = false; const MAPSPEC = {}, MAPS = {};
 function needLeaflet(){ if(window.L && window.L.map) return Promise.resolve();
   if(!LEAF_P) LEAF_P = (async () => { for(const u of LEAF_SRC){ try{ await loadScript(u); if(window.L && window.L.map) return; }catch(e){} } LEAF_BAD = true; throw new Error('leaflet'); })(); return LEAF_P; }
@@ -3150,6 +3160,8 @@ Object.assign(EN, {"એજન્ટ": "Agent", "તમારું કામ લ
 Object.assign(HI, {"એજન્ટ": "एजेंट", "તમારું કામ લખો": "अपना काम लिखें", "ફરજિયાત — આ નામથી ગ્રાહકની કામની યાદીમાં નવું કામ ઉમેરાશે": "ज़रूरी — इसी नाम से ग्राहकों की काम की सूची में नया काम जुड़ेगा", "દા.ત. ચોકીદાર, ફોટોગ્રાફર, ડેકોરેશન": "जैसे चौकीदार, फ़ोटोग्राफ़र, डेकोरेशन", "શેના માટે એજન્ટ છો?": "आप किसके एजेंट हैं?", "ફરજિયાત": "ज़रूरी", "દા.ત. દાડિયા / મજૂર, જમીન-મકાન લે-વેચ": "जैसे दिहाड़ी / मज़दूर, ज़मीन-मकान ख़रीद-बिक्री", "દાડિયા / મજૂર": "दिहाड़ी / मज़दूर", "વર્કર / કારીગર સપ્લાય": "वर्कर / कारीगर सप्लाई", "જમીન-મકાન લે-વેચ": "ज़मीन-मकान ख़रीद-बिक्री", "ભાડે મકાન / દુકાન": "किराये पर मकान / दुकान", "\"અન્ય કામ\" માં તમારું કામ લખો": "\"अन्य काम\" में अपना काम लिखें", "શેના માટે એજન્ટ છો તે લખો — ફરજિયાત": "आप किसके एजेंट हैं, लिखें — ज़रूरी"});
 Object.assign(EN, {"🎉 નવું અપડેટ આવ્યું છે": "🎉 A new update is available", "⬇️ હમણાં અપડેટ કરો": "⬇️ Update now", "પછી": "Later", "એપની નવી આવૃત્તિ": "A new version of the app", "તૈયાર છે (તમારી: 1.0.": "is ready (yours: 1.0.", "). ડાઉનલોડ કરીને ઇન્સ્ટોલ કરો — તમારો ડેટા અને લૉગિન સચવાયેલાં રહેશે.": "). Download and install it — your data and login stay safe."});
 Object.assign(HI, {"🎉 નવું અપડેટ આવ્યું છે": "🎉 नया अपडेट आया है", "⬇️ હમણાં અપડેટ કરો": "⬇️ अभी अपडेट करें", "પછી": "बाद में", "એપની નવી આવૃત્તિ": "ऐप का नया संस्करण", "તૈયાર છે (તમારી: 1.0.": "तैयार है (आपका: 1.0.", "). ડાઉનલોડ કરીને ઇન્સ્ટોલ કરો — તમારો ડેટા અને લૉગિન સચવાયેલાં રહેશે.": "). डाउनलोड करके इंस्टॉल करें — आपका डेटा और लॉगिन सुरक्षित रहेंगे।"});
+Object.assign(EN, {"સુરક્ષા માટે આપમેળે લૉગઆઉટ — ફરી લૉગિન કરો": "Logged out automatically for safety — please log in again"});
+Object.assign(HI, {"સુરક્ષા માટે આપમેળે લૉગઆઉટ — ફરી લૉગિન કરો": "सुरक्षा के लिए अपने-आप लॉगआउट — फिर से लॉगिन करें"});
 Object.assign(HI, {"OTP ફરી મોકલો": "OTP फिर भेजें", "લૉગિન: Google (ગ્રાહક/કારીગર), ઈમેલ (એડમિન) · મફત પ્લાન · સર્વર: Cloudflare Worker · સૂચના: FCM": "लॉगिन: Google (ग्राहक/कारीगर), ईमेल (एडमिन) · मुफ़्त प्लान · सर्वर: Cloudflare Worker · सूचना: FCM", "લાઇવ ચાલુ —": "लाइव चालू —", "10 આંકડાનો સાચો મોબાઇલ નંબર લખો": "10 अंकों का सही मोबाइल नंबर लिखें", "30 સેકન્ડ પછી ફરી મોકલી શકાશે": "30 सेकंड बाद फिर भेज सकेंगे", "6 આંકડાનો OTP લખો": "6 अंकों का OTP लिखें", "Firebase માં આ લૉગિન રીત ચાલુ નથી": "Firebase में यह लॉगिन तरीका चालू नहीं है", "OTP ખોટો છે": "OTP गलत है", "OTP ચકાસી ન શકાયો:": "OTP जाँचा नहीं जा सका:", "OTP ચકાસો": "OTP जाँचें", "OTP ચકાસો અને આગળ વધો": "OTP जाँचें और आगे बढ़ें", "OTP ની મુદત પૂરી — ફરી મંગાવો": "OTP की अवधि खत्म — फिर मँगाएँ", "OTP મોકલી રહ્યા છીએ…": "OTP भेज रहे हैं…", "OTP મોકલ્યો — SMS જુઓ": "OTP भेजा — SMS देखें", "📩 OTP મોકલો": "📩 OTP भेजें", "SMS મર્યાદા પૂરી — એડમિનને જાણ કરો": "SMS सीमा पूरी — एडमिन को बताएँ", "પર SMS થી આવેલો 6 આંકડાનો OTP લખો": "पर SMS से आया 6 अंकों का OTP लिखें", "SOS અને સૂચના": "SOS और सूचना", "SOS, બુકિંગ અને ફરિયાદની સૂચના": "SOS, बुकिंग और शिकायत की सूचना", "આ ખાતું એડમિન નથી — Firestore માં admins/": "यह खाता एडमिन नहीं है — Firestore में admins/", "બનાવો": "बनाएँ", "આ નંબર કારીગર તરીકે નોંધાયેલ છે — \"હું કારીગર છું\" થી લૉગિન કરો": "यह नंबर कारीगर के रूप में पंजीकृत है — \"मैं कारीगर हूँ\" से लॉगिन करें", "આ નંબર ગ્રાહક તરીકે નોંધાયેલ છે — બીજો નંબર વાપરો": "यह नंबर ग्राहक के रूप में पंजीकृत है — दूसरा नंबर इस्तेमाल करें", "આ વેબસાઇટ Firebase ના Authorized domains માં ઉમેરો": "यह वेबसाइट Firebase के Authorized domains में जोड़ें", "ઇન્ટરનેટ ચાલુ કરો": "इंटरनेट चालू करें", "ઈમેલ અને પાસવર્ડ લખો": "ईमेल और पासवर्ड लिखें", "ઈમેલ કે પાસવર્ડ ખોટો છે": "ईमेल या पासवर्ड गलत है", "ઈમેલ ખોટો છે": "ईमेल गलत है", "ઈમેલ લખો": "ईमेल लिखें", "એડમિન ઈમેલ": "एडमिन ईमेल", "પાસવર્ડ": "पासवर्ड", "પાસવર્ડ બદલવાની લિંક ઈમેલ પર મોકલી": "पासवर्ड बदलने की लिंक ईमेल पर भेजी", "પાસવર્ડ ભૂલી ગયા?": "पासवर्ड भूल गए?", "ફક્ત Firebase ના": "सिर्फ़ Firebase के", "સંગ્રહમાં જેનો UID હોય તે જ ખૂલશે.": "संग्रह में जिसका UID हो वही खुलेगा।", "ઘણા પ્રયત્નો થયા — થોડી વાર પછી પ્રયત્ન કરો": "बहुत कोशिशें हुईं — थोड़ी देर बाद कोशिश करें", "ચકાસણી નિષ્ફળ — પેજ ફરી ખોલો": "जाँच विफल — पेज फिर खोलें", "નંબર બદલો": "नंबर बदलें", "મોબાઇલ OTP થી લૉગિન / નોંધણી": "मोबाइल OTP से लॉगिन / पंजीकरण", "નવા હો કે જૂના — મોબાઇલ નંબર ચકાસો. નવા હશો તો પછી નોંધણી ફોર્મ ખૂલશે.": "नए हों या पुराने — मोबाइल नंबर जाँचें। नए होंगे तो फिर पंजीकरण फ़ॉर्म खुलेगा।", "મોબાઇલ:": "मोबाइल:", "✔ OTP થી ચકાસાયેલ": "✔ OTP से जाँचा हुआ", "નોંધણી થઈ રહી છે… ફોટા અપલોડ થાય છે": "पंजीकरण हो रहा है… फ़ोटो अपलोड हो रहे हैं", "પહેલાં OTP મંગાવો": "पहले OTP मँगाएँ", "ફોટો અપલોડ ન થયો": "फ़ोटो अपलोड नहीं हुआ", "ફોટો અપલોડ ન થયો:": "फ़ोटो अपलोड नहीं हुआ:", "મંજૂરી નથી": "अनुमति नहीं", "સેવ ન થયું:": "सेव नहीं हुआ:", "ભૂલ:": "त्रुटि:", "મોબાઇલ નંબર ખોટો છે": "मोबाइल नंबर गलत है", "લૉગ લોડ થાય છે…": "लॉग लोड हो रहे हैं…", "સૂચના (Notification) ની મંજૂરી આપો — નહીં તો એપ બંધ હોય ત્યારે વિનંતી નહીં આવે": "सूचना (Notification) की अनुमति दें — वरना ऐप बंद होने पर अनुरोध नहीं आएँगे", "કારીગર ઓફલાઇન છે — સમય નક્કી કરો": "कारीगर ऑफ़लाइन है — समय तय करें"});
 Object.assign(HI, {"Google ટોકન ન મળ્યો": "Google टोकन नहीं मिला", "Google લૉગિન ન થયું — ફરી પ્રયત્ન કરો": "Google लॉगिन नहीं हुआ — फिर कोशिश करें", "Google લૉગિન રદ કર્યું": "Google लॉगिन रद्द किया", "Google થી લૉગિન": "Google से लॉगिन", "SMS OTP લૉગિન પણ": "SMS OTP लॉगिन भी", "અથવા મોબાઇલ OTP": "या मोबाइल OTP", "આ ઈમેલ બીજી રીતે નોંધાયેલ છે": "यह ईमेल दूसरे तरीके से पंजीकृत है", "આ ખાતું કારીગર તરીકે નોંધાયેલ છે — \"હું કારીગર છું\" થી લૉગિન કરો": "यह खाता कारीगर के रूप में पंजीकृत है — \"मैं कारीगर हूँ\" से लॉगिन करें", "આ ખાતું ગ્રાહક તરીકે નોંધાયેલ છે — બીજું Google ખાતું વાપરો": "यह खाता ग्राहक के रूप में पंजीकृत है — दूसरा Google खाता इस्तेमाल करें", "કારીગર તમને આ નંબર પર કૉલ કરશે": "कारीगर आपको इस नंबर पर कॉल करेगा", "ગ્રાહક આ નંબર પર કૉલ કરશે": "ग्राहक इस नंबर पर कॉल करेंगे", "તમારા Gmail ખાતાથી એક ટેપમાં — કોઈ પાસવર્ડ કે SMS નહીં. નવા હશો તો પછી નામ અને મોબાઇલ પૂછશે.": "अपने Gmail खाते से एक टैप में — कोई पासवर्ड या SMS नहीं। नए होंगे तो फिर नाम और मोबाइल पूछेंगे।", "તમારા Gmail ખાતાથી એક ટેપમાં — મફત, કોઈ SMS નહીં. નવા હશો તો પછી નોંધણી ફોર્મ ખૂલશે.": "अपने Gmail खाते से एक टैप में — मुफ़्त, कोई SMS नहीं। नए होंगे तो फिर पंजीकरण फ़ॉर्म खुलेगा।", "નામ અને મોબાઇલ નંબર લખી \"આગળ વધો\" દબાવો": "नाम और मोबाइल नंबर लिखकर \"आगे बढ़ें\" दबाएँ", "બંધ = ફક્ત Google લૉગિન (મફત). ચાલુ = Google ઉપરાંત મોબાઇલ OTP (દરેક SMS ના પૈસા, Blaze જરૂરી)": "बंद = सिर्फ़ Google लॉगिन (मुफ़्त)। चालू = Google के साथ मोबाइल OTP भी (हर SMS के पैसे, Blaze ज़रूरी)", "બીજું ખાતું વાપરો": "दूसरा खाता इस्तेमाल करें", "લૉગિન / નવી નોંધણી": "लॉगिन / नया पंजीकरण", "લૉગિન / નવું ખાતું": "लॉगिन / नया खाता", "ગ્રાહક નોંધણી": "ग्राहक पंजीकरण", "✔ ચકાસાયેલ": "✔ जाँचा हुआ", "Google ખાતું": "Google खाता"});
 Object.assign(HI, {"રેટિંગ સેવ ન થયું:": "रेटिंग सेव नहीं हुई:", "4 આંકડાનો OTP લખો": "4 अंकों का OTP लिखें"});
@@ -3549,7 +3561,7 @@ if(APP_MODE === 'admin') VIEWS.welcome = () => VIEWS.a_login();
 /* ---------- start ---------- */
 (async function(){
   $('#app').innerHTML = `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`;
-  initBack(); initAutoUpdate(); await Store.init(); demoEnrich();
+  initBack(); initAutoUpdate(); initIdleGuard(); await Store.init(); demoEnrich();
   if(S.session && S.session.role !== 'admin' && !me()) setSession(null);
   home(); if(S.session){ logAccess('open'); if(window.Push) Push.init(); }
 })();

@@ -23,3 +23,7 @@ window.TJ_WORKER_URL = 'https://thaijashe.thaijaishe.workers.dev/';
 
 /* GitHub નું નામ/repo — એપ નવી APK (અપડેટ) અહીંથી શોધે છે */
 window.TJ_GH_REPO = 'thaijaishe/thai-jashe';
+
+/* સુરક્ષા (App Check): reCAPTCHA v3 ની "Site key" અહીં લખો — પછી ફક્ત તમારી સાચી સાઇટ/એપ જ ડેટા સુધી પહોંચી શકશે.
+   ખાલી રહે તો એપ સામાન્ય રીતે ચાલે. */
+window.TJ_APPCHECK_KEY = '';

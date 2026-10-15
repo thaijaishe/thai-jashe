@@ -156,12 +156,20 @@ async function cleanup(env){
   return out;
 }
 
-const CORS = {'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'POST, GET, OPTIONS', 'Access-Control-Allow-Headers':'Content-Type, Authorization', 'Access-Control-Max-Age':'86400'};
-const json = (o, s = 200) => new Response(JSON.stringify(o), {status:s, headers:{...CORS, 'Content-Type':'application/json; charset=utf-8'}});
+/* સુરક્ષા: ફક્ત તમારી વેબસાઇટ અને એપ જ આ સર્વરને બોલાવી શકે (બીજી સાઇટ નહીં). વધારાની સાઇટ: Cloudflare માં ALLOWED_ORIGINS variable (અલ્પવિરામથી) */
+const ORIGINS = ['https://thaijaishe.github.io', 'https://localhost', 'capacitor://localhost', 'http://localhost'];
+let ORIGIN = '';
+const allowOrigin = (req, env) => { const o = req.headers.get('Origin') || ''; const list = ORIGINS.concat(String(env.ALLOWED_ORIGINS || '').split(',').map(x => x.trim()).filter(Boolean)); return list.includes(o) ? o : ''; };
+const CORS = () => ({'Access-Control-Allow-Origin':ORIGIN || 'https://thaijaishe.github.io', 'Vary':'Origin', 'Access-Control-Allow-Methods':'POST, GET, OPTIONS', 'Access-Control-Allow-Headers':'Content-Type, Authorization', 'Access-Control-Max-Age':'86400',
+  'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer'});
+const json = (o, s = 200) => new Response(JSON.stringify(o), {status:s, headers:{...CORS(), 'Content-Type':'application/json; charset=utf-8'}});
 
 export default {
   async fetch(req, env){
-    if(req.method === 'OPTIONS') return new Response(null, {status:204, headers:CORS});
+    ORIGIN = allowOrigin(req, env); const hasOrigin = !!req.headers.get('Origin');
+    if(req.method === 'OPTIONS') return new Response(null, {status:ORIGIN ? 204 : 403, headers:CORS()});
+    if(req.method === 'POST' && hasOrigin && !ORIGIN) return json({error:'origin not allowed'}, 403); // બીજી વેબસાઇટ પરથી આવેલી વિનંતી બંધ
+    if(req.method === 'POST' && +(req.headers.get('Content-Length') || 0) > 20000) return json({error:'too large'}, 413);
     const path = new URL(req.url).pathname.replace(/\/+$/, '');
     if(req.method === 'GET') return json({ok:true, app:'થઈ જશે! સર્વર', project:env.FIREBASE_SA ? PID(env) : 'FIREBASE_SA નથી'});
     if(!env.FIREBASE_SA) return json({error:'FIREBASE_SA secret ઉમેરો'}, 500);
