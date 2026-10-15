@@ -69,8 +69,19 @@ public class RingtonePlugin extends Plugin {
         if (looper != null) handler.removeCallbacks(looper);
         if (stopper != null) handler.removeCallbacks(stopper);
         looper = null; stopper = null;
+        // વાઇબ્રેશન પૂરેપૂરું બંધ: બધા vibrator + રિંગ વાળી સૂચના પણ હટાવો
+        try {
+            if (Build.VERSION.SDK_INT >= 31) {
+                VibratorManager vm = (VibratorManager) ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                if (vm != null) vm.cancel();
+            }
+        } catch (Exception ignored) {}
         Vibrator v = vib(ctx);
-        if (v != null) v.cancel();
+        if (v != null) { try { v.cancel(); } catch (Exception ignored) {} }
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) nm.cancelAll();
+        } catch (Exception ignored) {}
     }
 
     private static Vibrator vib(Context ctx) {

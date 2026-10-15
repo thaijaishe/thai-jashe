@@ -62,6 +62,12 @@
 .sw2 i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:.2s}
 .swrow input:checked+.sw2{background:var(--ok-solid)}.swrow input:checked+.sw2 i{left:25px}.swrow input:focus-visible+.sw2{outline:3px solid var(--accent);outline-offset:2px}
 html,body{background:var(--bg);color:var(--ink)}
+.satbtn{background:#fff;color:#161A33;border:0;border-radius:10px;padding:7px 11px;font:700 13px var(--f-body);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+#tipb{position:fixed;z-index:4500;max-width:220px;background:#161A33;color:#fff;font-size:13px;line-height:1.4;padding:7px 10px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.35);pointer-events:none;text-align:center}
+/* ટીક બોક્ષ / રેડિયો: અક્ષર જેવડાં મોટાં, સહેલાઈથી દબાય */
+input[type=checkbox],input[type=radio]{width:24px!important;height:24px!important;min-width:24px;flex:none;margin:0 8px 0 0;accent-color:var(--brand);cursor:pointer;vertical-align:middle}
+.swrow input[type=checkbox]{width:1px!important;height:1px!important;min-width:0;margin:0}
+label.row:has(> input[type=checkbox]),label.row:has(> input[type=radio]){align-items:center;gap:8px;min-height:44px}
 /* ફોનની ઉપરની (બેટરી/સમય) અને નીચેની (Back બટન) પટ્ટી — તેની નીચે લખાણ ન જાય */
 :root{--sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));--sal:var(--safe-area-inset-left,env(safe-area-inset-left,0px));--sar:var(--safe-area-inset-right,env(safe-area-inset-right,0px))}
 body{padding:var(--sat) var(--sar) var(--sab) var(--sal)}
@@ -328,9 +334,11 @@ const Ring = {bid:null, iv:null, t:null,
   start(bid, ms = 60000){ if(this.bid === bid) return; this.stop(); this.bid = bid; const P = nativeRing();
     if(P) P.start({seconds:Math.round(ms / 1000)}).catch(() => this.web()); else this.web();
     this.t = setTimeout(() => this.stop(), ms); },
-  web(){ const tick = () => { ringOnce(); try{ navigator.vibrate && navigator.vibrate([600, 250, 600]); }catch(e){} }; tick(); clearInterval(this.iv); this.iv = setInterval(tick, 2400); },
-  stop(){ if(!this.bid) return; this.bid = null; clearInterval(this.iv); clearTimeout(this.t); this.iv = this.t = null;
-    const P = nativeRing(); if(P) P.stop().catch(() => {}); try{ navigator.vibrate && navigator.vibrate(0); }catch(e){} }
+  web(){ this.webOn = true; const tick = () => { ringOnce(); try{ navigator.vibrate && navigator.vibrate([600, 250, 600]); }catch(e){} }; tick(); clearInterval(this.iv); this.iv = setInterval(tick, 2400); },
+  /* રિંગ + વાઇબ્રેશન બંને પૂરેપૂરા બંધ (ફોનમાં મોડું પહોંચેલ start પછી પણ — એટલે થોડી વાર પછી ફરી એક વાર) */
+  stop(){ const had = !!this.bid; this.bid = null; clearInterval(this.iv); clearTimeout(this.t); this.iv = this.t = null; this.halt();
+    if(had){ clearTimeout(this.t2); this.t2 = setTimeout(() => { if(!this.bid) this.halt(); }, 700); } },
+  halt(){ const P = nativeRing(); if(P) P.stop().catch(() => {}); if(this.webOn){ this.webOn = false; try{ navigator.vibrate && navigator.vibrate(0); }catch(e){} } }
 };
 
 // Kari-GO logo concepts — each returns an SVG string (viewBox 0 0 64 64)
@@ -1076,6 +1084,16 @@ function initAutoUpdate(){ const App = window.Capacitor && Capacitor.Plugins && 
 let idleAt = Date.now();
 function initIdleGuard(){ if(APP_MODE !== 'admin') return; ['pointerdown', 'keydown', 'scroll'].forEach(ev => addEventListener(ev, () => { idleAt = Date.now(); }, {passive:true}));
   setInterval(() => { if(S.session && S.session.role === 'admin' && Date.now() - idleAt > 30 * 60000){ idleAt = Date.now(); logout(); toast('સુરક્ષા માટે આપમેળે લૉગઆઉટ — ફરી લૉગિન કરો'); } }, 30000); }
+/* નામ વગરના (ફક્ત ચિહ્નવાળા) બટન: કમ્પ્યુટરમાં માઉસ રાખતાં નામ, ફોનમાં બટન દબાવી રાખતાં નામ દેખાય */
+function labelize(root){ (root || document).querySelectorAll('[aria-label]:not([title])').forEach(el => el.title = el.getAttribute('aria-label')); }
+let tipT = null, tipShown = false;
+function initTips(){ const show = el => { const t = tr(el.title || el.getAttribute('aria-label') || ''); if(!t) return; let b = $('#tipb'); if(!b){ b = document.createElement('div'); b.id = 'tipb'; document.body.appendChild(b); }
+    b.textContent = t; const r = el.getBoundingClientRect(); b.style.left = Math.max(8, Math.min(innerWidth - 228, r.left + r.width / 2 - 110)) + 'px'; b.style.top = Math.max(8, r.top - 44) + 'px'; b.hidden = false; tipShown = true;
+    clearTimeout(b._h); b._h = setTimeout(() => { b.hidden = true; }, 2200); };
+  addEventListener('pointerdown', e => { if(e.pointerType === 'mouse') return; const el = e.target.closest && e.target.closest('[title],[aria-label]'); clearTimeout(tipT); tipShown = false; if(!el) return; tipT = setTimeout(() => show(el), 500); }, {passive:true});
+  ['pointerup', 'pointercancel', 'pointermove'].forEach(ev => addEventListener(ev, e => { if(ev === 'pointermove' && Math.abs(e.movementX) + Math.abs(e.movementY) < 4) return; clearTimeout(tipT); }, {passive:true}));
+  addEventListener('click', e => { if(tipShown){ tipShown = false; e.preventDefault(); e.stopPropagation(); } }, true); // નામ જોવા દબાવી રાખ્યું — બટન ન ચાલે
+  new MutationObserver(() => labelize()).observe(document.body, {childList:true, subtree:true}); labelize(); }
 function setSession(s){ S.session = s; if(s) LS.set(SESSION_KEY, s); else LS.del(SESSION_KEY); }
 function delAccountCard(){
   return S.delAsk ? `<div class="card" style="border:2px solid var(--bad)"><h3>ખાતું કાયમ માટે ડિલીટ કરવું છે?</h3>
@@ -1117,7 +1135,7 @@ function kycPrevRestore(){ if(typeof KYCF === 'undefined') return; for(const key
 function onData(){ if(!Store.ready) return; render(); }
 
 function topbar(title, opt = {}){
-  const backBtn = S.stack.length || opt.back ? `<button class="ib" onclick="back()" aria-label="પાછા">‹</button>` : `<span style="flex:none">${logoSVG(34)}</span>`;
+  const backBtn = S.stack.length || opt.back ? `<button class="ib" onclick="back()" aria-label="પાછા" title="પાછા">‹</button>` : `<span style="flex:none">${logoSVG(34)}</span>`;
   return `<header class="top">${backBtn}<div class="t">${h(title)}</div>${opt.right || ''}${themeBtn()}${opt.right ? '' : langBtn()}</header>`;
 }
 function bnav(items){
@@ -1251,7 +1269,7 @@ VIEWS.c_karigar = p => {
   const km = distKm(c.area, k.area);
   const revs = jobsOf(k.id).filter(b => b.rating).slice(0, 8);
   const fav = (c.favs || []).includes(k.id);
-  return topbar(k.name, {right:`<button class="ib" aria-label="મનપસંદ" onclick="toggleFav('${k.id}')">${fav ? '❤️' : '🤍'}</button>`}) + `<div class="wrap">
+  return topbar(k.name, {right:`<button class="ib" aria-label="મનપસંદ" title="${fav ? 'મનપસંદમાંથી કાઢો' : 'મનપસંદમાં ઉમેરો'}" onclick="toggleFav('${k.id}')">${fav ? '❤️' : '🤍'}</button>`}) + `<div class="wrap">
     <div class="card"><div class="row">${avatar(k, 'lg')}<div class="grow stack" style="gap:2px"><h2>${h(k.name)}</h2>
       <div class="meta"><span>${catIcon(k.cat)} ${h(kCatTxt(k))}</span><span class="pill ok">✔ વેરિફાઇડ</span>${policeOk(k) ? '<span class="pill ok">🛡️ પોલીસ વેરિફાઇડ</span>' : ''}${k.sample ? '<span class="sample">નમૂનો</span>' : ''}</div>
       <div class="meta"><span>📍 ${h(areaName(k.area))} · ${km.toFixed(1)} કિમી</span></div></div></div>
@@ -1420,6 +1438,7 @@ VIEWS.c_bookings = () => { const c = me(); const list = bookingsOf(c.id);
 
 VIEWS.c_profile = () => { const c = me(); const st = Store.settings();
   return topbar('પ્રોફાઇલ') + `<div class="wrap"><div class="card">
+    <label class="f">ફોટો <span class="h">વૈકલ્પિક — કાપીને ગોઠવી શકાય</span><input type="file" id="cp_photo" accept="image/*" onchange="readPhoto(this)"></label><div id="cp_prev">${c.photo ? `<img src="${c.photo}" style="width:72px;height:72px;border-radius:16px;object-fit:cover" alt="">` : ''}</div>
     <label class="f">નામ<input id="cp_name" value="${h(c.name)}"></label>
     <label class="f">મોબાઇલ<input value="${h(c.mobile)}" disabled></label>
     ${areaField('cp_area', c.area, c.areaGeo)}
@@ -1442,7 +1461,7 @@ VIEWS.k_login = () => Store.mode === 'firebase' ? topbar('કારીગર લ
     <button class="btn pri block" onclick="karLogin()">લૉગિન</button>
     ${Store.mode === 'local' ? '<p class="tiny muted">ડેમો: નમૂનાના કારીગર — મોબાઇલ 9000000001, PIN 1111</p>' : ''}</div>
   <div class="card" style="align-items:center;text-align:center"><b>નવા કારીગર છો?</b><p class="small muted">એપમાં નામ નોંધાવો, ગ્રાહકો તમને સીધા બોલાવશે.</p><button class="btn ink block" onclick="go('k_register')">નવી નોંધણી કરો</button></div></div>`;
-function saveCProfile(){ const c = me(); Store.patch('customers', c.id, {name:$('#cp_name').value.trim() || c.name, area:areaVal('cp_area') || c.area, areaGeo:areaGeoVal('cp_area'), address:$('#cp_addr').value.trim()}); toast('સેવ થયું'); }
+function saveCProfile(){ const c = me(); if(photoData){ Store.patch('customers', c.id, {photo:photoData}); photoData = ''; } Store.patch('customers', c.id, {name:$('#cp_name').value.trim() || c.name, area:areaVal('cp_area') || c.area, areaGeo:areaGeoVal('cp_area'), address:$('#cp_addr').value.trim()}); toast('સેવ થયું'); }
 async function karLogin(){ if(Store.mode === 'firebase'){ const mob = $('#kl_mob').value.replace(/\D/g, ''); if(!S.otpMob) return sendOtp(mob); const u = await confirmOtp(); if(u) await fbAfterLogin('karigar'); return; }
   const mob = $('#kl_mob').value.replace(/\D/g, ''), pin = $('#kl_pin').value;
   const k = Store.all('karigars').find(x => x.mobile === mob); if(!k) return toast('આ નંબર નોંધાયેલ નથી'); if(k.pin !== pin) return toast('PIN ખોટો છે');
@@ -1477,11 +1496,55 @@ function krCatBox(c){ return c === 'other' ? `<label class="f">તમારુ�
       <div class="chips">${AGENT_TYPES.map(t => `<button type="button" class="chipb" onclick="agentPick(this)">${t}</button>`).join('')}</div>` : ''; }
 function agentPick(b){ const i = $('#kr_agent'); if(!i) return; const t = b.textContent.trim(), cur = i.value.split(',').map(x => x.trim()).filter(Boolean);
   if(!cur.includes(t)) cur.push(t); i.value = cur.join(', ').slice(0, 60); b.classList.add('on'); }
+/* ---------- ફોટો કાપો (Crop): આંગળીથી ખસેડો, બે આંગળીથી/સ્લાઇડરથી મોટો-નાનો, ફેરવો ---------- */
+const CROP = {};
+function fileImg(f){ return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = r.result; }; r.onerror = no; r.readAsDataURL(f); }); }
+function cropSrc(im, rot){ const M = 2200, sc = Math.min(1, M / Math.max(im.width, im.height)); const w = Math.round(im.width * sc), h = Math.round(im.height * sc);
+  const cv = document.createElement('canvas'), sw = rot % 180 ? h : w, sh = rot % 180 ? w : h; cv.width = sw; cv.height = sh; const g = cv.getContext('2d');
+  g.translate(sw / 2, sh / 2); g.rotate(rot * Math.PI / 180); g.drawImage(im, -w / 2, -h / 2, w, h); return cv; }
+/* opt: {aspect:1, round:true, outW:400} અથવા {presets:[[નામ, aspect], ...], pick:0, outW:1400}  — aspect 0 = આખો ફોટો */
+function cropImage(file, opt = {}){ return new Promise(async done => {
+  let im; try{ im = await fileImg(file); }catch(e){ toast('ફોટો ખૂલ્યો નહીં — બીજો ફોટો પસંદ કરો'); return done(null); }
+  const C = CROP; Object.assign(C, {im, rot:0, opt, done, asp:opt.presets ? opt.presets[opt.pick || 0][1] : (opt.aspect || 1), s:1, tx:0, ty:0, ptr:new Map()});
+  modal(`<h3>✂️ ફોટો ગોઠવો</h3><p class="small muted">આંગળીથી ખસેડો • બે આંગળીથી કે નીચેના સ્લાઇડરથી મોટો-નાનો કરો</p>
+    <div id="cr_stage" style="position:relative;height:min(56vh,420px);background:#0d0f1a;border-radius:14px;overflow:hidden;touch-action:none;user-select:none;cursor:grab">
+      <canvas id="cr_img" style="position:absolute;left:50%;top:50%;transform-origin:center;pointer-events:none"></canvas>
+      <div id="cr_frame" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none;${opt.round ? 'border-radius:50%' : 'border-radius:6px'}"></div></div>
+    ${opt.presets ? `<div class="chips" id="cr_pre">${opt.presets.map(([n], i) => `<button type="button" class="chipb ${i === (opt.pick || 0) ? 'on' : ''}" onclick="cropPreset(${i})">${n}</button>`).join('')}</div>` : ''}
+    <div class="row" style="gap:10px"><span>➖</span><input type="range" id="cr_zoom" min="100" max="400" value="100" style="flex:1" oninput="cropZoom(this.value / 100)"><span>➕</span>
+      <button type="button" class="btn sm" title="ફોટો ફેરવો" onclick="cropRotate()">⟳ ફેરવો</button></div>
+    <div class="two"><button class="btn" onclick="cropDone(false)">રદ કરો</button><button class="btn pri" onclick="cropDone(true)">✔ કાપો અને વાપરો</button></div>`);
+  const m = $('#modal'); if(m) m.onclick = null; // બહાર દબાવવાથી બંધ ન થાય
+  C.src = cropSrc(im, 0); cropLayout(true); cropBind(); }); }
+function cropFrame(){ const st = $('#cr_stage'); if(!st) return null; const W = st.clientWidth - 24, H = st.clientHeight - 24, a = CROP.asp || (CROP.src.width / CROP.src.height);
+  let fw = W, fh = W / a; if(fh > H){ fh = H; fw = H * a; } return {W:st.clientWidth, H:st.clientHeight, fw, fh}; }
+function cropLayout(reset){ const C = CROP, F = cropFrame(); if(!F) return; const f = $('#cr_frame'); f.style.width = F.fw + 'px'; f.style.height = F.fh + 'px';
+  C.base = Math.max(F.fw / C.src.width, F.fh / C.src.height); if(reset){ C.z = 1; C.tx = C.ty = 0; const zr = $('#cr_zoom'); if(zr) zr.value = 100; }
+  const cv = $('#cr_img'); if(cv.width !== C.src.width || cv.height !== C.src.height){ cv.width = C.src.width; cv.height = C.src.height; } cv.getContext('2d').drawImage(C.src, 0, 0); cropApply(); }
+function cropClamp(){ const C = CROP, F = cropFrame(); if(!F) return; const s = C.base * C.z, mx = Math.max(0, (C.src.width * s - F.fw) / 2), my = Math.max(0, (C.src.height * s - F.fh) / 2);
+  C.tx = Math.max(-mx, Math.min(mx, C.tx)); C.ty = Math.max(-my, Math.min(my, C.ty)); }
+function cropApply(){ const C = CROP; cropClamp(); const cv = $('#cr_img'); if(!cv) return; const s = C.base * C.z;
+  cv.style.width = C.src.width + 'px'; cv.style.height = C.src.height + 'px'; cv.style.transform = `translate(calc(-50% + ${C.tx}px), calc(-50% + ${C.ty}px)) scale(${s})`; }
+function cropZoom(z){ CROP.z = Math.max(1, Math.min(4, z)); const zr = $('#cr_zoom'); if(zr && +zr.value !== Math.round(CROP.z * 100)) zr.value = Math.round(CROP.z * 100); cropApply(); }
+function cropRotate(){ const C = CROP; C.rot = (C.rot + 90) % 360; C.src = cropSrc(C.im, C.rot); cropLayout(true); }
+function cropPreset(i){ const C = CROP; C.asp = C.opt.presets[i][1]; document.querySelectorAll('#cr_pre .chipb').forEach((b, j) => b.classList.toggle('on', i === j)); cropLayout(true); }
+function cropBind(){ const st = $('#cr_stage'), C = CROP; if(!st) return; let d0 = 0, z0 = 1, last = null;
+  st.addEventListener('pointerdown', e => { st.setPointerCapture(e.pointerId); C.ptr.set(e.pointerId, {x:e.clientX, y:e.clientY}); if(C.ptr.size === 2){ const [a, b] = [...C.ptr.values()]; d0 = Math.hypot(a.x - b.x, a.y - b.y); z0 = C.z; } last = {x:e.clientX, y:e.clientY}; });
+  st.addEventListener('pointermove', e => { if(!C.ptr.has(e.pointerId)) return; C.ptr.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(C.ptr.size >= 2){ const [a, b] = [...C.ptr.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if(d0) cropZoom(z0 * d / d0); return; }
+    if(last){ C.tx += e.clientX - last.x; C.ty += e.clientY - last.y; last = {x:e.clientX, y:e.clientY}; cropApply(); } });
+  const up = e => { C.ptr.delete(e.pointerId); last = C.ptr.size === 1 ? [...C.ptr.values()][0] : null; d0 = 0; };
+  st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
+  st.addEventListener('wheel', e => { e.preventDefault(); cropZoom(C.z * (e.deltaY < 0 ? 1.1 : .9)); }, {passive:false}); }
+function cropDone(ok){ const C = CROP, F = cropFrame(), cb = C.done; C.done = null; let out = null;
+  if(ok && F){ const s = C.base * C.z; const sx = C.src.width / 2 - (F.fw / 2 + C.tx) / s, sy = C.src.height / 2 - (F.fh / 2 + C.ty) / s, sw = F.fw / s, sh = F.fh / s;
+    const ow = Math.min(C.opt.outW || 1400, Math.round(sw)), oh = Math.round(ow * sh / sw); out = document.createElement('canvas'); out.width = Math.max(1, ow); out.height = Math.max(1, oh);
+    const g = out.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, out.width, out.height); g.drawImage(C.src, sx, sy, sw, sh, 0, 0, out.width, out.height); }
+  closeModal(); if(cb) cb(out); }
 let photoData = '';
-function readPhoto(inp){ const f = inp.files[0]; if(!f) return; const r = new FileReader(); r.onload = () => { const img = new Image(); img.onload = () => {
-  const cv = document.createElement('canvas'), s = 180, m = Math.min(img.width, img.height); cv.width = cv.height = s;
-  cv.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s); photoData = cv.toDataURL('image/jpeg', .75);
-  const pv = $('#kr_prev') || $('#kp_prev'); if(pv) pv.innerHTML = `<img src="${photoData}" style="width:72px;height:72px;border-radius:16px;object-fit:cover" alt="">`; }; img.src = r.result; }; r.readAsDataURL(f); }
+async function readPhoto(inp){ const f = inp.files[0]; inp.value = ''; if(!f) return; if(!/^image\//.test(f.type)) return toast('ફક્ત ફોટો (JPG/PNG) પસંદ કરો');
+  const cv = await cropImage(f, {aspect:1, round:true, outW:240}); if(!cv) return; photoData = cv.toDataURL('image/jpeg', .8);
+  const pv = $('#kr_prev') || $('#kp_prev') || $('#cp_prev'); if(pv) pv.innerHTML = `<img src="${photoData}" style="width:72px;height:72px;border-radius:16px;object-fit:cover" alt=""> <span class="small" style="color:var(--ok)">✔ ફોટો ગોઠવાયો</span>`; }
 async function karRegister(){
   const v = id => $('#' + id) ? $('#' + id).value.trim() : '';
   const FBM = Store.mode === 'firebase', mob = FBM && S.pendingAuth.phoneV ? S.pendingAuth.mobile : v('kr_mob').replace(/\D/g, ''), pin = FBM ? '' : v('kr_pin');
@@ -1566,7 +1629,7 @@ VIEWS.k_job = p => {
   return topbar('કામ · ' + b.custName) + `<div class="wrap">
     <div class="status-hero"><span class="small" style="opacity:.8">${catIcon(b.cat)} ${h(catName(b.cat))}</span><h2>${STATUS[b.status]}</h2>
       ${si >= 0 ? `<div class="stepper">${STEPS.map((s, i) => `<div class="${i <= si ? 'on' : ''}"></div>`).join('')}</div><div class="stepl">${STEPL.map(l => `<span>${l}</span>`).join('')}</div>` : ''}</div>
-    <div class="card"><div class="between"><div><b>${h(b.custName)}</b> <span class="small">${custRatingPill(b.custId, b)}</span><div class="num">${h(b.custMobile)}</div></div><div class="row"><button class="btn sm" data-t="${h(b.custMobile)}" onclick="copyText(this.dataset.t)">કૉપિ</button><a class="btn sm ok" href="tel:${h(b.custMobile)}">📞</a></div></div>
+    <div class="card"><div class="between"><div><b>${h(b.custName)}</b> <span class="small">${custRatingPill(b.custId, b)}</span><div class="num">${h(b.custMobile)}</div></div><div class="row"><button class="btn sm" data-t="${h(b.custMobile)}" onclick="copyText(this.dataset.t)">કૉપિ</button><a class="btn sm ok" href="tel:${h(b.custMobile)}" title="ગ્રાહકને ફોન કરો">📞 ફોન</a></div></div>
       <div class="bill small"><span class="muted">સરનામું</span><span>${h(b.address)}, ${h(areaName(b.area))}</span><span class="muted">તકલીફ</span><span>${h(b.problem)}</span><span class="muted">સમય</span><span>${fmtDT(b.when)}</span></div>
       <a class="btn sm" target="_blank" rel="noopener" href="${b.geo ? mapsUrl(b.geo) : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.address + ', ' + areaName(b.area))}">🗺️ ${b.geo ? 'ગ્રાહકનું ચોક્કસ લોકેશન (GPS)' : 'નકશામાં ખોલો'}</a></div>
     ${['accepted','onway'].includes(b.status) ? kJobMap(b, k) : ''}
@@ -1664,6 +1727,27 @@ async function adminLogin(){
     catch(e){ toast(authErr(e)); } return; }
   if($('#al_pin').value !== String(Store.settings().adminPin)){ audit('ખોટો એડમિન PIN', '', devStr()); return toast('PIN ખોટો છે'); } setSession({role:'admin', id:'admin'}); home(); logAccess('login'); }
 
+/* ---------- એડમિન: બધે શોધો (કારીગર, ગ્રાહક, બુકિંગ, ફરિયાદ) + PDF/Excel ---------- */
+const qn = t => String(t == null ? '' : t).toLowerCase().replace(/\s+/g, ' ');
+function aHit(q, parts){ const t = qn(parts.filter(Boolean).join(' | ')); if(t.includes(q)) return true; const d = q.replace(/\D/g, ''); return d.length >= 3 && t.replace(/\D/g, '').includes(d) && q.replace(/[\d\s-]/g, '') === ''; }
+function aSearchSet(q){ q = qn(q).trim(); if(q.length < 2) return null;
+  const K = Store.all('karigars').filter(k => aHit(q, [k.name, k.mobile, k.email, kCatTxt(k), areaName(k.area), k.skills, k.about, k.lastIp, k.aadhaar4, k.policeNo, k.upi, k.id]));
+  const C = Store.all('customers').filter(c => aHit(q, [c.name, c.mobile, c.email, areaName(c.area), c.address, ...(c.addrs || []).map(a => a.label + ' ' + a.address + ' ' + areaName(a.area)), c.lastIp, c.id]));
+  const B = Store.all('bookings').filter(b => { const k = Store.get('karigars', b.karigarId) || {}; return aHit(q, [bNo(b), 'TJ-' + bNum(b), b.id, b.custName, b.custMobile, b.address, areaName(b.area), b.problem, catName(b.cat), k.name, k.mobile, stTxt(b.status), b.cancelReason]); });
+  const TK = Store.all('tickets').filter(t => aHit(q, [t.no, t.userName, t.mobile, t.topic, t.text]));
+  return {q, K, C, B, TK}; }
+function aSearchRes(q){ const r = aSearchSet(q); if(!r) return q ? '<p class="small muted">ઓછામાં ઓછા 2 અક્ષર લખો</p>' : '';
+  const n = r.K.length + r.C.length + r.B.length + r.TK.length; if(!n) return `<p class="small muted">"${h(q)}" — કંઈ મળ્યું નહીં</p>`;
+  const row = (on, t, sub) => `<button class="row" style="text-align:left;width:100%;padding:8px 4px;border-bottom:1px solid var(--line)" onclick="${on}"><div class="grow"><b class="small">${t}</b><div class="tiny muted">${sub}</div></div><span>›</span></button>`;
+  const grp = (title, list, f) => list.length ? `<h4 style="margin:12px 0 4px">${title} (${list.length})</h4>${list.slice(0, 25).map(f).join('')}${list.length > 25 ? `<p class="tiny muted">…વધુ ${list.length - 25} — બધું PDF/Excel માં આવશે</p>` : ''}` : '';
+  return `<div class="between" style="margin-top:8px"><b class="small">કુલ ${n} પરિણામ</b></div>
+    <div class="two" style="margin:8px 0"><button class="btn ink" onclick="runExport('pdf','q')">📄 શોધ PDF</button><button class="btn ok" onclick="runExport('xlsx','q')">📊 શોધ Excel</button></div>
+    ${grp('👷 કારીગર', r.K, k => row(`go('a_karigar',{id:'${k.id}'})`, h(k.name), [h(kCatTxt(k)), h(k.mobile || ''), '📍 ' + h(areaName(k.area))].join(' · ')))}
+    ${grp('👤 ગ્રાહક', r.C, c => row(`go('a_customer',{id:'${c.id}'})`, h(c.name), [h(c.mobile || ''), '📍 ' + h(areaName(c.area)), h(c.address || '')].join(' · ')))}
+    ${grp('📋 બુકિંગ', r.B, b => row(`go('a_booking',{id:'${b.id}'})`, h(bNo(b)) + ' · ' + h(catName(b.cat)), [h(b.custName || ''), h(stTxt(b.status)), dt(b.createdAt)].join(' · ')))}
+    ${grp('🎧 ફરિયાદ', r.TK, t => row(`go('a_tickets')`, h(t.no || '') + ' · ' + h(t.topic || ''), [h(t.userName || ''), dt(t.createdAt)].join(' · ')))}`; }
+let aqT = null;
+function aSearch(v){ S.aq = v; clearTimeout(aqT); aqT = setTimeout(() => { const el = $('#a_qres'); if(el){ el.innerHTML = aSearchRes(v); trTree(el); } }, 200); }
 VIEWS.a_home = () => {
   if(!isAdmin()) return VIEWS.welcome();
   const B = Store.all('bookings'), K = Store.all('karigars');
@@ -1676,6 +1760,7 @@ VIEWS.a_home = () => {
     ${openAl.map(alertCard).join('')}
     ${openT.length ? `<button class="banner ${lateT ? 'bad' : 'acc'}" style="text-align:left;width:100%" onclick="tab('a_tickets')">🎧 <div><b>${openT.length} ખુલ્લી ફરિયાદ${lateT ? ' · ' + lateT + ' ને 24 કલાકથી જવાબ નથી' : ''}</b>જવાબ આપવા ટેપ કરો</div></button>` : ''}
     ${pendK || pendP ? `<div class="banner warn">🔔 <div><b>ધ્યાન આપવાનું</b>${pendK ? `<button class="btn sm" onclick="tab('a_karigars')">${pendK} કારીગર મંજૂરી</button> ` : ''}${pendP ? `<button class="btn sm" onclick="tab('a_payments')">${pendP} કમીશન ચૂકવણી</button>` : ''}</div></div>` : ''}
+    <div class="card"><h3>🔎 બધે શોધો</h3><div class="search"><span>🔍</span><input id="a_q" value="${h(S.aq || '')}" placeholder="નામ, મોબાઇલ, સરનામું, બુકિંગ નંબર, IP, આધાર છેલ્લા 4…" oninput="aSearch(this.value)" autocomplete="off"></div><div id="a_qres">${aSearchRes(S.aq || '')}</div></div>
     <div class="stats"><div><b>${B.length}</b><span>કુલ બુકિંગ</span></div><div><b>${done.length}</b><span>પૂરા થયેલ</span></div><div><b>${B.filter(b => ACTIVE.includes(b.status)).length}</b><span>ચાલુ</span></div>
       <div><b>${rs(gmv)}</b><span>કુલ ધંધો</span></div>${commOn() || comm || due ? `<div><b style="color:var(--ok)">${rs(comm)}</b><span>કમાયેલ કમીશન</span></div><div><b style="color:var(--warn)">${rs(due)}</b><span>બાકી કમીશન</span></div>` : `<div><b>${Store.all('tickets').length}</b><span>કુલ ફરિયાદ</span></div><div><b>0%</b><span>કમીશન (બંધ)</span></div>`}
       <div><b>${K.filter(k => k.status === 'approved').length}</b><span>મંજૂર કારીગર</span></div><div><b>${K.filter(k => k.online && k.status === 'approved').length}</b><span>હાલ ઓનલાઇન</span></div><div><b>${Store.all('customers').length}</b><span>ગ્રાહકો</span></div></div>
@@ -1809,6 +1894,18 @@ const areaKeyIn = t => { t = String(t || '').toLowerCase(); if(!t) return ''; fo
 function areaLL(a, g){ if(g && isFinite(g.lat) && isFinite(g.lng)) return {lat:+g.lat, lng:+g.lng};
   if(AREAS[a]) return {lat:AREAS[a][1], lng:AREAS[a][2]}; if(!a) return null;
   const m = areaGeoMap()[a]; if(m) return {lat:+m.lat, lng:+m.lng}; const k = areaKeyIn(a); return k ? {lat:AREAS[k][1], lng:AREAS[k][2]} : null; }
+/* નકશો ⇄ સેટેલાઇટ બટન (બધા નકશામાં). સેટેલાઇટ: Esri World Imagery (મફત) + જગ્યાનાં નામ */
+function addSatToggle(map, street){
+  const sat = L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'Tiles © Esri'}),
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {maxZoom:19})]);
+  const Ctl = L.Control.extend({options:{position:'topright'}, onAdd(){ const b = L.DomUtil.create('button', 'satbtn'); b.type = 'button';
+    const paint = () => { const on = map.hasLayer(sat); b.textContent = on ? tr('🗺️ નકશો') : tr('🛰️ સેટેલાઇટ'); b.title = on ? tr('સામાન્ય નકશો બતાવો') : tr('સેટેલાઇટ (આકાશમાંથી) દૃશ્ય બતાવો'); };
+    L.DomEvent.disableClickPropagation(b);
+    b.onclick = () => { if(map.hasLayer(sat)){ map.removeLayer(sat); street.addTo(map); LS.set('tj_sat', 0); } else { map.removeLayer(street); sat.addTo(map); LS.set('tj_sat', 1); } paint(); };
+    setTimeout(paint); return b; }});
+  new Ctl().addTo(map);
+  if(LS.get('tj_sat', 0)){ map.removeLayer(street); sat.addTo(map); }
+  return sat; }
 /* નકશા પરથી વિસ્તાર પસંદ કરો (OpenStreetMap — મફત) */
 const APK = {map:null, id:'', nm:'', t:null, q:0};
 async function pickArea(id){ if(!$('#' + id)) return; APK.id = id; APK.nm = '';
@@ -1822,7 +1919,7 @@ async function pickArea(id){ if(!$('#' + id)) return; APK.id = id; APK.nm = '';
   try{ await needLeaflet(); }catch(e){ const m = $('#apk_map'); if(m) m.innerHTML = '<p class="small" style="padding:16px">નકશો ન ખૂલ્યો — ઇન્ટરનેટ તપાસો અથવા વિસ્તારનું નામ જાતે લખો.</p>'; return; }
   const el = $('#apk_map'); if(!el) return;
   const map = APK.map = L.map(el, {zoomControl:true, attributionControl:true}).setView([st.lat, st.lng], st0 ? 15 : 7); map.attributionControl.setPrefix('');
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+  addSatToggle(map, L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map));
   map.on('movestart', () => { APK.nm = ''; const n = $('#apk_nm'); if(n) n.textContent = '…'; });
   map.on('moveend', () => { clearTimeout(APK.t); APK.t = setTimeout(apkName, 700); });
   setTimeout(() => { try{ map.invalidateSize(); }catch(e){} }, 250); if(st0) apkName(); else apkHere(); }
@@ -1905,7 +2002,7 @@ async function mapsUpgrade(){
       const tl = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}); let ok = 0, bad = 0;
       M = MAPS[key] = {div, map, layer:L.layerGroup().addTo(map), fitted:false, dead:false};
       tl.on('tileload', () => ok++); tl.on('tileerror', () => { if(++bad >= 4 && !ok && !M.dead){ M.dead = true; try{ map.remove(); }catch(e){} const p2 = document.querySelector(`.lmap[data-mk="${key}"]`); if(p2) p2.innerHTML = miniMap(spec.pts, spec.o); } });
-      tl.addTo(map); map.on('dragstart', () => { M.user = true; });
+      tl.addTo(map); addSatToggle(map, tl); map.on('dragstart', () => { M.user = true; });
     } else if(M.div.parentNode !== ph) ph.replaceChildren(M.div);
     M.layer.clearLayers(); const o = spec.o;
     if(o.path && o.path.length > 1) L.polyline(o.path.map(p => [p.lat, p.lng]), {color:'#8FA0FF', weight:3, dashArray:'5 5'}).addTo(M.layer);
@@ -2263,14 +2360,13 @@ async function sha256(t){ try{ const b = await crypto.subtle.digest('SHA-256', n
 const aadHash = n => sha256('thaijashe-aadhaar:' + n);
 function fmtAad(el){ const d = el.value.replace(/\D/g, '').slice(0, 12); el.value = d.replace(/(\d{4})(?=\d)/g, '$1 '); }
 const KYCF = {};
-function readDoc(inp, key){ const f = inp.files[0]; if(!f) return; if(!/^image\//.test(f.type)) return toast('ફક્ત ફોટો (JPG/PNG) પસંદ કરો');
-  const r = new FileReader(); r.onload = () => { const img = new Image(); img.onload = () => {
+async function readDoc(inp, key){ const f = inp.files[0]; inp.value = ''; if(!f) return; if(!/^image\//.test(f.type)) return toast('ફક્ત ફોટો (JPG/PNG) પસંદ કરો');
+  const pol = /_polf$/.test(key); const img = await cropImage(f, {presets:[['🪪 કાર્ડ', 1.586], ['📄 પાનું', .707], ['🖼️ આખો ફોટો', 0]], pick:pol ? 1 : 0, outW:1600}); if(!img) return; {
     // આશરે 250 KB સુધી નાનો કરો (અક્ષરો વંચાય તેટલો) — Firestore ના 1 MB દસ્તાવેજમાં 3 ફોટા સમાય
     let M = 1400, q = .72, out = ''; for(let i = 0; i < 8; i++){ const sc = Math.min(1, M / Math.max(img.width, img.height));
       const cv = document.createElement('canvas'); cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
       out = cv.toDataURL('image/jpeg', q); if(out.length < 330000) break; if(q > .5) q -= .08; else M = Math.round(M * .8); }
-    KYCF[key] = out; const pv = $('#' + key + '_pv'); if(pv) pv.innerHTML = `<img src="${KYCF[key]}" alt="" style="max-height:90px;border-radius:10px;border:1px solid var(--line)"> <span class="small" style="color:var(--ok)">✔ પસંદ કર્યો</span>`; };
-    img.onerror = () => toast('ફોટો ખૂલ્યો નહીં — બીજો ફોટો પસંદ કરો'); img.src = r.result; }; r.readAsDataURL(f); }
+    KYCF[key] = out; const pv = $('#' + key + '_pv'); if(pv) pv.innerHTML = `<img src="${KYCF[key]}" alt="" style="max-height:90px;border-radius:10px;border:1px solid var(--line)"> <span class="small" style="color:var(--ok)">✔ પસંદ કર્યો</span>`; } }
 function kycFields(p){ return `<label class="f">આધાર નંબર (પૂરા 12 આંકડા) <span class="h">ફરજિયાત</span><input id="${p}_aadn" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="1234 5678 9012" oninput="fmtAad(this)"></label>
     <label class="f">આધાર કાર્ડનો ફોટો (આગળની બાજુ) <span class="h">ફરજિયાત</span><input type="file" id="${p}_aadf" accept="image/*" onchange="readDoc(this,'${p}_aadf')"></label><div id="${p}_aadf_pv"></div>
     <label class="f">આધાર કાર્ડ પાછળની બાજુ <span class="h">વૈકલ્પિક</span><input type="file" id="${p}_aadb" accept="image/*" onchange="readDoc(this,'${p}_aadb')"></label><div id="${p}_aadb_pv"></div>
@@ -2336,7 +2432,6 @@ function submitKRating(id){ if(!pickedStar) return toast('સ્ટાર પસ
   if(c && Store.mode !== 'firebase') Store.patch('customers', c.id, {ratingSum:(c.ratingSum || 0) + pickedStar, ratingCount:(c.ratingCount || 0) + 1}); pickedStar = 0; toast('ગ્રાહકને રેટિંગ આપ્યું'); }
 
 /* ================= ADMIN: detail screens ================= */
-const dt = ts => ts ? new Date(ts).toLocaleString(LOC(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
 const kv = rows => `<div class="bill small">${rows.filter(Boolean).map(([a, b]) => `<span class="muted">${a}</span><span>${b}</span>`).join('')}</div>`;
 const STATUS_K = {pending:['મંજૂરી બાકી','warn'], approved:['મંજૂર','ok'], blocked:['બંધ','bad']};
 const sameDevice = (x, col) => { const ids = new Set((x.logins || []).map(l => l.did).filter(d => d && !/^DSMPL/.test(d)));
@@ -2482,7 +2577,7 @@ VIEWS.a_map = () => { if(!isAdmin()) return VIEWS.welcome();
   return topbar('લાઇવ નકશો', {back:true}) + `<div class="wrap"><div class="card">${mapBox('amap', pts)}<div class="meta"><span>🛵 ઓનલાઇન કારીગર</span><span><b style="color:#9AA1BD">●</b> ઓફલાઇન (છેલ્લું લોકેશન)</span><span>🏠 ચાલુ બુકિંગ</span></div></div>
     <h3>${K.filter(k => k.online).length} ઓનલાઇન / ${K.length} મંજૂર</h3>
     ${K.map(k => `<div class="card kitem" style="flex-direction:row;align-items:center">${avatar(k)}<div class="grow"><b>${h(k.name)}</b><div class="meta"><span>${h(kCatTxt(k))}</span><span>${k.loc ? '📍 ' + ago(k.loc.ts) : 'લોકેશન નથી'}</span>${activeJobOf(k.id) ? '<span class="pill acc">કામ પર</span>' : ''}</div></div>
-      <div class="stack" style="gap:4px">${k.loc ? `<a class="btn sm" target="_blank" rel="noopener" href="${mapsUrl(k.loc)}">🗺️</a>` : ''}<button class="btn sm" onclick="go('a_karigar',{id:'${k.id}',t:'loc'})">›</button></div></div>`).join('')}</div>` + aNav(); };
+      <div class="stack" style="gap:4px">${k.loc ? `<a class="btn sm" target="_blank" rel="noopener" href="${mapsUrl(k.loc)}" title="Google Maps માં કારીગરનું હાલનું લોકેશન ખોલો">🗺️ Google નકશો</a>` : ''}<button class="btn sm" title="કારીગરની પૂરી વિગત અને લોકેશન ઇતિહાસ" onclick="go('a_karigar',{id:'${k.id}',t:'loc'})">વિગત ›</button></div></div>`).join('')}</div>` + aNav(); };
 VIEWS.a_reports = () => { if(!isAdmin()) return VIEWS.welcome(); const B = Store.all('bookings'), D = 86400000, d0 = new Date(); d0.setHours(0, 0, 0, 0);
   let [ra, rb] = rangeOf(); if(!isFinite(rb)) rb = d0.getTime() + D; if(!ra) ra = Math.min(rb - 7 * D, ...B.map(b => b.createdAt || rb)); ra = new Date(ra).setHours(0, 0, 0, 0);
   const monthly = rb - ra > 62 * D, buckets = [];
@@ -2593,7 +2688,7 @@ function locStatus(k){
   return `<p class="tiny muted" style="margin:-6px 0 0">📍 ${fresh(k.loc, 300000) ? 'લોકેશન ચાલુ · ' + ago(k.loc.ts) + ' અપડેટ' : 'લોકેશન શોધી રહ્યા છીએ… (ઓનલાઇન હો ત્યારે જ લેવાય છે)'}</p>`;
 }
 const custRatingPill = (cid, b) => { const c = Store.get('customers', cid) || (b && b.cRate && b.cRate.n ? {ratingSum:b.cRate.s, ratingCount:b.cRate.n} : null); if(c && !Store.get('customers', cid)) return `<span class="star">ગ્રાહક ★${(c.ratingSum / c.ratingCount).toFixed(1)}</span>`; return c && c.ratingCount ? `<span class="star">ગ્રાહક ★${custRating(cid).toFixed(1)}</span>` : '<span>નવા ગ્રાહક</span>'; };
-function addrCard(c){ return `<div class="card"><h3>મારાં સરનામાં</h3>${(c.addrs || []).map((a, i) => `<div class="between small"><span><b>${h(a.label)}:</b> ${h(a.address)}, ${h(areaName(a.area))}</span><button class="btn sm bad" onclick="delAddr(${i})">✕</button></div>`).join('') || '<p class="small muted">હજુ કોઈ સરનામું સેવ નથી.</p>'}
+function addrCard(c){ return `<div class="card"><h3>મારાં સરનામાં</h3>${(c.addrs || []).map((a, i) => `<div class="between small"><span><b>${h(a.label)}:</b> ${h(a.address)}, ${h(areaName(a.area))}</span><button class="btn sm bad" onclick="delAddr(${i})" title="આ સરનામું કાઢી નાખો">✕ કાઢો</button></div>`).join('') || '<p class="small muted">હજુ કોઈ સરનામું સેવ નથી.</p>'}
   <details class="faq"><summary>+ નવું સરનામું ઉમેરો</summary><div class="stack"><label class="f">નામ<input id="ad_lbl" placeholder="ઘર / ઓફિસ / મમ્મીનું ઘર"></label>${areaField('ad_area', '')}
   <label class="f">પૂરું સરનામું<textarea id="ad_addr"></textarea></label><button class="btn ink block" onclick="addAddr()">સરનામું સેવ કરો</button></div></details></div>`; }
 function weekEarn(k){ const D = 86400000, d0 = new Date(); d0.setHours(0, 0, 0, 0); const J = jobsOf(k.id).filter(b => b.status === 'done');
@@ -3193,6 +3288,14 @@ Object.assign(EN, {"🎉 નવું અપડેટ આવ્યું છે"
 Object.assign(HI, {"🎉 નવું અપડેટ આવ્યું છે": "🎉 नया अपडेट आया है", "⬇️ હમણાં અપડેટ કરો": "⬇️ अभी अपडेट करें", "પછી": "बाद में", "એપની નવી આવૃત્તિ": "ऐप का नया संस्करण", "તૈયાર છે (તમારી: 1.0.": "तैयार है (आपका: 1.0.", "). ડાઉનલોડ કરીને ઇન્સ્ટોલ કરો — તમારો ડેટા અને લૉગિન સચવાયેલાં રહેશે.": "). डाउनलोड करके इंस्टॉल करें — आपका डेटा और लॉगिन सुरक्षित रहेंगे।"});
 Object.assign(EN, {"સુરક્ષા માટે આપમેળે લૉગઆઉટ — ફરી લૉગિન કરો": "Logged out automatically for safety — please log in again"});
 Object.assign(HI, {"સુરક્ષા માટે આપમેળે લૉગઆઉટ — ફરી લૉગિન કરો": "सुरक्षा के लिए अपने-आप लॉगआउट — फिर से लॉगिन करें"});
+Object.assign(EN, {"🗺️ નકશો": "🗺️ Map", "🛰️ સેટેલાઇટ": "🛰️ Satellite", "સામાન્ય નકશો બતાવો": "Show normal map", "સેટેલાઇટ (આકાશમાંથી) દૃશ્ય બતાવો": "Show satellite view"});
+Object.assign(HI, {"🗺️ નકશો": "🗺️ नक्शा", "🛰️ સેટેલાઇટ": "🛰️ सैटेलाइट", "સામાન્ય નકશો બતાવો": "सामान्य नक्शा दिखाएँ", "સેટેલાઇટ (આકાશમાંથી) દૃશ્ય બતાવો": "सैटेलाइट दृश्य दिखाएँ"});
+Object.assign(EN, {"✂️ ફોટો ગોઠવો": "✂️ Adjust photo", "આંગળીથી ખસેડો • બે આંગળીથી કે નીચેના સ્લાઇડરથી મોટો-નાનો કરો": "Drag to move • pinch or use the slider to zoom", "⟳ ફેરવો": "⟳ Rotate", "ફોટો ફેરવો": "Rotate photo", "✔ કાપો અને વાપરો": "✔ Crop & use", "🪪 કાર્ડ": "🪪 Card", "📄 પાનું": "📄 Page", "🖼️ આખો ફોટો": "🖼️ Whole photo", "✔ ફોટો ગોઠવાયો": "✔ Photo set", "વૈકલ્પિક — કાપીને ગોઠવી શકાય": "Optional — you can crop it"});
+Object.assign(HI, {"✂️ ફોટો ગોઠવો": "✂️ फ़ोटो सेट करें", "આંગળીથી ખસેડો • બે આંગળીથી કે નીચેના સ્લાઇડરથી મોટો-નાનો કરો": "उँगली से खिसकाएँ • दो उँगलियों या स्लाइडर से छोटा-बड़ा करें", "⟳ ફેરવો": "⟳ घुमाएँ", "ફોટો ફેરવો": "फ़ोटो घुमाएँ", "✔ કાપો અને વાપરો": "✔ काटें और इस्तेमाल करें", "🪪 કાર્ડ": "🪪 कार्ड", "📄 પાનું": "📄 पेज", "🖼️ આખો ફોટો": "🖼️ पूरी फ़ोटो", "✔ ફોટો ગોઠવાયો": "✔ फ़ोटो सेट", "વૈકલ્પિક — કાપીને ગોઠવી શકાય": "वैकल्पिक — काटकर सेट कर सकते हैं"});
+Object.assign(EN, {"Google Maps માં કારીગરનું હાલનું લોકેશન ખોલો": "Open the pro's current location in Google Maps", "🗺️ Google નકશો": "🗺️ Google Maps", "કારીગરની પૂરી વિગત અને લોકેશન ઇતિહાસ": "Full details and location history", "વિગત ›": "Details ›", "ગ્રાહકને ફોન કરો": "Call the customer", "📞 ફોન": "📞 Call", "આ સરનામું કાઢી નાખો": "Delete this address", "✕ કાઢો": "✕ Remove", "મનપસંદમાંથી કાઢો": "Remove from favourites", "મનપસંદમાં ઉમેરો": "Add to favourites", "પાછા": "Back"});
+Object.assign(HI, {"Google Maps માં કારીગરનું હાલનું લોકેશન ખોલો": "Google Maps में कारीगर की मौजूदा लोकेशन खोलें", "🗺️ Google નકશો": "🗺️ Google मैप", "કારીગરની પૂરી વિગત અને લોકેશન ઇતિહાસ": "पूरी जानकारी और लोकेशन इतिहास", "વિગત ›": "विवरण ›", "ગ્રાહકને ફોન કરો": "ग्राहक को फ़ोन करें", "📞 ફોન": "📞 फ़ोन", "આ સરનામું કાઢી નાખો": "यह पता हटाएँ", "✕ કાઢો": "✕ हटाएँ", "મનપસંદમાંથી કાઢો": "पसंदीदा से हटाएँ", "મનપસંદમાં ઉમેરો": "पसंदीदा में जोड़ें", "પાછા": "वापस"});
+Object.assign(EN, {"🔎 બધે શોધો": "🔎 Search everything", "નામ, મોબાઇલ, સરનામું, બુકિંગ નંબર, IP, આધાર છેલ્લા 4…": "Name, mobile, address, booking no., IP, Aadhaar last 4…", "ઓછામાં ઓછા 2 અક્ષર લખો": "Type at least 2 characters", "કંઈ મળ્યું નહીં": "nothing found", "📄 શોધ PDF": "📄 Search PDF", "📊 શોધ Excel": "📊 Search Excel", "👷 કારીગર": "👷 Pros", "👤 ગ્રાહક": "👤 Customers", "📋 બુકિંગ": "📋 Bookings", "🎧 ફરિયાદ": "🎧 Complaints", "પરિણામ": "results", "કુલ": "Total"});
+Object.assign(HI, {"🔎 બધે શોધો": "🔎 सब जगह खोजें", "નામ, મોબાઇલ, સરનામું, બુકિંગ નંબર, IP, આધાર છેલ્લા 4…": "नाम, मोबाइल, पता, बुकिंग नंबर, IP, आधार आखिरी 4…", "ઓછામાં ઓછા 2 અક્ષર લખો": "कम से कम 2 अक्षर लिखें", "કંઈ મળ્યું નહીં": "कुछ नहीं मिला", "📄 શોધ PDF": "📄 खोज PDF", "📊 શોધ Excel": "📊 खोज Excel", "👷 કારીગર": "👷 कारीगर", "👤 ગ્રાહક": "👤 ग्राहक", "📋 બુકિંગ": "📋 बुकिंग", "🎧 ફરિયાદ": "🎧 शिकायत", "પરિણામ": "परिणाम", "કુલ": "कुल"});
 Object.assign(HI, {"OTP ફરી મોકલો": "OTP फिर भेजें", "લૉગિન: Google (ગ્રાહક/કારીગર), ઈમેલ (એડમિન) · મફત પ્લાન · સર્વર: Cloudflare Worker · સૂચના: FCM": "लॉगिन: Google (ग्राहक/कारीगर), ईमेल (एडमिन) · मुफ़्त प्लान · सर्वर: Cloudflare Worker · सूचना: FCM", "લાઇવ ચાલુ —": "लाइव चालू —", "10 આંકડાનો સાચો મોબાઇલ નંબર લખો": "10 अंकों का सही मोबाइल नंबर लिखें", "30 સેકન્ડ પછી ફરી મોકલી શકાશે": "30 सेकंड बाद फिर भेज सकेंगे", "6 આંકડાનો OTP લખો": "6 अंकों का OTP लिखें", "Firebase માં આ લૉગિન રીત ચાલુ નથી": "Firebase में यह लॉगिन तरीका चालू नहीं है", "OTP ખોટો છે": "OTP गलत है", "OTP ચકાસી ન શકાયો:": "OTP जाँचा नहीं जा सका:", "OTP ચકાસો": "OTP जाँचें", "OTP ચકાસો અને આગળ વધો": "OTP जाँचें और आगे बढ़ें", "OTP ની મુદત પૂરી — ફરી મંગાવો": "OTP की अवधि खत्म — फिर मँगाएँ", "OTP મોકલી રહ્યા છીએ…": "OTP भेज रहे हैं…", "OTP મોકલ્યો — SMS જુઓ": "OTP भेजा — SMS देखें", "📩 OTP મોકલો": "📩 OTP भेजें", "SMS મર્યાદા પૂરી — એડમિનને જાણ કરો": "SMS सीमा पूरी — एडमिन को बताएँ", "પર SMS થી આવેલો 6 આંકડાનો OTP લખો": "पर SMS से आया 6 अंकों का OTP लिखें", "SOS અને સૂચના": "SOS और सूचना", "SOS, બુકિંગ અને ફરિયાદની સૂચના": "SOS, बुकिंग और शिकायत की सूचना", "આ ખાતું એડમિન નથી — Firestore માં admins/": "यह खाता एडमिन नहीं है — Firestore में admins/", "બનાવો": "बनाएँ", "આ નંબર કારીગર તરીકે નોંધાયેલ છે — \"હું કારીગર છું\" થી લૉગિન કરો": "यह नंबर कारीगर के रूप में पंजीकृत है — \"मैं कारीगर हूँ\" से लॉगिन करें", "આ નંબર ગ્રાહક તરીકે નોંધાયેલ છે — બીજો નંબર વાપરો": "यह नंबर ग्राहक के रूप में पंजीकृत है — दूसरा नंबर इस्तेमाल करें", "આ વેબસાઇટ Firebase ના Authorized domains માં ઉમેરો": "यह वेबसाइट Firebase के Authorized domains में जोड़ें", "ઇન્ટરનેટ ચાલુ કરો": "इंटरनेट चालू करें", "ઈમેલ અને પાસવર્ડ લખો": "ईमेल और पासवर्ड लिखें", "ઈમેલ કે પાસવર્ડ ખોટો છે": "ईमेल या पासवर्ड गलत है", "ઈમેલ ખોટો છે": "ईमेल गलत है", "ઈમેલ લખો": "ईमेल लिखें", "એડમિન ઈમેલ": "एडमिन ईमेल", "પાસવર્ડ": "पासवर्ड", "પાસવર્ડ બદલવાની લિંક ઈમેલ પર મોકલી": "पासवर्ड बदलने की लिंक ईमेल पर भेजी", "પાસવર્ડ ભૂલી ગયા?": "पासवर्ड भूल गए?", "ફક્ત Firebase ના": "सिर्फ़ Firebase के", "સંગ્રહમાં જેનો UID હોય તે જ ખૂલશે.": "संग्रह में जिसका UID हो वही खुलेगा।", "ઘણા પ્રયત્નો થયા — થોડી વાર પછી પ્રયત્ન કરો": "बहुत कोशिशें हुईं — थोड़ी देर बाद कोशिश करें", "ચકાસણી નિષ્ફળ — પેજ ફરી ખોલો": "जाँच विफल — पेज फिर खोलें", "નંબર બદલો": "नंबर बदलें", "મોબાઇલ OTP થી લૉગિન / નોંધણી": "मोबाइल OTP से लॉगिन / पंजीकरण", "નવા હો કે જૂના — મોબાઇલ નંબર ચકાસો. નવા હશો તો પછી નોંધણી ફોર્મ ખૂલશે.": "नए हों या पुराने — मोबाइल नंबर जाँचें। नए होंगे तो फिर पंजीकरण फ़ॉर्म खुलेगा।", "મોબાઇલ:": "मोबाइल:", "✔ OTP થી ચકાસાયેલ": "✔ OTP से जाँचा हुआ", "નોંધણી થઈ રહી છે… ફોટા અપલોડ થાય છે": "पंजीकरण हो रहा है… फ़ोटो अपलोड हो रहे हैं", "પહેલાં OTP મંગાવો": "पहले OTP मँगाएँ", "ફોટો અપલોડ ન થયો": "फ़ोटो अपलोड नहीं हुआ", "ફોટો અપલોડ ન થયો:": "फ़ोटो अपलोड नहीं हुआ:", "મંજૂરી નથી": "अनुमति नहीं", "સેવ ન થયું:": "सेव नहीं हुआ:", "ભૂલ:": "त्रुटि:", "મોબાઇલ નંબર ખોટો છે": "मोबाइल नंबर गलत है", "લૉગ લોડ થાય છે…": "लॉग लोड हो रहे हैं…", "સૂચના (Notification) ની મંજૂરી આપો — નહીં તો એપ બંધ હોય ત્યારે વિનંતી નહીં આવે": "सूचना (Notification) की अनुमति दें — वरना ऐप बंद होने पर अनुरोध नहीं आएँगे", "કારીગર ઓફલાઇન છે — સમય નક્કી કરો": "कारीगर ऑफ़लाइन है — समय तय करें"});
 Object.assign(HI, {"Google ટોકન ન મળ્યો": "Google टोकन नहीं मिला", "Google લૉગિન ન થયું — ફરી પ્રયત્ન કરો": "Google लॉगिन नहीं हुआ — फिर कोशिश करें", "Google લૉગિન રદ કર્યું": "Google लॉगिन रद्द किया", "Google થી લૉગિન": "Google से लॉगिन", "SMS OTP લૉગિન પણ": "SMS OTP लॉगिन भी", "અથવા મોબાઇલ OTP": "या मोबाइल OTP", "આ ઈમેલ બીજી રીતે નોંધાયેલ છે": "यह ईमेल दूसरे तरीके से पंजीकृत है", "આ ખાતું કારીગર તરીકે નોંધાયેલ છે — \"હું કારીગર છું\" થી લૉગિન કરો": "यह खाता कारीगर के रूप में पंजीकृत है — \"मैं कारीगर हूँ\" से लॉगिन करें", "આ ખાતું ગ્રાહક તરીકે નોંધાયેલ છે — બીજું Google ખાતું વાપરો": "यह खाता ग्राहक के रूप में पंजीकृत है — दूसरा Google खाता इस्तेमाल करें", "કારીગર તમને આ નંબર પર કૉલ કરશે": "कारीगर आपको इस नंबर पर कॉल करेगा", "ગ્રાહક આ નંબર પર કૉલ કરશે": "ग्राहक इस नंबर पर कॉल करेंगे", "તમારા Gmail ખાતાથી એક ટેપમાં — કોઈ પાસવર્ડ કે SMS નહીં. નવા હશો તો પછી નામ અને મોબાઇલ પૂછશે.": "अपने Gmail खाते से एक टैप में — कोई पासवर्ड या SMS नहीं। नए होंगे तो फिर नाम और मोबाइल पूछेंगे।", "તમારા Gmail ખાતાથી એક ટેપમાં — મફત, કોઈ SMS નહીં. નવા હશો તો પછી નોંધણી ફોર્મ ખૂલશે.": "अपने Gmail खाते से एक टैप में — मुफ़्त, कोई SMS नहीं। नए होंगे तो फिर पंजीकरण फ़ॉर्म खुलेगा।", "નામ અને મોબાઇલ નંબર લખી \"આગળ વધો\" દબાવો": "नाम और मोबाइल नंबर लिखकर \"आगे बढ़ें\" दबाएँ", "બંધ = ફક્ત Google લૉગિન (મફત). ચાલુ = Google ઉપરાંત મોબાઇલ OTP (દરેક SMS ના પૈસા, Blaze જરૂરી)": "बंद = सिर्फ़ Google लॉगिन (मुफ़्त)। चालू = Google के साथ मोबाइल OTP भी (हर SMS के पैसे, Blaze ज़रूरी)", "બીજું ખાતું વાપરો": "दूसरा खाता इस्तेमाल करें", "લૉગિન / નવી નોંધણી": "लॉगिन / नया पंजीकरण", "લૉગિન / નવું ખાતું": "लॉगिन / नया खाता", "ગ્રાહક નોંધણી": "ग्राहक पंजीकरण", "✔ ચકાસાયેલ": "✔ जाँचा हुआ", "Google ખાતું": "Google खाता"});
 Object.assign(HI, {"રેટિંગ સેવ ન થયું:": "रेटिंग सेव नहीं हुई:", "4 આંકડાનો OTP લખો": "4 अंकों का OTP लिखें"});
@@ -3284,6 +3387,8 @@ const INV_CSS = `<style>.inv{font-family:"Hind Vadodara","Noto Sans Gujarati","N
 const r2 = n => (Math.round(n * 100) / 100).toFixed(2);
 function invHead(st){ return `<div class="ih">${logoSVG(54, false)}<div><h1>${h(st.bizName || APP.name)}</h1><div class="mut">${h(st.bizAddr || st.city || '')}${st.gstin ? ' · GSTIN: ' + h(st.gstin) : ''}</div>
   <div class="mut">${st.supportPhone ? '📞 ' + h(st.supportPhone) + ' ' : ''}${st.supportEmail ? '✉ ' + h(st.supportEmail) : ''}</div></div></div>`; }
+/* તારીખ-સમય (બિલ, એડમિન બંનેમાં) */
+const dt = ts => ts ? new Date(ts).toLocaleString(LOC(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
 function billHTML(b){ const st = Store.settings(), k = Store.get('karigars', b.karigarId) || {}, bl = b.bill || {}, tl = b.timeline || {};
   const paid = b.status === 'done';
   return `<div class="inv">${invHead(st)}<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><h2>બિલ / રસીદ</h2><div class="mut">બિલ નં. TJ-${bNum(b)} · ${dt(tl.billed || tl.done || b.createdAt)}</div></div>${paid ? '<span class="stamp">ચૂકવાઈ ગયું ✔</span>' : ''}</div>
@@ -3324,7 +3429,28 @@ function avatarPng(x, size = 160){ if(x.photo) return x.photo;
   const cv = document.createElement('canvas'); cv.width = cv.height = size; const c = cv.getContext('2d'); const hue = Math.abs((CATS.findIndex(q => q.id === x.cat) * 37) % 360) || 220;
   c.fillStyle = `hsl(${hue},45%,42%)`; c.fillRect(0, 0, size, size); c.fillStyle = '#fff'; c.font = `700 ${size * .48}px "Hind Vadodara","Noto Sans Gujarati",sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText((tr(x.name || '?') || '?').trim().charAt(0), size / 2, size / 2 + size * .05); return cv.toDataURL('image/png'); }
-function mapPng(pts, o = {}){
+/* રિપોર્ટ (PDF/Excel) માટે સાચો નકશો: OpenStreetMap ના ટુકડા (tiles) જોડીને ચિત્ર બને; ન મળે તો સાદો નકશો */
+async function tileMapPng(pts, o = {}, W = 1020, H = 630){
+  pts = pts.filter(p => p && isFinite(p.lat) && isFinite(p.lng)); const path = (o.path || []).filter(p => p && isFinite(p.lat) && isFinite(p.lng));
+  const all = [...pts, ...path]; if(!all.length) return '';
+  const T = 256, px = (lat, lng, z) => { const n = T * 2 ** z, s = Math.sin(lat * Math.PI / 180); return {x:(lng + 180) / 360 * n, y:(.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n}; };
+  let z = 16; for(; z > 3; z--){ const P = all.map(p => px(p.lat, p.lng, z)); const w = Math.max(...P.map(q => q.x)) - Math.min(...P.map(q => q.x)), hh = Math.max(...P.map(q => q.y)) - Math.min(...P.map(q => q.y)); if(w < W - 160 && hh < H - 140) break; }
+  const P = all.map(p => px(p.lat, p.lng, z)), cx = (Math.max(...P.map(q => q.x)) + Math.min(...P.map(q => q.x))) / 2, cy = (Math.max(...P.map(q => q.y)) + Math.min(...P.map(q => q.y))) / 2, x0 = cx - W / 2, y0 = cy - H / 2;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'); g.fillStyle = '#EEF1F7'; g.fillRect(0, 0, W, H);
+  const jobs = [], N = 2 ** z; let ok = 0, tot = 0;
+  for(let tx = Math.floor(x0 / T); tx <= Math.floor((x0 + W) / T); tx++) for(let ty = Math.floor(y0 / T); ty <= Math.floor((y0 + H) / T); ty++){ if(ty < 0 || ty >= N) continue; tot++;
+    jobs.push(new Promise(done => { const im = new Image(); im.crossOrigin = 'anonymous'; const tm = setTimeout(() => done(), 9000);
+      im.onload = () => { clearTimeout(tm); g.drawImage(im, tx * T - x0, ty * T - y0, T, T); ok++; done(); }; im.onerror = () => { clearTimeout(tm); done(); };
+      im.src = `https://tile.openstreetmap.org/${z}/${((tx % N) + N) % N}/${ty}.png`; })); }
+  await Promise.all(jobs); if(!ok || ok < tot / 2) return '';
+  const XY = p => { const q = px(p.lat, p.lng, z); return [q.x - x0, q.y - y0]; };
+  if(path.length > 1){ g.strokeStyle = '#3F55D9'; g.lineWidth = 4; g.setLineDash([10, 7]); g.beginPath(); path.forEach((p, i) => { const [x, y] = XY(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); g.setLineDash([]); }
+  pts.forEach(p => { const [x, y] = XY(p), r = (p.r || 7) * 1.6; g.beginPath(); g.arc(x, y, r + 3, 0, 7); g.fillStyle = '#fff'; g.fill(); g.beginPath(); g.arc(x, y, r, 0, 7); g.fillStyle = p.c || '#1E2A78'; g.fill(); });
+  if(o.labels !== false) pts.forEach(p => { if(!p.label) return; const [x, y] = XY(p); g.font = '700 17px "Hind Vadodara","Noto Sans Gujarati",sans-serif'; g.lineWidth = 5; g.strokeStyle = '#fff'; g.lineJoin = 'round'; const t = tr(p.label); g.strokeText(t, x + 15, y + 6); g.fillStyle = '#161A33'; g.fillText(t, x + 15, y + 6); });
+  g.font = '12px sans-serif'; const at = '© OpenStreetMap'; const aw = g.measureText(at).width + 10; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(W - aw, H - 18, aw, 18); g.fillStyle = '#333'; g.fillText(at, W - aw + 5, H - 5);
+  try{ return cv.toDataURL('image/png'); }catch(e){ return ''; } }
+async function mapPng(pts, o = {}){ try{ const t = await tileMapPng(pts, o); if(t) return t; }catch(e){ console.warn('tilemap', e); } return svgMapPng(pts, o); }
+function svgMapPng(pts, o = {}){
   return new Promise(res => {
     let svg = miniMap(pts, o).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
       .replace(/(<svg[^>]*>)/, '$1<style>.mbg{fill:#EEF1F7}.ma{fill:#C3C9D8}.mt{font-size:7px;fill:#5D6480;font-family:sans-serif}.ml{font-size:7.5px;font-weight:700;fill:#161A33;font-family:sans-serif;paint-order:stroke;stroke:#EEF1F7;stroke-width:3px}</style>');
@@ -3335,6 +3461,9 @@ function mapPng(pts, o = {}){
 }
 function exportSet(scope, id){
   let KS = [], CS = [];
+  if(scope === 'q'){ const r = aSearchSet(S.aq || '') || {K:[], C:[], B:[], TK:[]}; const bid = new Set(r.B.map(b => b.id)), kid = new Set(r.K.map(k => k.id)), cid = new Set(r.C.map(c => c.id));
+    return {KS:r.K, CS:r.C, B:Store.all('bookings').filter(b => bid.has(b.id) || kid.has(b.karigarId) || cid.has(b.custId)).sort((a, b) => b.createdAt - a.createdAt), TK:r.TK,
+      AL:Store.all('alerts').filter(a => kid.has(a.userId) || cid.has(a.userId)), PY:Store.all('payments').filter(p => kid.has(p.karigarId))}; }
   if(scope === 'k1') KS = [Store.get('karigars', id)].filter(Boolean); else if(scope === 'c1') CS = [Store.get('customers', id)].filter(Boolean);
   else { if(scope !== 'c') KS = Store.all('karigars').sort((a, b) => a.createdAt - b.createdAt); if(scope !== 'k') CS = Store.all('customers').sort((a, b) => a.createdAt - b.createdAt); }
   const kid = new Set(KS.map(k => k.id)), cid = new Set(CS.map(c => c.id));
@@ -3342,7 +3471,7 @@ function exportSet(scope, id){
   const rel = x => scope === 'all' || kid.has(x.userId) || cid.has(x.userId) || kid.has(x.karigarId) || cid.has(x.custId);
   return {KS, CS, B, TK:Store.all('tickets').filter(rel), AL:Store.all('alerts').filter(rel), PY:Store.all('payments').filter(p => kid.has(p.karigarId))};
 }
-const scopeName = (scope, set) => scope === 'k1' ? (set.KS[0] || {}).name : scope === 'c1' ? (set.CS[0] || {}).name : {all:L2('બધા કારીગરો અને ગ્રાહકો', 'All pros and customers'), k:L2('બધા કારીગરો', 'All pros'), c:L2('બધા ગ્રાહકો', 'All customers')}[scope];
+const scopeName = (scope, set) => scope === 'q' ? L2('શોધ: ', 'Search: ') + '"' + (S.aq || '') + '"' : scope === 'k1' ? (set.KS[0] || {}).name : scope === 'c1' ? (set.CS[0] || {}).name : {all:L2('બધા કારીગરો અને ગ્રાહકો', 'All pros and customers'), k:L2('બધા કારીગરો', 'All pros'), c:L2('બધા ગ્રાહકો', 'All customers')}[scope];
 const kStatusTxt = k => tr((STATUS_K[k.status] || ['—'])[0]);
 const stTxt = s => tr(STATUS[s] || s);
 
@@ -3509,12 +3638,12 @@ async function buildPDF(scope, id, prog){
 }
 async function runExport(fmt, scope, id){
   if(Store.mode === 'firebase'){ toast(L2('લૉગ લોડ થાય છે…', 'Loading logs…')); try{ await FB.loadAllSubs(); }catch(e){ console.warn(e); } }
-  const set = exportSet(scope, id); if(!set.KS.length && !set.CS.length) return toast(L2('કોઈ ડેટા નથી', 'No data'));
+  const set = exportSet(scope, id); if(!set.KS.length && !set.CS.length && !set.B.length && !(set.TK || []).length) return toast(L2('કોઈ ડેટા નથી', 'No data'));
   modal(`<h3>${fmt === 'pdf' ? '📄 ' + L2('PDF બની રહી છે…', 'Creating PDF…') : '📊 ' + L2('Excel બની રહી છે…', 'Creating Excel…')}</h3><div class="bar"><i id="ex_bar" style="width:3%"></i></div><p class="small muted" id="ex_txt">${L2('ફોટા, ઓર્ડર, નકશો, લોકેશન, IP — બધું એક ફાઇલમાં', 'Photos, orders, map, location, IP — everything in one file')}</p>`);
   const prog = (a, b) => { const e = $('#ex_bar'); if(e) e.style.width = Math.max(3, a / b * 100) + '%'; const t = $('#ex_txt'); if(t) t.textContent = a + ' / ' + b; };
   try{
     const blob = fmt === 'pdf' ? await buildPDF(scope, id, prog) : await buildExcel(scope, id, prog);
-    const base = scope === 'k1' ? 'karigar_' + fileSafe((set.KS[0] || {}).mobile) : scope === 'c1' ? 'customer_' + fileSafe((set.CS[0] || {}).mobile) : {all:'all', k:'karigars', c:'customers'}[scope];
+    const base = scope === 'k1' ? 'karigar_' + fileSafe((set.KS[0] || {}).mobile) : scope === 'c1' ? 'customer_' + fileSafe((set.CS[0] || {}).mobile) : {all:'all', k:'karigars', c:'customers', q:'search_' + fileSafe(S.aq || '')}[scope];
     const name = `ThaiJashe_${base}_${today()}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}`;
     audit(fmt === 'pdf' ? 'PDF રિપોર્ટ' : 'Excel રિપોર્ટ', id || '', scope);
     modal(`<h3>✔ ${L2('ફાઇલ તૈયાર', 'File ready')}</h3><p class="small">${h(name)} · ${(blob.size / 1048576).toFixed(1)} MB</p><button class="btn pri block" id="ex_save">⬇️ ${L2('ફાઇલ સેવ કરો', 'Save file')}</button><button class="btn block" onclick="closeModal()">${L2('બંધ કરો', 'Close')}</button>`);
@@ -3592,7 +3721,7 @@ if(APP_MODE === 'admin') VIEWS.welcome = () => VIEWS.a_login();
 /* ---------- start ---------- */
 (async function(){
   $('#app').innerHTML = `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`;
-  initBack(); initAutoUpdate(); initIdleGuard(); await Store.init(); demoEnrich();
+  initBack(); initAutoUpdate(); initIdleGuard(); initTips(); await Store.init(); demoEnrich();
   if(S.session && S.session.role !== 'admin' && !me() && !Store.syncing) setSession(null);
   home(); if(S.session){ logAccess('open'); if(window.Push) Push.init(); }
 })();
