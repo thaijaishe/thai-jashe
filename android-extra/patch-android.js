@@ -22,6 +22,14 @@ if(!m.includes('TJMessagingService')) m = m.replace('</application>', `
 // રિંગ service (એપ બંધ હોય ત્યારે રિંગ વગાડે)
 if(!m.includes('.RingService')) m = m.replace('</application>', `    <service android:name=".RingService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
     </application>`);
+// રેફરલ લિંક: thaijashe://ref/CODE — વેબ પેજનું "એપમાં ખોલો" બટન એપ ખોલે અને કોડ ફોર્મમાં આપમેળે ભરાય
+if(!m.includes('android:scheme="thaijashe"')) m = m.replace(/(<activity[^>]*MainActivity[\s\S]*?)(\s*<\/activity>)/, (a, b, c) => b + `
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="thaijashe" android:host="ref" />
+            </intent-filter>` + c);
 fs.writeFileSync(MP, m);
 // રિંગ ફાઇલ build વખતે ન કપાય (shrinkResources)
 fs.writeFileSync(path.join(RAW, 'keep.xml'), '<?xml version="1.0" encoding="utf-8"?>\n<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@raw/tj_ring" />\n');

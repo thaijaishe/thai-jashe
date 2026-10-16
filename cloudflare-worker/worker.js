@@ -103,8 +103,16 @@ async function push(env, list, data, ring, validateOnly){
   return sent;
 }
 async function notifyAdmins(env, data){ const A = await query(env, {from:[{collectionId:'admins'}]}); const list = []; A.forEach(a => (a.fcm || []).forEach(t => list.push({col:'admins', id:a.id, t}))); return push(env, list, data); }
+/* કામ પર હોય તે કારીગર (સ્વીકાર્યું-હમણાં / રસ્તામાં / પહોંચ્યા / કામ ચાલુ) — બિલ બને ત્યાં સુધી નવી રિંગ નહીં */
+const BUSY_ST = ['accepted', 'onway', 'arrived', 'working'];
+const isBusyJob = x => BUSY_ST.includes(x.status) && (x.when === 'now' || x.status !== 'accepted');
+async function busySet(env){ const L = await query(env, {from:[{collectionId:'bookings'}], where:{fieldFilter:{field:{fieldPath:'status'}, op:'IN', value:{arrayValue:{values:BUSY_ST.map(toV)}}}}});
+  return new Set(L.filter(isBusyJob).map(x => x.karigarId).filter(Boolean)); }
+async function kBusy(env, kid){ const L = await query(env, {from:[{collectionId:'bookings'}], where:eq('karigarId', kid)}); return L.some(isBusyJob); }
+async function refreshBusy(env, kid){ if(!kid) return; try{ await setMerge(env, 'karigars/' + kid, {busy:await kBusy(env, kid), busyAt:Date.now()}); }catch(e){} }
 async function notifyNearby(env, id, b){
   const st = await getDoc(env, 'settings/main') || {}, R = +st.radiusKm || 25, bp = b.geoR || areaLL(b.areaGeo), skip = new Set(b.rejectedBy || []);
+  try{ (await busySet(env)).forEach(k => skip.add(k)); }catch(e){}
   // કારીગરના એક થી વધુ કામ (cats); "અન્ય કામ" ની વિનંતી જાતે લખેલા કામ (x:...) વાળાને પણ
   const has = k => (Array.isArray(k.cats) && k.cats.length ? k.cats : [k.cat]).some(c => c === b.cat || (b.cat === 'other' && (c === 'other' || String(c || '').startsWith('x:'))));
   const ks = (await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true))})).filter(has);
@@ -133,11 +141,15 @@ async function doNotify(env, uid, d, ctx){
     const b = await getDoc(env, 'bookings/' + id); if(!b) return {ok:false};
     const party = uid === b.custId || uid === b.karigarId || (b.rejectedBy || []).includes(uid); if(!party) throw new Error('not allowed');
     if(type === 'request'){
+      if(uid !== b.custId && (b.rejectedBy || []).includes(uid)){ const p = refreshBusy(env, uid); if(ctx && ctx.waitUntil) ctx.waitUntil(p); else await p; }
       if(b.status === 'searching') return {ok:true, sent:await notifyNearby(env, id, b)};
+      if(b.status === 'requested' && b.karigarId && await kBusy(env, b.karigarId).catch(() => false)) return {ok:true, sent:0, busy:true};
       if(b.status === 'requested' && b.karigarId) return {ok:true, sent:await push(env, await tokensOf(env, 'users', [b.karigarId]),
         {type:'request', bookingId:id, title:'🔔 ખાસ તમને વિનંતી: ' + (catT(b.cat) || 'કામ'), body:`${String(b.area || '').slice(0, 40)} · ${String(b.problem || '').slice(0, 60)}`}, true)};
       return {ok:true, sent:0};
     }
+    const kids = [b.karigarId, ...(uid !== b.custId && (b.rejectedBy || []).includes(uid) ? [uid] : [])].filter(Boolean);
+    if(ctx && ctx.waitUntil) ctx.waitUntil(Promise.all(kids.map(k => refreshBusy(env, k)))); else await Promise.all(kids.map(k => refreshBusy(env, k)));
     const to = uid === b.karigarId ? b.custId : b.karigarId; const msg = CUST_MSG[b.status]; if(!to || !msg) return {ok:true, sent:0};
     return {ok:true, sent:await push(env, await tokensOf(env, 'users', [to]), {type:'status', bookingId:id, title:'થઈ જશે! — ' + catT(b.cat), body:msg})};
   }

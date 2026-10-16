@@ -1134,6 +1134,11 @@ const me = () => S.session && Store.get(S.session.role === 'customer' ? 'custome
 const avg = k => k && k.ratingCount ? (k.ratingSum / k.ratingCount) : 0;
 const bookingsOf = cid => Store.all('bookings').filter(b => b.custId === cid).sort((a, b) => b.createdAt - a.createdAt);
 const jobsOf = kid => Store.all('bookings').filter(b => b.karigarId === kid).sort((a, b) => b.createdAt - a.createdAt);
+/* કામ પર = સ્વીકાર્યું (હમણાં) / રસ્તામાં / પહોંચ્યા / કામ ચાલુ — બિલ બને એટલે ફરી ફ્રી */
+const BUSY_ST = ['accepted', 'onway', 'arrived', 'working'];
+const busyJobOf = kid => jobsOf(kid).find(b => BUSY_ST.includes(b.status) && (b.when === 'now' || b.status !== 'accepted'));
+const busyNow = k => !!(k && (busyJobOf(k.id) || (k.busy && Date.now() - (k.busyAt || 0) < 6 * 3600000)));
+function syncBusy(kid){ const k = Store.get('karigars', kid); if(!k) return; const b = !!busyJobOf(kid); if(!!k.busy !== b) Store.patch('karigars', kid, {busy:b, busyAt:Date.now()}); }
 const activeJobOf = kid => jobsOf(kid).find(b => ['accepted','onway','arrived','working','billed'].includes(b.status) && (b.when === 'now' || b.status !== 'accepted'));
 /* ચાલુ/બંધ સ્વિચ (એડમિન → સેટિંગ): કમીશન, UPI, કૂપન — બધા મૂળથી બંધ */
 const commOn = () => !!Store.settings().commOn;
@@ -1142,6 +1147,22 @@ const couponOn = () => !!Store.settings().couponOn;
 /* ---------- રેફર એન્ડ અર્ન ---------- */
 const refOn = role => { const st = Store.settings(); return role === 'karigar' ? st.kRefOn !== false : st.refOn !== false; };
 try{ const q = new URLSearchParams(location.search).get('ref'); if(q){ S.refIn = q.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12); LS.set('tj_ref', S.refIn); } else S.refIn = LS.get('tj_ref', ''); }catch(e){}
+/* રેફરલ લિંક: વેબમાં ?ref=, Android એપમાં thaijashe://ref/CODE — કોડ ફોર્મમાં આપમેળે ભરાય */
+function refApply(raw, quiet){ const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12); if(!/^(TJ|KG)[A-Z0-9]{4,10}$/.test(code)) return '';
+  S.refIn = code; try{ LS.set('tj_ref', code); }catch(e){}
+  ['cl_ref', 'kr_ref'].forEach(id => { const i = document.getElementById(id); if(i && !i.value.trim() && (id === 'kr_ref') === /^KG/.test(code)) i.value = code; });
+  if(!quiet) toast(S.session ? 'તમે પહેલેથી જોડાયેલા છો — રેફરલ કોડ ફક્ત નવા ખાતા માટે' : '🎁 મિત્રનો રેફરલ કોડ ' + code + ' આપમેળે ઉમેરાયો');
+  if(!S.session && S.view === 'welcome') render(); return code; }
+function refFromUrl(u){ const m = String(u || '').match(/(?:[?&#]ref=|\/\/ref\/|\/ref\/)([A-Za-z0-9]{4,14})/i); return m ? refApply(m[1]) : ''; }
+function initDeepLink(){ const App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App; if(!isNative() || !App) return;
+  try{ App.addListener('appUrlOpen', e => refFromUrl(e && e.url)); }catch(e){}
+  try{ App.getLaunchUrl && App.getLaunchUrl().then(r => r && r.url && refFromUrl(r.url)).catch(() => {}); }catch(e){} }
+const refQ = () => S.refIn && !S.session ? '?ref=' + encodeURIComponent(S.refIn) : '';
+const isAndroidWeb = () => !isNative() && /Android/i.test(navigator.userAgent) && /^https?:$/.test(location.protocol);
+function appIntent(code){ return 'intent://ref/' + code + '#Intent;scheme=thaijashe;package=com.thaijashe.app;S.browser_fallback_url=' + encodeURIComponent(shareBase() + 'download.html?ref=' + code) + ';end'; }
+function refInCard(){ if(!S.refIn || S.session) return ''; const kg = /^KG/.test(S.refIn), st = Store.settings();
+  return `<div class="card rf-in" style="border:2px solid var(--ok)"><div class="row" style="gap:10px;align-items:center"><span style="font-size:34px">🎁</span><div class="grow"><b>મિત્રની લિંકથી આવ્યા છો</b><div class="small">રેફરલ કોડ <b class="num">${h(S.refIn)}</b> — ${kg ? '"હું કારીગર છું" માં નોંધણી કરો' : `ગ્રાહક તરીકે જોડાઓ, પહેલા કામ પર <b>₹${st.refFriend} છૂટ</b>`}. કોડ ફોર્મમાં આપમેળે ભરાઈ જશે — લખવાની જરૂર નથી.</div></div></div>
+    ${isAndroidWeb() ? `<a class="btn pri block" style="margin-top:10px" href="${h(appIntent(S.refIn))}">📲 એપમાં ખોલો (કોડ સાથે)</a><span class="tiny muted">એપ ન હોય તો ડાઉનલોડ પેજ ખૂલશે; ઇન્સ્ટોલ પછી ફરી આ બટન દબાવો.</span>` : ''}</div>`; }
 const shareBase = () => /^https?:/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.host) ? location.origin + location.pathname.replace(/[^/]*$/, '') : 'https://thaijaishe.github.io/thai-jashe/';
 function refMakeCode(role, mob){ const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; return (role === 'karigar' ? 'KG' : 'TJ') + String(mob || '').replace(/\D/g, '').slice(-4).padStart(4, '0') + L[Math.floor(Math.random() * 24)] + L[Math.floor(Math.random() * 24)]; }
 async function ensureRefCode(){ const u = me(), role = S.session && S.session.role; if(!u || !role || u.refCode) return u && u.refCode; const col = role === 'karigar' ? 'karigars' : 'customers';
@@ -1176,8 +1197,8 @@ async function loadRefs(){ if(Store.mode !== 'firebase' || !S.session) return; c
   try{ const q = isAdmin() ? Store.fs.collection('referrals') : Store.fs.collection('referrals').where('referrer', '==', S.session.id); const sn = await q.get(); const m = {};
     sn.forEach(d => m[d.id] = {...d.data(), id:d.id}); Store.cache.referrals = m; Store.changed(); }catch(e){ console.warn('refs', e); } }
 function refShareMsg(code, role){ const st = Store.settings(), link = shareBase() + '?ref=' + code;
-  return role === 'karigar' ? `🤝 "થઈ જશે!" એપમાં કારીગર તરીકે જોડાઓ — તમારા વિસ્તારમાં જ નવું કામ મળશે.\nનોંધણી વખતે મારો કોડ લખો: *${code}*\n👉 ${link}`
-    : `🎁 ઘરનું કોઈ પણ કામ — એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન… *થઈ જશે!*\nમારા કોડથી જોડાઓ અને પહેલા કામ પર *₹${st.refFriend} છૂટ* મેળવો.\nકોડ: *${code}*\n👉 ${link}`; }
+  return role === 'karigar' ? `🤝 "થઈ જશે!" એપમાં કારીગર તરીકે જોડાઓ — તમારા વિસ્તારમાં જ નવું કામ મળશે.\nનીચેની લિંક ખોલો — મારો કોડ *${code}* આપમેળે ભરાઈ જશે.\n👉 ${link}`
+    : `🎁 ઘરનું કોઈ પણ કામ — એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન… *થઈ જશે!*\nઆ લિંકથી જોડાઓ અને પહેલા કામ પર *₹${st.refFriend} છૂટ* મેળવો — કોડ *${code}* આપમેળે ભરાઈ જશે.\n👉 ${link}`; }
 function refShareWA(code, role){ const a = document.createElement('a'); a.href = 'https://wa.me/?text=' + encodeURIComponent(refShareMsg(code, role)); a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
 async function refShareLink(code, role){ const t = refShareMsg(code, role); try{ if(navigator.share){ await navigator.share({text:t}); return; } }catch(e){ return; } copyText(t); }
 function refBanner(){ const st = Store.settings(); if(!refOn('customer')) return '';
@@ -1193,10 +1214,10 @@ const radiusKm = () => Math.max(1, +Store.settings().radiusKm || 25);
 const inRadius = (k, b) => kmTo(k, b) <= radiusKm();
 function openRequestsFor(k){
   if(!k || k.status !== 'approved' || !k.online || dueBlocked(k)) return [];
-  const busy = !!activeJobOf(k.id);
+  if(busyJobOf(k.id)) return [];   // એક કામ ચાલુ છે — બિલ બને ત્યાં સુધી બીજી વિનંતી નહીં
   return Store.all('bookings').filter(b =>
     (b.status === 'requested' && b.karigarId === k.id) ||
-    (!busy && b.status === 'searching' && kHas(k, b.cat) && !(b.rejectedBy || []).includes(k.id) && inRadius(k, b))
+    (b.status === 'searching' && kHas(k, b.cat) && !(b.rejectedBy || []).includes(k.id) && inRadius(k, b))
   ).sort((a, b) => a.createdAt - b.createdAt);
 }
 function avatar(k, cls = ''){
@@ -1205,6 +1226,7 @@ function avatar(k, cls = ''){
   return `<div class="av ${cls}" style="background:hsl(${hue} 45% 42%)">${inner}${k.online && k.status === 'approved' ? '<span class="on-dot" title="ઓનલાઇન"></span>' : ''}</div>`;
 }
 function setStatus(b, s, extra = {}){ Store.patch('bookings', b.id, {...extra, status:s, timeline:{...(b.timeline || {}), [s]:Date.now()}});
+  if(S.session && S.session.role === 'karigar') syncBusy(S.session.id); else if(Store.mode === 'local' && b.karigarId) syncBusy(b.karigarId);
   if(Store.mode === 'firebase') FB.notify(s === 'searching' ? 'request' : 'status', b.id, Store.lastWrite); }
 function finishJob(b){ setTimeout(() => refAfterDone(b.id), 0);
   const st = Store.settings(), bill = b.bill || {gross:0, discount:0, payable:0};
@@ -1333,6 +1355,7 @@ VIEWS.welcome = () => `
   <div class="wrap">
     <button class="role" onclick="startRole('customer')"><span class="ic" style="overflow:hidden"><svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1E2A78"/><path d="M7 34 L26 17 L45 34 L40 34 L40 54 L12 54 L12 34 Z" fill="#F5B301" stroke="#F5B301" stroke-width="3" stroke-linejoin="round"/><rect x="21" y="40" width="10" height="14" rx="2" fill="#1E2A78"/><path d="M36 8 h18 a6 6 0 0 1 6 6 v9 a6 6 0 0 1 -6 6 h-8 l-6 6 v-6 h-4 a6 6 0 0 1 -6 -6 v-9 a6 6 0 0 1 6 -6 z" fill="#FFFFFF"/><path d="M41.5 14.6 a3.6 3.6 0 1 1 5.2 3.2 c-1.3 .7 -1.7 1.4 -1.7 2.7" fill="none" stroke="#1E2A78" stroke-width="2.6" stroke-linecap="round"/><circle cx="45" cy="24.6" r="1.6" fill="#1E2A78"/></svg></span><div><b>મારે કારીગર જોઈએ છે</b><span>એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન સહિત ${CATS.length} પ્રકારના કામ</span></div></button>
     <button class="role" onclick="startRole('karigar')"><span class="ic" style="overflow:hidden"><svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#F5B301"/><path d="M11 58 c0 -12 9 -18 19 -18 s19 6 19 18 z" fill="#1E2A78"/><path d="M24 40 l6 7 l6 -7" fill="#F5B301"/><circle cx="30" cy="29" r="9.5" fill="#1E2A78"/><path d="M18 25 a12 11 0 0 1 24 0 z" fill="#FFFFFF"/><rect x="15.5" y="23.6" width="29" height="4" rx="2" fill="#FFFFFF"/><rect x="28.4" y="13.6" width="3.2" height="10" rx="1.6" fill="#F5B301"/><g transform="translate(50 46) rotate(45)"><circle r="10.5" fill="#FFFFFF"/><rect x="-1.9" y="-2" width="3.8" height="10" rx="1.9" fill="#1E2A78"/><circle cx="0" cy="-3.6" r="4.6" fill="#1E2A78"/><rect x="-1.6" y="-9.4" width="3.2" height="5" fill="#FFFFFF"/></g></svg></span><div><b>હું કારીગર છું</b><span>નોંધણી કરો, ઘરે બેઠા કામ મેળવો, કમાણી કરો</span></div></button>
+    ${refInCard()}
     ${installCard()}
     <h3 style="margin-top:6px">એપ કેવી રીતે ચાલે છે</h3>
     <div class="steps">
@@ -1358,7 +1381,7 @@ VIEWS.c_login = () => Store.mode === 'firebase' ? cLoginFB() : topbar('ગ્ર
     <label class="f">મોબાઇલ નંબર<input id="cl_mob" inputmode="numeric" maxlength="10" placeholder="10 આંકડા"></label>
     ${areaField('cl_area', '')}
     <label class="f">સરનામું<textarea id="cl_addr" placeholder="મકાન નં., સોસાયટી, લેન્ડમાર્ક"></textarea></label>
-    ${refOn('customer') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — મિત્રએ આપ્યો હોય તો, પહેલા કામ પર ₹${Store.settings().refFriend} છૂટ</span><input id="cl_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^TJ/.test(S.refIn) ? S.refIn : '')}"></label>` : ''}
+    ${refOn('customer') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — મિત્રએ આપ્યો હોય તો, પહેલા કામ પર ₹${Store.settings().refFriend} છૂટ</span><input id="cl_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^TJ/.test(S.refIn) ? S.refIn : '')}">${S.refIn && /^TJ/.test(S.refIn) ? '<span class="tiny" style="color:var(--ok);font-weight:700">✔ મિત્રની લિંકથી કોડ આપમેળે ભરાયો</span>' : ''}</label>` : ''}
     ${Store.mode === 'firebase' ? otpBox() + `<button class="btn pri block" onclick="custLogin()">${S.otpMob ? 'OTP ચકાસો અને આગળ વધો' : '📩 OTP મોકલો'}</button>` : `<button class="btn pri block" onclick="custLogin()">આગળ વધો</button>`}
     <p class="tiny muted">આગળ વધીને તમે <a href="#" onclick="go('info',{page:'terms'});return false">ઉપયોગની શરતો</a> અને <a href="#" onclick="go('info',{page:'privacy'});return false">પ્રાઇવસી પોલિસી</a> સ્વીકારો છો. સલામતી માટે લૉગિન વખતે IP અને ડિવાઇસની વિગત નોંધાય છે.</p></div></div>`;
 function cLoginFB(){ const pa = S.pendingAuth && Store.auth.currentUser ? S.pendingAuth : null;
@@ -1369,7 +1392,7 @@ function cLoginFB(){ const pa = S.pendingAuth && Store.auth.currentUser ? S.pend
     <label class="f">મોબાઇલ નંબર <span class="h">કારીગર તમને આ નંબર પર કૉલ કરશે</span><input id="cl_mob" inputmode="numeric" maxlength="10" placeholder="10 આંકડા" value="${h(pa.mobile || '')}" ${pa.phoneV ? 'disabled' : ''}></label>
     ${areaField('cl_area', '')}
     <label class="f">સરનામું<textarea id="cl_addr" placeholder="મકાન નં., સોસાયટી, લેન્ડમાર્ક"></textarea></label>
-    ${refOn('customer') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — મિત્રએ આપ્યો હોય તો, પહેલા કામ પર ₹${Store.settings().refFriend} છૂટ</span><input id="cl_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^TJ/.test(S.refIn) ? S.refIn : '')}"></label>` : ''}
+    ${refOn('customer') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — મિત્રએ આપ્યો હોય તો, પહેલા કામ પર ₹${Store.settings().refFriend} છૂટ</span><input id="cl_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^TJ/.test(S.refIn) ? S.refIn : '')}">${S.refIn && /^TJ/.test(S.refIn) ? '<span class="tiny" style="color:var(--ok);font-weight:700">✔ મિત્રની લિંકથી કોડ આપમેળે ભરાયો</span>' : ''}</label>` : ''}
     <button class="btn pri block" onclick="custLogin()">આગળ વધો</button><button class="btn sm" onclick="doLogout().then(()=>{S.pendingAuth=null;render()})">બીજું ખાતું વાપરો</button>${terms}</div></div>`;
   return topbar('ગ્રાહક લૉગિન', {back:true}) + `<div class="wrap"><div class="card"><h2>લૉગિન / નવું ખાતું</h2><p class="small muted">તમારા Gmail ખાતાથી એક ટેપમાં — કોઈ પાસવર્ડ કે SMS નહીં. નવા હશો તો પછી નામ અને મોબાઇલ પૂછશે.</p>
     ${gBtn('customer')}
@@ -1422,11 +1445,11 @@ function kCard(k, area){
   return `<button class="card kitem ${k.online ? '' : 'off'}" onclick="go('c_karigar',{id:'${k.id}'})">${avatar(k)}
     <div class="grow stack" style="gap:3px"><div class="between"><span class="nm">${h(k.name)}</span><b class="num">${rs(k.visit)}</b></div>
     <div class="meta"><span>${catIcon(k.cat)} ${h(kCatTxt(k))}</span><span class="star">★ ${avg(k).toFixed(1)}</span><span>${k.jobs || 0} કામ</span><span>${k.exp || 0} વર્ષ અનુભવ</span></div>
-    <div class="meta"><span>📍 ${h(areaName(k.area))} · ${km.toFixed(1)} કિમી</span>${k.online ? `<span class="pill ok">~${etaMin(km)} મિનિટમાં</span>` : '<span class="pill">ઓફલાઇન</span>'}${k.sample ? '<span class="sample">નમૂનો</span>' : ''}</div></div></button>`;
+    <div class="meta"><span>📍 ${h(areaName(k.area))} · ${km.toFixed(1)} કિમી</span>${k.online ? (busyNow(k) ? '<span class="pill acc">🔧 હાલ કામ પર</span>' : `<span class="pill ok">~${etaMin(km)} મિનિટમાં</span>`) : '<span class="pill">ઓફલાઇન</span>'}${k.sample ? '<span class="sample">નમૂનો</span>' : ''}</div></div></button>`;
 }
 
 VIEWS.c_quick = () => topbar('ઝડપી બોલાવો') + `<div class="wrap"><p class="muted">કયું કામ છે? પસંદ કરતાં જ નજીકના બધા ઓનલાઇન કારીગરોને વિનંતી જશે, જે પહેલો સ્વીકારે તે આવશે.</p>
-  <div class="grid">${catList().map(x => { const n = Store.all('karigars').filter(k => kHas(k, x.id) && k.online && k.status === 'approved').length;
+  <div class="grid">${catList().map(x => { const n = Store.all('karigars').filter(k => kHas(k, x.id) && k.online && k.status === 'approved' && !busyNow(k)).length;
     return `<button class="cat" onclick="go('c_book',{cat:'${x.id}',mode:'broadcast'})"><span class="e">${x.icon}</span>${h(x.name)}<span class="tiny ${n ? '' : 'muted'}" style="color:${n ? 'var(--ok)' : ''}">${n} ઓનલાઇન</span></button>`; }).join('')}</div></div>` + cNav();
 
 VIEWS.c_cat = p => {
@@ -1434,9 +1457,9 @@ VIEWS.c_cat = p => {
   S.lastCat = p.cat; let ks = Store.all('karigars').filter(k => kHas(k, p.cat) && k.status === 'approved');
   const f = {near:(a, b) => (b.online - a.online) || distKm(c.area, a.area) - distKm(c.area, b.area), rating:(a, b) => avg(b) - avg(a), price:(a, b) => a.visit - b.visit};
   ks.sort(f[sort]);
-  const online = ks.filter(k => k.online).length;
+  const online = ks.filter(k => k.online && !busyNow(k)).length;
   return topbar(catIcon(p.cat) + ' ' + catName(p.cat)) + `<div class="wrap">
-    <button class="quick" onclick="go('c_book',{cat:'${p.cat}',mode:'broadcast'})" ${online ? '' : 'disabled'} style="${online ? '' : 'opacity:.5'}"><span style="font-size:28px">⚡</span><div><b>નજીકના બધાને વિનંતી મોકલો</b><span class="small">${online} કારીગર ઓનલાઇન · જે પહેલો સ્વીકારે તે આવશે</span></div></button>
+    <button class="quick" onclick="go('c_book',{cat:'${p.cat}',mode:'broadcast'})" ${online ? '' : 'disabled'} style="${online ? '' : 'opacity:.5'}"><span style="font-size:28px">⚡</span><div><b>નજીકના બધાને વિનંતી મોકલો</b><span class="small">${online} કારીગર ફ્રી · જે પહેલો સ્વીકારે તે આવશે</span></div></button>
     ${rateCard(p.cat)}
     <div class="between"><h3>${ks.length} કારીગર</h3><div class="chips">${[['near','નજીક'],['rating','રેટિંગ'],['price','સસ્તું']].map(([v, l]) =>
       `<button class="chipb ${sort === v ? 'on' : ''}" onclick="S.p.sort='${v}';render()">${l}</button>`).join('')}</div></div>
@@ -1463,9 +1486,9 @@ VIEWS.c_karigar = p => {
     ${rateCard(bc)}
     <div class="card"><h3>ગ્રાહકોના રિવ્યૂ</h3>${revs.length ? revs.map(b => `<div class="stack" style="gap:2px"><div class="between"><b class="small">${h(b.custName)}</b><span class="star small">${'★'.repeat(b.rating)}</span></div>${b.review ? `<p class="small">${h(b.review)}</p>` : ''}<span class="tiny muted">${ago(b.timeline && b.timeline.done)}</span></div>`).join('<hr>') : '<p class="small muted">હજુ કોઈ રિવ્યૂ નથી.</p>'}</div>
     <div class="two">
-      <button class="btn pri" ${k.online ? '' : 'disabled'} onclick="go('c_book',{cat:'${bc}',kid:'${k.id}',mode:'direct',when:'now'})">હમણાં બોલાવો</button>
+      <button class="btn pri" ${k.online && !busyNow(k) ? '' : 'disabled'} onclick="go('c_book',{cat:'${bc}',kid:'${k.id}',mode:'direct',when:'now'})">હમણાં બોલાવો</button>
       <button class="btn ink" onclick="go('c_book',{cat:'${bc}',kid:'${k.id}',mode:'direct',when:'later'})">સમય નક્કી કરો</button>
-    </div>${k.online ? '' : '<p class="tiny muted">આ કારીગર હાલ ઓફલાઇન છે — સમય નક્કી કરીને બુક કરી શકો.</p>'}
+    </div>${!k.online ? '<p class="tiny muted">આ કારીગર હાલ ઓફલાઇન છે — સમય નક્કી કરીને બુક કરી શકો.</p>' : busyNow(k) ? '<div class="banner acc">🔧 <div><b>આ કારીગર હાલ બીજા ઘરે કામ પર છે</b>કામ પૂરું થાય પછી ફરી બોલાવી શકશો — અથવા સમય નક્કી કરો / નજીકના બધાને વિનંતી મોકલો.</div></div>' : ''}
   </div>` + cNav();
 };
 
@@ -1521,7 +1544,7 @@ function placeBooking(){
   if(!area) return toast('વિસ્તાર લખો અથવા નકશા પરથી પસંદ કરો');
   if(!address) return toast('સરનામું લખો');
   if(later && !dt) return toast('તારીખ-સમય પસંદ કરો');
-  if(p.kid && !later){ const k = Store.get('karigars', p.kid); if(!k.online) return toast('કારીગર ઓફલાઇન છે — સમય નક્કી કરો'); }
+  if(p.kid && !later){ const k = Store.get('karigars', p.kid); if(!k.online) return toast('કારીગર ઓફલાઇન છે — સમય નક્કી કરો'); if(busyNow(k)) return toast('કારીગર હાલ બીજા કામ પર છે — સમય નક્કી કરો કે બધાને વિનંતી મોકલો'); }
   const cpRaw = couponOn() && $('#bk_cpn') ? $('#bk_cpn').value.trim() : ''; const cp = cpRaw ? findCoupon(cpRaw, p.cat) : null;
   if(cpRaw && !cp) return toast('કૂપન કોડ ખોટો છે');
   const now = Date.now(); let cpn = cp ? {code:cp.code, amount:cp.amount} : null; const rst = Store.settings();
@@ -1684,7 +1707,7 @@ VIEWS.k_register = () => (Store.mode === 'firebase' && !S.pendingAuth) ? (setTim
     <div id="kr_prev"></div></div>
   <div class="card"><h3>તમારું કામ</h3>
     <label class="f">કામનો પ્રકાર <span class="h">એક થી વધુ પસંદ કરી શકો — પછી પ્રોફાઇલમાંથી બદલી શકાશે</span></label>${catPicker('kr', S.cp_kr || [])}
-    ${refOn('karigar') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — કોઈ કારીગર મિત્રએ આપ્યો હોય તો</span><input id="kr_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^KG/.test(S.refIn) ? S.refIn : '')}"></label>` : ''}
+    ${refOn('karigar') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — કોઈ કારીગર મિત્રએ આપ્યો હોય તો</span><input id="kr_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^KG/.test(S.refIn) ? S.refIn : '')}">${S.refIn && /^KG/.test(S.refIn) ? '<span class="tiny" style="color:var(--ok);font-weight:700">✔ મિત્રની લિંકથી કોડ આપમેળે ભરાયો</span>' : ''}</label>` : ''}
     <label class="f">કયા કામ કરો છો <span class="h">અલ્પવિરામથી અલગ લખો</span><input id="kr_skills" placeholder="દા.ત. એસી સર્વિસ, ગેસ ભરવો, ઇન્સ્ટોલેશન"></label>
     <div class="two"><label class="f">અનુભવ (વર્ષ)<input id="kr_exp" inputmode="numeric" value="2"></label><label class="f">વિઝિટ ચાર્જ ₹<input id="kr_visit" inputmode="numeric" value="249"></label></div>
     ${areaField('kr_area', '', null, 'તમારો વિસ્તાર')}
@@ -1810,7 +1833,7 @@ VIEWS.k_home = () => {
     <div class="stats"><div><b>${today.length}</b><span>આજના કામ</span></div><div><b>${rs(todayEarn)}</b><span>આજની કમાણી</span></div><div><b class="star">★ ${avg(k).toFixed(1)}</b><span>રેટિંગ</span></div></div>
     ${act ? `<button class="card" style="text-align:left;border:2px solid var(--accent)" onclick="go('k_job',{id:'${act.id}'})"><div class="between"><b>ચાલુ કામ · ${h(act.custName)}</b>${statusPill(act.status)}</div><span class="small muted">📍 ${h(areaName(act.area))} · ${h(act.problem)}</span><span class="small" style="color:var(--brand);font-weight:700">ખોલો ›</span></button>` : ''}
     <div class="between"><h3>નવી વિનંતીઓ</h3>${reqs.length ? `<span class="pill warn">${reqs.length}</span>` : ''}</div>
-    ${reqs.length ? reqs.map(b => reqCard(b, k)).join('') : `<div class="card" style="align-items:center;text-align:center;color:var(--muted)">${k.online ? '<div class="radar" style="width:80px;height:80px"><span style="font-size:28px">' + catIcon(k.cat) + '</span></div>નવી વિનંતીની રાહ…' : 'ઓનલાઇન થાઓ એટલે અહીં ગ્રાહકોની વિનંતીઓ દેખાશે'}</div>`}
+    ${(() => { syncBusy(k.id); return ''; })()}${busyJobOf(k.id) && k.online ? `<div class="banner acc">🔧 <div><b>તમે હાલ કામ પર છો</b>આ કામનું બિલ બને પછી જ નવી વિનંતી (રિંગ) આવશે.</div></div>` : reqs.length ? reqs.map(b => reqCard(b, k)).join('') : `<div class="card" style="align-items:center;text-align:center;color:var(--muted)">${k.online ? '<div class="radar" style="width:80px;height:80px"><span style="font-size:28px">' + catIcon(k.cat) + '</span></div>નવી વિનંતીની રાહ…' : 'ઓનલાઇન થાઓ એટલે અહીં ગ્રાહકોની વિનંતીઓ દેખાશે'}</div>`}
     ${sched.length ? `<h3>આગળના નક્કી કરેલ કામ</h3>${sched.map(b => `<button class="card" style="text-align:left" onclick="go('k_job',{id:'${b.id}'})"><div class="between"><b>${h(b.custName)}</b><span class="pill brand">🗓️ ${fmtDT(b.when)}</span></div><span class="small muted">${h(areaName(b.area))} · ${h(b.problem)}</span></button>`).join('')}` : ''}
   </div>` + kNav();
 };
@@ -1824,6 +1847,7 @@ function toggleOnline(){ const k = me(); try{ AC = AC || new (window.AudioContex
 async function acceptReq(id){
   const k = me(); const b = Store.get('bookings', id); if(!b) return;
   S.ignored.add(id); $('#overlay').hidden = true; Ring.stop();
+  if(busyJobOf(k.id)) return toast('પહેલાં ચાલુ કામનું બિલ બનાવો — પછી નવું કામ લઈ શકશો');
   if(b.status === 'searching'){ const ok = await Store.claim(id, k.id); if(!ok) return toast('આ કામ બીજા કારીગરે લઈ લીધું'); FB.notify('status', id); }
   else if(b.status === 'requested' && b.karigarId === k.id) setStatus(b, 'accepted');
   else return toast('આ વિનંતી હવે ઉપલબ્ધ નથી');
@@ -3229,7 +3253,7 @@ function installCard(admin){
   const btn = INSTALL_EVT ? `<button class="btn pri" onclick="doInstall()">📲 હોમ સ્ક્રીન પર ઉમેરો</button>` : '';
   return `<div class="card" style="border:2px dashed var(--accent)"><b>📲 ${admin ? 'એડમિન પેનલ ફોનમાં રાખો' : 'ફોનમાં એપ રાખો'}</b>
     <span class="small muted">Play Store વગર — હોમ સ્ક્રીન પર "${admin ? 'TJ Admin' : 'થઈ જશે!'}" આઇકન આવી જશે અને એપની જેમ ખૂલશે.</span>
-    ${admin ? btn : `<div class="two">${btn || `<a class="btn pri" href="download.html">ઇન્સ્ટોલ કરવાની રીત</a>`}<a class="btn" href="download.html">Android APK</a></div>`}
+    ${admin ? btn : `<div class="two">${btn || `<a class="btn pri" href="download.html${refQ()}">ઇન્સ્ટોલ કરવાની રીત</a>`}<a class="btn" href="download.html${refQ()}">Android APK</a></div>`}
     ${!INSTALL_EVT ? `<span class="tiny muted">${ios ? 'iPhone: Safari માં શેર બટન → "Add to Home Screen"' : 'Chrome: ઉપર ⋮ મેનુ → "Add to Home screen" / "Install app"'}</span>` : ''}</div>`;
 }
 async function doInstall(){ const e = INSTALL_EVT; if(!e) return; e.prompt(); try{ await e.userChoice; }catch(x){} INSTALL_EVT = null; render(); }
@@ -3367,7 +3391,7 @@ if(APP_MODE === 'admin') VIEWS.welcome = () => VIEWS.a_login();
 /* ---------- start ---------- */
 (async function(){
   $('#app').innerHTML = `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`;
-  initBack(); initAutoUpdate(); initIdleGuard(); initTips(); await Store.init(); demoEnrich();
+  initBack(); initDeepLink(); initAutoUpdate(); initIdleGuard(); initTips(); await Store.init(); demoEnrich();
   if(S.session && S.session.role !== 'admin' && !me() && !Store.syncing) setSession(null);
   home(); if(S.session){ logAccess('open'); if(window.Push) Push.init(); }
 })();

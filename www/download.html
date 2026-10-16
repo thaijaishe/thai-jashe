@@ -1,12 +1,15 @@
 <!doctype html><html lang="gu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>એપ ઇન્સ્ટોલ કરો — થઈ જશે!</title><link rel="stylesheet" href="legal.css"><link rel="icon" href="icons/icon-192.png"><link rel="manifest" href="manifest.webmanifest">
 <script src="config.js"></script>
-<style>[hidden]{display:none!important}.big{display:block;text-align:center;background:#F5B301;color:#1A1300;font-weight:800;font-size:19px;border-radius:14px;padding:15px;text-decoration:none;margin:10px 0;border:0;width:100%;font-family:inherit;cursor:pointer}
+<style>[hidden]{display:none!important}.big{display:block;text-align:center;background:#F5B301;color:#1A1300;font-weight:800;font-size:19px;border-radius:14px;padding:15px;text-decoration:none;margin:10px 0;border:0;width:100%;box-sizing:border-box;font-family:inherit;cursor:pointer}
 .big.navy{background:#1E2A78;color:#fff}.steps li{margin:6px 0}#qr{display:flex;justify-content:center;padding:12px;background:#fff;border-radius:12px;width:max-content;margin:8px auto}
 .note{background:#FFF4D1;color:#161A33;border-radius:12px;padding:10px 14px;font-size:14px}</style></head>
 <body><main>
 <header><img src="icons/icon-192.png" alt=""><h1>થઈ જશે! એપ ઇન્સ્ટોલ કરો</h1></header>
 <p class="muted">કામ છે? થઈ જશે! — Play Store વગર, બે રીતે ફોનમાં રાખી શકો.</p>
+<div class="card" id="refbox" hidden style="border:2px solid #16A05C"><h2 style="margin-top:0">🎁 મિત્રનો રેફરલ કોડ: <span id="refcode"></span></h2>
+<p>APK ઇન્સ્ટોલ કર્યા પછી <b>અહીં પાછા આવીને આ બટન દબાવો</b> — એપ ખૂલશે અને કોડ ફોર્મમાં આપમેળે ભરાઈ જશે.</p>
+<a class="big" id="refopen" href="#">📲 એપમાં ખોલો (કોડ સાથે)</a><a class="big navy" id="refweb" href="index.html">🌐 વેબસાઇટમાં જ જોડાઓ</a></div>
 
 <div class="card"><h2 style="margin-top:0">રીત 1: હોમ સ્ક્રીન એપ (સૌથી સહેલી — Android અને iPhone)</h2>
 <button class="big" id="pwa" hidden>📲 હોમ સ્ક્રીન પર ઉમેરો</button>
@@ -35,6 +38,12 @@
   if(!apk){ var host = location.hostname, m = host.match(/^([^.]+)\.github\.io$/), repo = location.pathname.split('/').filter(Boolean)[0];
     apk = m && repo ? 'https://github.com/' + m[1] + '/' + repo + '/releases/latest/download/ThaiJashe.apk' : 'ThaiJashe.apk'; }
   document.getElementById('apk').href = apk;
+  var ref = ''; try{ ref = (new URLSearchParams(location.search).get('ref') || localStorage.getItem('tj_ref') || '').replace(/"/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12); }catch(e){}
+  if(/^(TJ|KG)[A-Z0-9]{4,10}$/.test(ref)){ try{ localStorage.setItem('tj_ref', JSON.stringify(ref)); }catch(e){}
+    document.getElementById('refbox').hidden = false; document.getElementById('refcode').textContent = ref;
+    document.getElementById('refopen').href = 'intent://ref/' + ref + '#Intent;scheme=thaijashe;package=com.thaijashe.app;end';
+    if(!/Android/i.test(navigator.userAgent)) document.getElementById('refopen').hidden = true;
+    document.getElementById('refweb').href = 'index.html?ref=' + ref; }
   var page = location.href.replace(/download(-en)?\.html.*$/, '');
   try{ new QRCode(document.getElementById('qr'), {text: page, width: 180, height: 180, colorDark: '#1E2A78'}); }catch(e){ document.getElementById('qr').textContent = page; }
   document.getElementById('share').onclick = function(){ var t = 'થઈ જશે! — ઘરના કોઈ પણ કામ માટે કારીગર બોલાવો. એપ: ' + page;
