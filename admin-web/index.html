@@ -164,6 +164,8 @@ textarea{min-height:76px;resize:vertical}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .cat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;background:var(--surface);font-size:12px;font-weight:600;text-align:center;line-height:1.25;box-shadow:var(--shadow)}
 .cat .e{font-size:26px;line-height:1}
+.acats{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}.acats button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;background:var(--surface2);font-size:12px;text-align:center;line-height:1.2}.acats .e{font-size:26px;line-height:1.1}
+.cimg{width:1.15em;height:1.15em;object-fit:cover;border-radius:24%;display:inline-block;vertical-align:middle}
 .search{position:relative} .search input{padding-left:38px} .search span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
 
 /* karigar item */
@@ -718,12 +720,27 @@ for(let i = LOGOS.length - 1; i >= 0; i--) if(!KEEP_LOGOS.includes(LOGOS[i].id.r
 const logoSvg = (l, size) => `<svg width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="${l.name}">${l.svg}</svg>`;
 function curLogo(){ const id = (Store.ready && Store.settings().logo) || 'tjf'; return LOGOS.find(l => l.id === id) || LOGOS[0]; }
 /* કૂપન બેનર: દર 5 સેકન્ડે બીજું કૂપન, છેલ્લા પછી ફરી પહેલું (મોટા "પહેલા કામ" બોક્ષ વાળો કૂપન આમાં નહીં) */
-function heroCp(){ const st = Store.settings(); if(!couponOn() || st.heroOn === false) return null; const code = String(st.heroCode || 'FIRST50').toUpperCase(); return (st.coupons || []).find(c => c && c.code && c.code.toUpperCase() === code) || null; }
-function couponsRot(){ if(!couponOn()) return []; const hc = heroCp(); return (Store.settings().coupons || []).filter(c => c && c.code && (!hc || c.code !== hc.code)); }
+/* કૂપન: cats=[] બધી સેવા · who: all | new (પહેલું બુકિંગ) | list (ચોક્કસ મોબાઇલ) · once = એક ગ્રાહક એક જ વાર · until = છેલ્લી તારીખ · off = બંધ */
+const cpCats = c => Array.isArray(c.cats) ? c.cats.filter(Boolean) : (c.cat ? [c.cat] : []);
+const cpMobs = c => String(c.mobs || '').split(/[\s,;]+/).map(x => x.replace(/\D/g, '').slice(-10)).filter(x => x.length === 10);
+function couponWhy(c, cat, cust){ if(!c) return 'આ કોડ મળ્યો નથી'; if(c.off) return 'આ કૂપન હાલ બંધ છે';
+  if(c.until && new Date().toISOString().slice(0, 10) > c.until) return 'આ કૂપનની મુદત પૂરી થઈ ગઈ';
+  const cs = cpCats(c); if(cat && cs.length && !cs.some(x => catMatch(cat, x) || x === cat)) return 'આ કૂપન ફક્ત ' + cs.map(catName).join(', ') + ' માટે છે';
+  if(cust){ const B = bookingsOf(cust.id).filter(b => b.status !== 'cancelled');
+    if(c.who === 'new' && B.length) return 'આ કૂપન ફક્ત નવા ગ્રાહક (પહેલું બુકિંગ) માટે છે';
+    if(c.who === 'list' && !cpMobs(c).includes(String(cust.mobile || '').replace(/\D/g, '').slice(-10))) return 'આ કૂપન તમારા મોબાઇલ નંબર માટે નથી';
+    if(c.once && B.some(b => b.coupon && String(b.coupon.code).toUpperCase() === String(c.code).toUpperCase())) return 'આ કૂપન તમે વાપરી લીધો છે'; }
+  return ''; }
+const cpForMe = c => { const u = S.session && S.session.role === 'customer' ? me() : null; return !couponWhy(c, '', u); };
+function heroCp(){ const st = Store.settings(); if(!couponOn() || st.heroOn === false) return null; const code = String(st.heroCode || 'FIRST50').toUpperCase(); const c = (st.coupons || []).find(c => c && c.code && c.code.toUpperCase() === code) || null; return c && cpForMe(c) ? c : null; }
+function couponsRot(){ if(!couponOn()) return []; const hc = heroCp(); return (Store.settings().coupons || []).filter(c => c && c.code && (!hc || c.code !== hc.code) && cpForMe(c)); }
 const GIFT_SVG = `<svg viewBox="0 0 64 64" width="58" height="58" aria-hidden="true"><path d="M10 28h44v28a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3z" fill="#FFB020"/><path d="M6 20h52v10H6z" fill="#FFC94D"/><path d="M28 20h8v39h-8z" fill="#9B4DCA"/><path d="M32 20c-6-12-20-12-18-3 1 5 11 5 18 3zM32 20c6-12 20-12 18-3-1 5-11 5-18 3z" fill="#B964E8"/><path d="M50 6l1.6 4 4 1.6-4 1.6L50 17l-1.6-3.8-4-1.6 4-1.6z" fill="#FFD84D"/><path d="M8 40l1 2.4 2.4 1-2.4 1L8 47l-1-2.6-2.4-1 2.4-1z" fill="#FFD84D"/></svg>`;
 function heroOffer(){ const c = heroCp(); if(!c) return ''; const st = Store.settings();
   return `<button class="hero-off spin" style="--spc:#1FAF55" onclick="copyText('${h(c.code)}')" title="કોડ કૉપિ કરો"><span class="ho-txt"><span class="ho-up">${h(st.heroTop || 'સુધી')}</span><b>${h(st.heroTitle || '₹' + c.amount + ' છૂટ')}</b><span class="ho-sub">${h(st.heroSub || 'પહેલા કામ પર')} · કોડ <i>${h(c.code)}</i></span></span><span class="ho-gift">${GIFT_SVG}</span><span class="ho-edge"></span></button>`; }
-function trustStrip(){ return `<div class="trust spin" style="--spc:#9B4DCA"><div><span class="ti">🏠</span><b>ઘરે જ<br>કામ કરાવો</b></div><i></i><div><span class="ti">💵</span><b>કેશ ઓન<br>ડિલિવરી</b></div><i></i><div><span class="ti">🏷️</span><b>લોએસ્ટ<br>પ્રાઇસ</b></div></div>`; }
+const TRUST_DEF = [{i:'🏠', t:'ઘરે જ\nકામ કરાવો'}, {i:'💵', t:'કેશ ઓન\nડિલિવરી'}, {i:'🏷️', t:'લોએસ્ટ\nપ્રાઇસ'}];
+function trustItems(){ const T = Store.settings().trust || {}; return (Array.isArray(T.items) && T.items.length ? T.items : TRUST_DEF).filter(x => x && (String(x.t || '').trim() || x.i || x.img)).slice(0, 4); }
+function trustStrip(){ const T = Store.settings().trust || {}; if(T.off) return ''; const L = trustItems(); if(!L.length) return '';
+  return `<div class="trust spin" style="--spc:${h(T.c || '#9B4DCA')}">${L.map(x => `<div><span class="ti">${x.img ? `<img class="cimg" style="width:34px;height:34px" src="${h(x.img)}" alt="">` : h(x.i || '')}</span><b>${h(String(x.t || '')).replace(/\n/g, '<br>')}</b></div>`).join('<i></i>')}</div>`; }
 /* હોમના તળિયે ફૂટર — એડમિન સેટિંગમાંથી A / B / C */
 const FT_TORAN = `<svg class="toran" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true"><path d="M0 4h400" stroke="#7A1F2B" stroke-width="3"/>${Array.from({length:14}, (_, i) => { const x = 14 + i * 28.6, c = ['#2E9D57','#E9B949','#C0392B'][i % 3]; return `<path d="M${x - 9} 5 Q${x} 40 ${x + 9} 5Z" fill="${c}"/><circle cx="${x}" cy="${i % 2 ? 30 : 36}" r="2.6" fill="#7A1F2B"/>`; }).join('')}</svg>`;
 /* ફૂટરનું લખાણ — એડમિન બદલી શકે. *શબ્દ* = હાઇલાઇટ, નવી લાઇન = નવી લીટી, {N} = કુલ કામ */
@@ -770,6 +787,15 @@ const CATS = [
   ['movers','ઘરવખરી શિફ્ટિંગ','🚚',999],['pop','ઇન્ટિરિયર/POP','🛋️',499],['maid','ઘરકામ','🧽',199],['driver','ડ્રાઇવર','🚗',399],['puncture','ઘર બેઠા પંચર','🛵',149],['agent','એજન્ટ','🤝',199],['other','અન્ય કામ','➕',199]
 ].map(([id, name, icon, visit]) => ({id, name, icon, visit}));
 const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+/* એડમિન કામની યાદી બદલી શકે (settings.catEd = {id:{n,i,img,v,off}}, settings.catNew = [{id,name,icon,visit}]) */
+const CAT_BASE = CATS.map(c => ({...c}));
+let CAT_ED_R = [0, 0];
+function applyCatEd(force){ if(!Store || !Store.ready) return; const st = Store.settings(), ed = st.catEd || null, nw = st.catNew || null; if(!force && CAT_ED_R[0] === ed && CAT_ED_R[1] === nw) return; CAT_ED_R = [ed, nw];
+  const E = ed || {}, list = [];
+  for(const b of CAT_BASE){ const o = E[b.id] || {}; CAT[b.id] = Object.assign(CAT[b.id] || {}, b, {name:o.n || b.name, icon:o.i || b.icon, img:o.img || '', visit:+o.v || b.visit, off:!!o.off && b.id !== 'other', base:true}); list.push(CAT[b.id]); }
+  for(const n of (nw || [])){ if(!n || !n.id) continue; const o = E[n.id] || {}; CAT[n.id] = Object.assign(CAT[n.id] || {}, {id:n.id, name:o.n || n.name, icon:o.i || n.icon || '🛠️', img:o.img || '', visit:+o.v || +n.visit || 199, off:!!o.off, base:false}); list.splice(list.length - 1, 0, CAT[n.id]); }
+  CATS.length = 0; list.filter(c => !c.off).forEach(c => CATS.push(c)); }
+const catPic = c => c && c.img ? `<img class="cimg" src="${h(c.img)}" alt="">` : (c ? c.icon : '🛠️');
 /* "અન્ય કામ" માં કારીગરે લખેલું કામ = નવો પ્રકાર (id "x:લખેલું નામ") — ગ્રાહકની યાદીમાં આપમેળે ઉમેરાય */
 const isXCat = id => typeof id === 'string' && id.startsWith('x:');
 const catName = id => CAT[id] ? CAT[id].name : isXCat(id) ? id.slice(2) : CAT.other.name;
@@ -1339,6 +1365,7 @@ function logout(){ if(S.session && S.session.role === 'karigar'){ const k = me()
   if(Store.mode === 'firebase') return doLogout().then(() => home()); setSession(null); home(); }
 
 function render(){
+  try{ applyCatEd(); }catch(e){ console.warn('cat', e); }
   const app = $('#app'); const key = S.view + JSON.stringify(S.p); const same = key === S.renderKey;
   const keep = {}; const fid = document.activeElement && document.activeElement.id;
   let caret = null;
@@ -1461,7 +1488,7 @@ VIEWS.c_home = () => {
     ${coupon ? `<div class="offer lite spin" style="--spc:#6C5CE7" id="offerbox">${offerInner(coupon, CPS.length, (S.ci || 0) % CPS.length)}</div>` : ''}
     ${refBanner()}
     <div class="between"><h3>બધા કામ</h3><span class="tiny muted">${catList().length} પ્રકાર</span></div>
-    <div class="grid" id="catgrid">${catList().map(x => `<button class="cat" data-n="${h(x.name + ' ' + x.id)}" onclick="go('c_cat',{cat:'${x.id}'})"><span class="e">${x.icon}</span>${h(x.name)}</button>`).join('')}</div>
+    <div class="grid" id="catgrid">${catList().map(x => `<button class="cat" data-n="${h(x.name + ' ' + x.id)}" onclick="go('c_cat',{cat:'${x.id}'})"><span class="e">${catPic(x)}</span>${h(x.name)}</button>`).join('')}</div>
     ${(c.favs || []).length ? `<h3>❤️ મારા મનપસંદ કારીગરો</h3><div class="stack">${(c.favs || []).map(id => Store.get('karigars', id)).filter(k => k && k.status === 'approved').map(k => kCard(k, c.area)).join('')}</div>` : ''}
     ${top.length ? `<h3>તમારી નજીકના ઓનલાઇન કારીગરો</h3><div class="stack">${top.map(k => kCard(k, c.area)).join('')}</div>` : ''}
     ${homeFooter()}
@@ -1478,7 +1505,7 @@ function kCard(k, area){
 
 VIEWS.c_quick = () => topbar('ઝડપી બોલાવો') + `<div class="wrap"><p class="muted">કયું કામ છે? પસંદ કરતાં જ નજીકના બધા ઓનલાઇન કારીગરોને વિનંતી જશે, જે પહેલો સ્વીકારે તે આવશે.</p>
   <div class="grid">${catList().map(x => { const n = Store.all('karigars').filter(k => kHas(k, x.id) && k.online && k.status === 'approved' && !busyNow(k)).length;
-    return `<button class="cat" onclick="go('c_book',{cat:'${x.id}',mode:'broadcast'})"><span class="e">${x.icon}</span>${h(x.name)}<span class="tiny ${n ? '' : 'muted'}" style="color:${n ? 'var(--ok)' : ''}">${n} ઓનલાઇન</span></button>`; }).join('')}</div></div>` + cNav();
+    return `<button class="cat" onclick="go('c_book',{cat:'${x.id}',mode:'broadcast'})"><span class="e">${catPic(x)}</span>${h(x.name)}<span class="tiny ${n ? '' : 'muted'}" style="color:${n ? 'var(--ok)' : ''}">${n} ઓનલાઇન</span></button>`; }).join('')}</div></div>` + cNav();
 
 VIEWS.c_cat = p => {
   const c = me(); const sort = p.sort || 'near';
@@ -1560,10 +1587,10 @@ function refBookBox(c){ if(!c || !refOn('customer')) return ''; const st = Store
   if(refFirst(c)) return `<div class="banner ok" style="background:var(--ok-soft);color:var(--ok)">🎉 <div><b>મિત્રના કોડથી પહેલા કામ પર ₹${st.refFriend} છૂટ</b>આપોઆપ લાગશે (બિલ ₹${st.refMin} કે વધુ હોય તો). એક બુકિંગ પર એક જ છૂટ.</div></div>`;
   if((c.refBal || 0) > 0) return `<label class="flat between" style="cursor:pointer"><span><input type="checkbox" id="bk_rbal" checked style="width:22px;height:22px;vertical-align:middle"> 🎁 રેફરલ બેલેન્સ વાપરો <span class="tiny muted">(${rs(c.refBal)} છે — આ કામમાં ${rs(Math.min(c.refBal, +st.refMax || 50))} છૂટ)</span></span></label>`;
   return ''; }
-function findCoupon(code, cat){ const st = Store.settings(); code = (code || '').trim().toUpperCase();
-  return (st.coupons || []).find(x => x.code.toUpperCase() === code && (!x.cat || x.cat === cat)); }
-function checkCoupon(cat){ const cp = findCoupon($('#bk_cpn').value, cat); const m = $('#bk_cpnmsg');
-  m.innerHTML = cp ? `<span style="color:var(--ok)">✔ ${h(cp.code)} લાગુ — બિલમાંથી ${rs(cp.amount)} ઓછા થશે</span>` : `<span style="color:var(--bad)">આ કોડ આ કામ પર લાગુ નથી</span>`; }
+const cpByCode = code => { code = String(code || '').trim().toUpperCase(); return code ? (Store.settings().coupons || []).find(x => x && String(x.code).toUpperCase() === code) : null; };
+function findCoupon(code, cat){ const c = cpByCode(code); return c && !couponWhy(c, cat, me()) ? c : null; }
+function checkCoupon(cat){ const raw = $('#bk_cpn').value, c = cpByCode(raw), why = c ? couponWhy(c, cat, me()) : 'આ કોડ મળ્યો નથી'; const m = $('#bk_cpnmsg');
+  m.innerHTML = !why ? `<span style="color:var(--ok)">✔ ${h(c.code)} લાગુ — બિલમાંથી ${rs(c.amount)} ઓછા થશે</span>` : `<span style="color:var(--bad)">${h(why)}</span>`; }
 function placeBooking(){
   const p = S.p, c = me(); const prob = $('#bk_prob').value.trim();
   const later = $('#bk_later').checked; const dt = $('#bk_dt').value;
@@ -1574,7 +1601,7 @@ function placeBooking(){
   if(later && !dt) return toast('તારીખ-સમય પસંદ કરો');
   if(p.kid && !later){ const k = Store.get('karigars', p.kid); if(!k.online) return toast('કારીગર ઓફલાઇન છે — સમય નક્કી કરો'); if(busyNow(k)) return toast('કારીગર હાલ બીજા કામ પર છે — સમય નક્કી કરો કે બધાને વિનંતી મોકલો'); }
   const cpRaw = couponOn() && $('#bk_cpn') ? $('#bk_cpn').value.trim() : ''; const cp = cpRaw ? findCoupon(cpRaw, p.cat) : null;
-  if(cpRaw && !cp) return toast('કૂપન કોડ ખોટો છે');
+  if(cpRaw && !cp){ const c0 = cpByCode(cpRaw); return toast(c0 ? couponWhy(c0, p.cat, c) : 'કૂપન કોડ ખોટો છે'); }
   const now = Date.now(); let cpn = cp ? {code:cp.code, amount:cp.amount} : null; const rst = Store.settings();
   if(refFirst(c)){ if(!cpn || cpn.amount < +rst.refFriend) cpn = {code:'મિત્રનો કોડ', amount:+rst.refFriend, ref:'friend'}; }
   else if($('#bk_rbal') && $('#bk_rbal').checked && (c.refBal || 0) > 0 && refOn('customer')){ const a = Math.min(c.refBal, +rst.refMax || 50); if(!cpn || cpn.amount < a) cpn = {code:'રેફરલ બેલેન્સ', amount:a, ref:'bal'}; }
@@ -2057,6 +2084,7 @@ VIEWS.a_home = () => {
     ${openT.length ? `<button class="banner ${lateT ? 'bad' : 'acc'}" style="text-align:left;width:100%" onclick="tab('a_tickets')">🎧 <div><b>${openT.length} ખુલ્લી ફરિયાદ${lateT ? ' · ' + lateT + ' ને 24 કલાકથી જવાબ નથી' : ''}</b>જવાબ આપવા ટેપ કરો</div></button>` : ''}
     ${pendK || pendP ? `<div class="banner warn">🔔 <div><b>ધ્યાન આપવાનું</b>${pendK ? `<button class="btn sm" onclick="tab('a_karigars')">${pendK} કારીગર મંજૂરી</button> ` : ''}${pendP ? `<button class="btn sm" onclick="tab('a_payments')">${pendP} કમીશન ચૂકવણી</button>` : ''}</div></div>` : ''}
     <div class="card"><h3>🔎 બધે શોધો</h3><div class="search"><span>🔍</span><input id="a_q" value="${h(S.aq || '')}" placeholder="નામ, મોબાઇલ, સરનામું, બુકિંગ નંબર, IP, આધાર છેલ્લા 4…" oninput="aSearch(this.value)" autocomplete="off"></div><div id="a_qres">${aSearchRes(S.aq || '')}</div></div>
+    ${catsCard()}
     ${rangeBar()}
     <div class="stats"><div><b>${B.length}</b><span>બુકિંગ (${h(rangeLabel())})</span></div><div><b>${done.length}</b><span>પૂરા થયેલ</span></div><div><b>${BA.filter(b => ACTIVE.includes(b.status)).length}</b><span>હાલ ચાલુ</span></div>
       <div><b>${rs(gmv)}</b><span>કુલ ધંધો</span></div>${commOn() || comm || due ? `<div><b style="color:var(--ok)">${rs(comm)}</b><span>કમાયેલ કમીશન</span></div><div><b style="color:var(--warn)">${rs(due)}</b><span>બાકી કમીશન</span></div>` : `<div><b>${Store.all('tickets').length}</b><span>કુલ ફરિયાદ</span></div><div><b>0%</b><span>કમીશન (બંધ)</span></div>`}
@@ -2135,8 +2163,10 @@ VIEWS.a_settings = () => { if(!isAdmin()) return VIEWS.welcome(); const st = Sto
         ${v === 'A' ? `<label class="f">નાના ખાના <span class="h">અલ્પવિરામ (,) થી અલગ</span><input id="as_f${v}_c" value="${val('c')}"></label>` : ''}
         <div class="two"><label class="f">છેલ્લી લાઇન ૧<input id="as_f${v}_l1" value="${val('l1')}"></label><label class="f">છેલ્લી લાઇન ૨<input id="as_f${v}_l2" value="${val('l2')}"></label></div>
         <button type="button" class="btn sm" onclick="footReset('${v}')">↺ મૂળ લખાણ પાછું</button></details>`; }).join('')}</div>
-    <div class="card"><h3>કૂપન</h3><label class="f">એક લાઇનમાં એક કૂપન <span class="h">કોડ, રકમ, કામ(ખાલી=બધા), વર્ણન</span>
-      <textarea id="as_cpn" style="min-height:96px;font-family:ui-monospace,monospace;font-size:13px">${h((st.coupons || []).map(c => [c.code, c.amount, c.cat || '', c.note || ''].join(', ')).join('\n'))}</textarea></label></div>
+    <div class="card"><h3>🎟️ કૂપન</h3><label class="f" style="display:none">
+      </label><p class="small">હાલ <b>${(st.coupons || []).length}</b> કૂપન: ${(st.coupons || []).slice(0, 6).map(c => `<span class="pill ${c.off ? '' : 'ok'}">${h(c.code)} ₹${c.amount}</span>`).join(' ')}</p>
+      <button class="btn ink block" onclick="go('a_coupons')">🎟️ કૂપન બનાવો / બદલો — કઈ સેવા, કયા ગ્રાહક માટે ›</button></div>
+    ${trustEditor(st)}
     <div class="card"><h3>🎁 રેફર એન્ડ અર્ન</h3>
       ${sw('as_refOn', st.refOn !== false, 'ગ્રાહક રેફરલ ચાલુ', 'ગ્રાહક મિત્રને કોડ મોકલે — મિત્રને પહેલા કામ પર છૂટ, મિત્રનું પહેલું કામ પૂરું થાય એટલે મોકલનારને બેલેન્સ')}
       <div class="two"><label class="f">મિત્રને છૂટ ₹<input id="as_rF" inputmode="numeric" value="${+st.refFriend || 0}"></label><label class="f">રેફર કરનારને ₹<input id="as_rM" inputmode="numeric" value="${+st.refMe || 0}"></label></div>
@@ -2153,11 +2183,10 @@ VIEWS.a_settings = () => { if(!isAdmin()) return VIEWS.welcome(); const st = Sto
 function footCollect(){ const o = {}; ['A', 'B', 'C'].forEach(v => { o[v] = {}; ['t', 's', 'c', 'l1', 'l2'].forEach(k => { const e = $('#as_f' + v + '_' + k); if(e){ const x = e.value.replace(/[<>`]/g, '').trim().slice(0, 160); if(x && x !== FOOT_DEF[v][k]) o[v][k] = x; } }); }); return o; }
 function footReset(v){ ['t', 's', 'c', 'l1', 'l2'].forEach(k => { const e = $('#as_f' + v + '_' + k); if(e) e.value = FOOT_DEF[v][k]; }); toast('મૂળ લખાણ મૂક્યું — "સેટિંગ સેવ કરો" દબાવો'); }
 function saveSettings(){
-  const coupons = $('#as_cpn').value.split('\n').map(l => l.split(',').map(s => s.trim())).filter(a => a[0] && +a[1] > 0).map(a => ({code:a[0].toUpperCase(), amount:+a[1], cat:CAT[a[2]] ? a[2] : '', note:a.slice(3).join(', ')}));
   const pin = $('#as_pin').value.trim(); if(!/^\d{4,6}$/.test(pin)) return toast('PIN 4-6 આંકડાનો રાખો');
   const rad = Math.round(+$('#as_rad').value || 0); if(rad < 1 || rad > 100) return toast('અંતર 1 થી 100 કિમી રાખો');
   Store.put('settings', {...Store.settings(), id:'main', otpOn:$('#as_otpOn').checked, commOn:$('#as_commOn').checked, upiOn:$('#as_upiOn').checked, couponOn:$('#as_couponOn').checked, radiusKm:rad, commRate:Math.max(0, +$('#as_rate').value || 0), dueLimit:Math.max(0, +$('#as_lim').value || 0), adminUpi:$('#as_upi').value.trim(),
-    supportPhone:$('#as_sup').value.trim(), autoApprove:$('#as_auto').checked, adminPin:pin, coupons,
+    supportPhone:$('#as_sup').value.trim(), autoApprove:$('#as_auto').checked, adminPin:pin,
     footStyle:(document.querySelector('[name=as_ft]:checked') || {}).value || 'C', foot:footCollect(),
     heroOn:$('#as_heroOn').checked, heroCode:$('#as_hC').value.trim().toUpperCase(), heroTop:$('#as_hU').value.trim(), heroTitle:$('#as_hT').value.trim(), heroSub:$('#as_hS').value.trim(),
     refOn:$('#as_refOn').checked, refFriend:Math.max(0, +$('#as_rF').value || 0), refMe:Math.max(0, +$('#as_rM').value || 0), refMax:Math.max(0, +$('#as_rX').value || 0), refMin:Math.max(0, +$('#as_rN').value || 0),
@@ -2993,7 +3022,7 @@ VIEWS.a_audit = () => { if(!isAdmin()) return VIEWS.welcome(); const A0 = Store.
   return topbar('એડમિન લૉગ', {back:true}) + `<div class="wrap"><p class="small muted">એડમિને કરેલી દરેક કાર્યવાહીનો રેકોર્ડ (IT નિયમો મુજબ ઓછામાં ઓછા 180 દિવસ રાખો).</p>${rangeBar()}
     <div class="card"><div class="tbl"><table><thead><tr><th>સમય</th><th>કાર્યવાહી</th><th>કોના પર</th><th>નોંધ</th></tr></thead><tbody>${A.map(a => `<tr><td>${dt(a.ts)}</td><td>${h(a.action)}</td><td>${h(((Store.get('karigars', a.target) || Store.get('customers', a.target) || {}).name) || a.target)}</td><td>${h(a.note)}</td></tr>`).join('') || '<tr><td colspan="4">આ ગાળામાં કંઈ નથી</td></tr>'}</tbody></table></div>${PGA.bar}</div></div>` + aNav(); };
 VIEWS.a_more = () => { if(!isAdmin()) return VIEWS.welcome(); const pp = Store.all('payments').filter(p => p.status === 'pending').length, al = Store.all('alerts').filter(a => a.status === 'open').length;
-  const it = [['a_ads','📣','જાહેરાત ફોટો બનાવો',''],['a_export','📑','ડેટા રિપોર્ટ (PDF / Excel)',''],['a_customers','👥','ગ્રાહકો', Store.all('customers').length],['a_payments','💰','કમીશન ચૂકવણી', pp],['a_map','🗺️','લાઇવ નકશો', Store.all('karigars').filter(k => k.online && k.status === 'approved').length + ' ઓનલાઇન'],
+  const it = [['a_ads','📣','જાહેરાત ફોટો બનાવો',''],['a_cats','🛠️','બધાં કામ (નામ / ફોટો / ડિલીટ)', CATS.length],['a_coupons','🎟️','કૂપન', (Store.settings().coupons || []).length],['a_export','📑','ડેટા રિપોર્ટ (PDF / Excel)',''],['a_customers','👥','ગ્રાહકો', Store.all('customers').length],['a_payments','💰','કમીશન ચૂકવણી', pp],['a_map','🗺️','લાઇવ નકશો', Store.all('karigars').filter(k => k.online && k.status === 'approved').length + ' ઓનલાઇન'],
     ['a_alerts','🆘','SOS એલર્ટ', al],['a_reports','📈','રિપોર્ટ / CSV',''],['a_audit','🗂️','એડમિન લૉગ',''],['a_refer','🎁','રેફરલ રિપોર્ટ',''],['a_settings','⚙️','સેટિંગ / કંપની વિગત',''],['theme','🎨','થીમ બદલો',''],['help','📜','પોલિસી અને મદદ પેજ','']];
   return topbar('વધુ') + `<div class="wrap"><div class="menu">${it.map(([v, i, l, n]) => `<button onclick="${v === 'theme' ? 'themeSheet()' : `go('${v}')`}"><span class="e">${i}</span><b>${l}</b>${n ? `<span class="pill ${v === 'a_alerts' || v === 'a_payments' ? 'bad' : ''}">${n}</span>` : ''}</button>`).join('')}</div>
     <button class="btn bad block" onclick="logout()">લૉગ આઉટ</button></div>` + aNav(); };
@@ -4404,6 +4433,114 @@ VIEWS.a_ads = () => { if(!isAdmin()) return VIEWS.welcome(); const A = adState()
   <div class="card"><h3>6. માપ</h3><div class="stack" style="gap:8px">${Object.entries(AD_SIZES).map(([id, s]) => `<button class="chipb ${A.size === id ? 'on' : ''}" style="text-align:left" onclick="adSet('size','${id}');render()">${s[2]} <span class="tiny muted">${s[0]}×${s[1]} · ${s[3]}</span></button>`).join('')}</div></div>
   ${saved.length ? `<div class="card"><h3>💾 સાચવેલી ડિઝાઇન (${saved.length})</h3><div class="adsaved">${saved.map((d, i) => `<div>${d.th ? `<img src="${h(d.th)}" alt="" onclick="adLoad(${i})">` : `<button class="btn sm" onclick="adLoad(${i})">ખોલો</button>`}<button class="x" title="હટાવો" onclick="adDel(${i})">✕</button></div>`).join('')}</div><p class="tiny muted">ટેપ કરો એટલે ફરી ખૂલશે અને બદલી શકશો.</p></div>` : ''}
   </div></div></div>` + aNav(); };
+
+/* ---------- એડમિન: 🛠️ બધાં કામ — નામ, ઇમોજી, ફોટો, વિઝિટ ચાર્જ, ડિલીટ, નવું કામ ---------- */
+async function smallPic(file, outW = 128){ const cv = await cropImage(file, {aspect:1, outW}); if(!cv) return ''; let d = cv.toDataURL('image/png'); if(d.length > 40000) d = cv.toDataURL('image/jpeg', 0.82); return d; }
+function catKCount(){ const m = {}; Store.all('karigars').filter(k => k.status === 'approved').forEach(k => kCats(k).forEach(c => m[c] = (m[c] || 0) + 1)); return m; }
+function catEdPut(id, o){ const st = Store.settings(), ed = {...(st.catEd || {})}; const x = {...(ed[id] || {}), ...o}; Object.keys(x).forEach(k => { if(x[k] === '' || x[k] == null || x[k] === false) delete x[k]; });
+  if(Object.keys(x).length) ed[id] = x; else delete ed[id]; Store.put('settings', {...st, id:'main', catEd:ed}); applyCatEd(true); }
+function allCatsAdmin(){ applyCatEd(); return [...CAT_BASE.map(b => CAT[b.id]), ...((Store.settings().catNew || []).map(n => CAT[n.id]).filter(Boolean))]; }
+function catsCard(){ const KC = catKCount(), A = allCatsAdmin(), off = A.filter(c => c.off);
+  return `<div class="card"><div class="between"><h3>🛠️ બધાં કામ (${CATS.length})</h3><button class="btn sm ink" onclick="go('a_cats')">✏️ ફેરફાર / નવું ઉમેરો</button></div>
+    <div class="acats">${(S.catAll ? CATS : CATS.slice(0, 12)).map(c => `<button onclick="catEdit('${c.id}')" title="ફેરફાર કરવા ટેપ કરો"><span class="e">${catPic(c)}</span><b>${h(c.name)}</b><span class="tiny muted">${KC[c.id] || 0} કારીગર · ₹${c.visit}</span></button>`).join('')}</div>
+    ${CATS.length > 12 ? `<button class="btn sm block" onclick="S.catAll=!S.catAll;render()">${S.catAll ? '▲ ઓછાં બતાવો' : '▼ બધાં ' + CATS.length + ' કામ બતાવો'}</button>` : ''}
+    ${off.length ? `<p class="tiny muted">🗑️ ડિલીટ કરેલાં ${off.length} કામ ગ્રાહકને દેખાતાં નથી — "ફેરફાર" માં જઈ પાછાં લાવી શકો.</p>` : ''}</div>`; }
+VIEWS.a_cats = () => { if(!isAdmin()) return VIEWS.welcome(); const KC = catKCount(), A = allCatsAdmin(), on = A.filter(c => !c.off), off = A.filter(c => c.off), X = xCats();
+  const row = c => `<div class="card crow ${c.off ? 'off' : ''}"><span class="e">${catPic(c)}</span><div class="grow"><b>${h(c.name)}</b>${c.base ? '' : ' <span class="pill acc">નવું</span>'}${c.img ? ' <span class="pill">📷 ફોટો</span>' : ''}
+      <div class="tiny muted">વિઝિટ ₹${c.visit} · ${KC[c.id] || 0} કારીગર${c.base && (c.name !== CAT_BASE.find(b => b.id === c.id).name) ? ' · મૂળ નામ: ' + h(CAT_BASE.find(b => b.id === c.id).name) : ''}</div></div>
+      ${c.off ? `<button class="btn sm ok" onclick="catRestore('${c.id}')">↺ પાછું લાવો</button>` : `<button class="btn sm" onclick="catEdit('${c.id}')">✏️</button>${c.id === 'other' ? '' : `<button class="btn sm bad" onclick="catDel('${c.id}')">🗑️</button>`}`}</div>`;
+  return topbar('🛠️ બધાં કામ', {back:true}) + `<style>.crow{flex-direction:row;align-items:center;gap:12px;padding:10px 12px}.crow .e{font-size:30px;width:44px;text-align:center}.crow.off{opacity:.6}</style><div class="wrap">
+    <button class="btn pri block" onclick="catEdit('')">➕ નવું કામ ઉમેરો</button>
+    <p class="tiny muted">ગ્રાહકની "બધા કામ" યાદીમાં આ જ ક્રમે દેખાય છે. ✏️ = નામ, ઇમોજી, ફોટો અને વિઝિટ ચાર્જ બદલો · 🗑️ = ગ્રાહકની યાદીમાંથી હટાવો (જૂનાં બુકિંગ સલામત રહે, ગમે ત્યારે પાછું લાવી શકો).</p>
+    <h3>ચાલુ કામ (${on.length})</h3><div class="stack" style="gap:8px">${on.map(row).join('')}</div>
+    ${off.length ? `<h3>🗑️ ડિલીટ કરેલાં (${off.length})</h3><div class="stack" style="gap:8px">${off.map(row).join('')}</div>` : ''}
+    ${X.length ? `<h3>✍️ કારીગરોએ જાતે લખેલાં કામ (${X.length})</h3><div class="card"><div class="chips">${X.map(x => `<span class="pill">${h(catName(x))} · ${KC[x] || 0}</span>`).join('')}</div><p class="tiny muted">આ કામ "અન્ય કામ" ની વિનંતીમાં આવે છે. કાયમી બનાવવું હોય તો ➕ નવું કામ ઉમેરો.</p></div>` : ''}
+  </div>` + aNav(); };
+let CED = null;
+function catEdit(id){ const c = id ? CAT[id] : null; CED = {id, img:c ? c.img || '' : '', base:c ? c.base : false};
+  modal(`<h3>${c ? '✏️ કામ બદલો' : '➕ નવું કામ'}</h3>
+    <div class="row" style="gap:12px;align-items:center"><span id="ced_pv" style="font-size:44px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border-radius:16px">${c ? catPic(c) : '🛠️'}</span>
+      <div class="stack" style="gap:6px"><label class="btn sm">📷 ફોટો મૂકો<input type="file" accept="image/*" hidden onchange="catPhoto(this)"></label><button class="btn sm" onclick="CED.img='';catPv()">ફોટો હટાવો — ઇમોજી વાપરો</button></div></div>
+    <label class="f">કામનું નામ<input id="ced_n" maxlength="30" value="${h(c ? c.name : '')}" placeholder="દા.ત. વોટર પ્રૂફિંગ"></label>
+    <div class="two"><label class="f">ઇમોજી <span class="h">ફોટો ન હોય ત્યારે</span><input id="ced_i" maxlength="8" value="${h(c ? c.icon : '🛠️')}" oninput="catPv()"></label>
+    <label class="f">વિઝિટ ચાર્જ ₹<input id="ced_v" inputmode="numeric" value="${c ? c.visit : 199}"></label></div>
+    ${c && c.base ? `<p class="tiny muted">મૂળ: ${h(CAT_BASE.find(b => b.id === c.id).icon)} ${h(CAT_BASE.find(b => b.id === c.id).name)} · ₹${CAT_BASE.find(b => b.id === c.id).visit} — <a href="#" onclick="catResetOne('${c.id}');return false">મૂળ મુજબ કરો</a></p>` : ''}
+    <div class="two"><button class="btn" onclick="closeModal()">રદ</button><button class="btn pri" onclick="catSave()">💾 સેવ કરો</button></div>`); }
+function catPv(){ const pv = $('#ced_pv'); if(pv) pv.innerHTML = CED.img ? `<img class="cimg" style="width:56px;height:56px" src="${CED.img}" alt="">` : h(($('#ced_i') || {}).value || '🛠️'); }
+async function catPhoto(inp){ const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return; if(!/^image\//.test(f.type)) return toast('ફક્ત ફોટો પસંદ કરો');
+  const keep = {n:$('#ced_n').value, i:$('#ced_i').value, v:$('#ced_v').value}; const d = await smallPic(f); if(!d) return;
+  catEdit(CED.id); CED.img = d; $('#ced_n').value = keep.n; $('#ced_i').value = keep.i; $('#ced_v').value = keep.v; catPv(); }
+function catSave(){ const n = $('#ced_n').value.replace(/[<>"'`\\]/g, '').trim().slice(0, 30), i = $('#ced_i').value.trim().slice(0, 8) || '🛠️', v = Math.max(0, Math.round(+$('#ced_v').value || 0));
+  if(!n) return toast('કામનું નામ લખો'); const st = Store.settings();
+  if(allCatsAdmin().some(c => c.id !== CED.id && !c.off && c.name.trim() === n)) return toast('આ નામનું કામ પહેલેથી છે');
+  if(!CED.id){ const id = 'c' + Date.now().toString(36); Store.put('settings', {...st, id:'main', catNew:[...(st.catNew || []), {id, name:n, icon:i, visit:v || 199}], catEd:{...(st.catEd || {}), ...(CED.img ? {[id]:{img:CED.img}} : {})}}); applyCatEd(true); audit('➕ નવું કામ', n); }
+  else { const b = CAT_BASE.find(x => x.id === CED.id); if(b) catEdPut(CED.id, {n:n !== b.name ? n : '', i:i !== b.icon ? i : '', v:v !== b.visit ? v : '', img:CED.img});
+    else { const nw = (st.catNew || []).map(x => x.id === CED.id ? {...x, name:n, icon:i, visit:v || 199} : x); Store.put('settings', {...st, id:'main', catNew:nw}); applyCatEd(true); catEdPut(CED.id, {n:'', i:'', v:'', img:CED.img}); }
+    audit('✏️ કામ બદલ્યું', n); }
+  if(JSON.stringify(Store.settings()).length > 800000) toast('⚠️ ફોટા વધુ થયા — નાના ફોટા વાપરો'); closeModal(); toast('સેવ થયું — ગ્રાહકની યાદીમાં તરત દેખાશે'); render(); }
+function catResetOne(id){ catEdPut(id, {n:'', i:'', v:'', img:''}); closeModal(); render(); toast('મૂળ મુજબ કર્યું'); }
+function catDel(id){ const c = CAT[id]; if(!c || id === 'other') return; const n = catKCount()[id] || 0;
+  if(!confirm(`"${c.name}" ગ્રાહકની યાદીમાંથી હટાવવું છે?\n\n${n ? n + ' કારીગરનું આ કામ પ્રોફાઇલમાં રહેશે, પણ ગ્રાહક આ કામ માટે નવું બુકિંગ નહીં કરી શકે.\n' : ''}જૂનાં બુકિંગ સલામત રહેશે. પછી "પાછું લાવો" થી ફરી ચાલુ કરી શકશો.`)) return;
+  catEdPut(id, {off:true}); audit('🗑️ કામ ડિલીટ', c.name); toast('હટાવ્યું'); render(); }
+function catRestore(id){ catEdPut(id, {off:false}); audit('↺ કામ પાછું', catName(id)); toast('પાછું ચાલુ થયું'); render(); }
+
+/* ---------- એડમિન: 🎟️ કૂપન — કઈ સેવા, કયા ગ્રાહક, એક વાર, છેલ્લી તારીખ ---------- */
+function cpLoad(){ if(!S.cpEd) S.cpEd = (Store.settings().coupons || []).map(c => ({code:c.code || '', amount:+c.amount || 0, cats:cpCats(c), who:c.who || 'all', mobs:c.mobs || '', once:!!c.once, until:c.until || '', note:c.note || '', off:!!c.off})); return S.cpEd; }
+function cpSet(i, k, v){ const L = cpLoad(); if(!L[i]) return; L[i][k] = v; if(['who', 'off', 'once'].includes(k)) render(); }
+function cpCat(i, id){ const c = cpLoad()[i]; if(!id){ c.cats = []; } else { const s = new Set(c.cats); s.has(id) ? s.delete(id) : s.add(id); c.cats = [...s]; } render(); }
+function cpAdd(){ cpLoad().unshift({code:'', amount:50, cats:[], who:'all', mobs:'', once:true, until:'', note:'', off:false}); S.cpOpen = 0; render(); window.scrollTo(0, 0); }
+function cpDel(i){ const c = cpLoad()[i]; if(!confirm(`કૂપન ${c.code || '(નવું)'} ડિલીટ કરવું છે?`)) return; cpLoad().splice(i, 1); render(); }
+function cpNote(c){ const cs = c.cats.length ? c.cats.map(catName).join(', ') : 'કોઈ પણ કામ'; return `${cs} પર ₹${c.amount} ની છૂટ` + (c.who === 'new' ? ' (નવા ગ્રાહક)' : ''); }
+function cpSave(){ const L = cpLoad(), seen = new Set(), out = [];
+  for(const c of L){ const code = String(c.code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, ''); if(!code && !(+c.amount)) continue;
+    if(!code) return toast('દરેક કૂપનનો કોડ લખો (A-Z, 0-9)'); if(seen.has(code)) return toast('કોડ ' + code + ' બે વાર છે'); seen.add(code);
+    if(!(+c.amount > 0)) return toast(code + ': છૂટની રકમ લખો'); if(c.who === 'list' && !cpMobs(c).length) return toast(code + ': ગ્રાહકના મોબાઇલ નંબર લખો');
+    const cats = c.cats.filter(x => CAT[x]); out.push({code, amount:Math.round(+c.amount), cats, cat:cats.length === 1 ? cats[0] : '', who:c.who || 'all', ...(c.who === 'list' ? {mobs:cpMobs(c).join(', ')} : {}),
+      ...(c.once ? {once:true} : {}), ...(c.until ? {until:c.until} : {}), ...(c.off ? {off:true} : {}), note:String(c.note || '').trim().slice(0, 80) || cpNote({...c, cats})}); }
+  Store.put('settings', {...Store.settings(), id:'main', coupons:out}); S.cpEd = null; audit('🎟️ કૂપન બદલ્યા', out.map(c => c.code).join(', ')); toast('કૂપન સેવ થયા (' + out.length + ')'); render(); }
+VIEWS.a_coupons = () => { if(!isAdmin()) return VIEWS.welcome(); const L = cpLoad(), st = Store.settings(), today = new Date().toISOString().slice(0, 10);
+  const card = (c, i) => { const open = S.cpOpen === i, exp = c.until && c.until < today;
+    return `<div class="card" style="${c.off || exp ? 'opacity:.7' : ''}"><div class="between"><b style="font-size:18px">🎟️ ${h(c.code || 'નવું કૂપન')}</b><span class="pill ${c.off ? '' : exp ? 'bad' : 'ok'}">${c.off ? 'બંધ' : exp ? 'મુદત પૂરી' : 'ચાલુ'}</span></div>
+      <div class="two"><label class="f">કોડ<input value="${h(c.code)}" maxlength="16" style="text-transform:uppercase" placeholder="દા.ત. AC100" oninput="cpSet(${i},'code',this.value.toUpperCase())"></label>
+        <label class="f">છૂટ ₹<input value="${c.amount || ''}" inputmode="numeric" oninput="cpSet(${i},'amount',+this.value||0)"></label></div>
+      <b class="small">🛠️ કઈ સેવા માટે?</b>
+      <div class="chips">${`<button class="chipb ${c.cats.length ? '' : 'on'}" onclick="cpCat(${i},'')">✅ બધી સેવા</button>`}${c.cats.map(x => `<button class="chipb on" onclick="cpCat(${i},'${x}')">${catPic(CAT[x])} ${h(catName(x))} ✕</button>`).join('')}<button class="chipb" onclick="S.cpOpen=${open ? -1 : i};render()">${open ? '▲ બંધ કરો' : '➕ સેવા પસંદ કરો'}</button></div>
+      ${open ? `<div class="chips" style="max-height:220px;overflow:auto;background:var(--surface2);padding:8px;border-radius:12px">${CATS.map(x => `<button class="chipb ${c.cats.includes(x.id) ? 'on' : ''}" onclick="cpCat(${i},'${x.id}')">${catPic(x)} ${h(x.name)}</button>`).join('')}</div><p class="tiny muted">એક કરતાં વધુ પસંદ કરી શકો — દા.ત. એસી + ફ્રિજ.</p>` : ''}
+      <label class="f">👤 કયા ગ્રાહક માટે?<select onchange="cpSet(${i},'who',this.value)"><option value="all" ${c.who === 'all' ? 'selected' : ''}>બધા ગ્રાહક</option><option value="new" ${c.who === 'new' ? 'selected' : ''}>ફક્ત નવા ગ્રાહક (પહેલું બુકિંગ)</option><option value="list" ${c.who === 'list' ? 'selected' : ''}>ચોક્કસ ગ્રાહક (મોબાઇલ નંબર)</option></select></label>
+      ${c.who === 'list' ? `<label class="f">ગ્રાહકના મોબાઇલ <span class="h">અલ્પવિરામ કે નવી લાઇનથી</span><textarea rows="2" oninput="cpSet(${i},'mobs',this.value)" placeholder="98XXXXXXXX, 97XXXXXXXX">${h(c.mobs)}</textarea></label>` : ''}
+      <div class="two"><label class="f">છેલ્લી તારીખ <span class="h">ખાલી = કાયમ</span><input type="date" value="${h(c.until)}" onchange="cpSet(${i},'until',this.value)"></label>
+        <label class="row small" style="align-self:end;padding-bottom:10px"><input type="checkbox" style="width:auto" ${c.once ? 'checked' : ''} onchange="cpSet(${i},'once',this.checked)"> એક ગ્રાહક એક જ વાર</label></div>
+      <label class="f">ગ્રાહકને દેખાતું લખાણ <span class="h">ખાલી = આપમેળે</span><input value="${h(c.note)}" maxlength="80" placeholder="${h(cpNote(c))}" oninput="cpSet(${i},'note',this.value)"></label>
+      <div class="between"><label class="row small"><input type="checkbox" style="width:auto" ${c.off ? '' : 'checked'} onchange="cpSet(${i},'off',!this.checked)"> ચાલુ</label><button class="btn sm bad" onclick="cpDel(${i})">🗑️ ડિલીટ</button></div></div>`; };
+  return topbar('🎟️ કૂપન', {back:true}) + `<div class="wrap">
+    ${couponOn() ? '' : `<div class="banner warn">⚠️ <div><b>કૂપન હાલ બંધ છે</b>ગ્રાહકને દેખાડવા સેટિંગમાં "કૂપન / છૂટ" ચાલુ કરો.</div></div>`}
+    <div class="two"><button class="btn pri" onclick="cpAdd()">➕ નવું કૂપન</button><button class="btn ok" onclick="cpSave()">💾 બધા કૂપન સેવ કરો</button></div>
+    <p class="tiny muted">ગ્રાહક બુકિંગ વખતે કોડ નાખે ત્યારે સેવા, ગ્રાહક, તારીખ અને "એક જ વાર" ચકાસાય છે. ખોટી સેવા પર નાખે તો કારણ દેખાય છે (દા.ત. "આ કૂપન ફક્ત એસી રિપેર માટે છે"). હોમ પરની ઓફરમાં ફક્ત એ ગ્રાહકને લાગુ પડતાં કૂપન જ દેખાય છે.${st.heroCode ? ` મોટા ઓફર બૉક્સમાં કૂપન: <b>${h(st.heroCode)}</b>.` : ''}</p>
+    ${L.length ? L.map(card).join('') : '<div class="card" style="text-align:center;color:var(--muted)">હજુ કોઈ કૂપન નથી — ➕ નવું કૂપન</div>'}
+    ${L.length > 1 ? `<button class="btn ok block" onclick="cpSave()">💾 બધા કૂપન સેવ કરો</button>` : ''}</div>` + aNav(); };
+
+/* ---------- એડમિન: ગ્રાહક હોમનું ભરોસાનું બૉક્સ (ઘરે જ કામ કરાવો / કેશ ઓન ડિલિવરી / લોએસ્ટ પ્રાઇસ) ---------- */
+function trLoad(){ if(!S.trEd){ const T = Store.settings().trust || {}; S.trEd = {off:!!T.off, items:trustItems().map(x => ({i:x.i || '', img:x.img || '', t:x.t || ''}))}; while(S.trEd.items.length < 3) S.trEd.items.push({i:'', img:'', t:''}); } return S.trEd; }
+function trSet(i, k, v){ trLoad().items[i][k] = v; const pv = $('#tr_pv'); if(pv) pv.innerHTML = trPreview(); }
+function trPreview(){ const T = trLoad(); const L = T.items.filter(x => x.t.trim() || x.i || x.img); if(T.off) return '<p class="small muted" style="text-align:center">બૉક્સ બંધ — ગ્રાહકને નહીં દેખાય</p>';
+  return `<div class="trust" style="--spc:#9B4DCA">${L.map(x => `<div><span class="ti">${x.img ? `<img class="cimg" style="width:34px;height:34px" src="${h(x.img)}" alt="">` : h(x.i)}</span><b>${h(x.t).replace(/\n/g, '<br>')}</b></div>`).join('<i></i>')}</div>`; }
+async function trPhoto(i, inp){ const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return; const d = await smallPic(f, 112); if(!d) return; trLoad().items[i].img = d; render(); }
+function trSave(){ const T = trLoad(), items = T.items.map(x => ({i:String(x.i || '').trim().slice(0, 8), t:String(x.t || '').replace(/[<>`]/g, '').trim().slice(0, 40), ...(x.img ? {img:x.img} : {})})).filter(x => x.t || x.i || x.img);
+  if(!T.off && !items.length) return toast('ઓછામાં ઓછું એક ખાનું ભરો');
+  Store.put('settings', {...Store.settings(), id:'main', trust:{off:T.off, items}}); S.trEd = null; audit('ભરોસાનું બૉક્સ બદલ્યું', items.map(x => x.t.replace(/\n/g, ' ')).join(' / ')); toast('સેવ થયું — ગ્રાહકના હોમ પર તરત દેખાશે'); render(); }
+function trReset(){ S.trEd = {off:false, items:TRUST_DEF.map(x => ({...x, img:''}))}; render(); toast('મૂળ લખાણ મૂક્યું — "સેવ" દબાવો'); }
+function trustEditor(){ const T = trLoad();
+  return `<div class="card"><h3>✅ ગ્રાહક હોમનું ભરોસાનું બૉક્સ</h3><p class="tiny muted">"ઘરે જ કામ કરાવો · કેશ ઓન ડિલિવરી · લોએસ્ટ પ્રાઇસ" વાળું બૉક્સ — લખાણ, ઇમોજી કે ફોટો બદલો. 2 થી 4 ખાનાં.</p>
+    <div id="tr_pv">${trPreview()}</div>
+    <label class="row small"><input type="checkbox" style="width:auto" ${T.off ? '' : 'checked'} onchange="trLoad().off=!this.checked;render()"> ગ્રાહકને બૉક્સ બતાવો</label>
+    ${T.items.map((x, i) => `<div class="card" style="background:var(--surface2);gap:8px"><b class="small">ખાનું ${i + 1}</b>
+      <div class="row" style="gap:10px;align-items:flex-start"><div class="stack" style="gap:6px;align-items:center;width:76px"><span style="font-size:32px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:12px">${x.img ? `<img class="cimg" style="width:44px;height:44px" src="${h(x.img)}" alt="">` : h(x.i || '➕')}</span>
+        <label class="btn sm" style="padding:4px 8px">📷<input type="file" accept="image/*" hidden onchange="trPhoto(${i},this)"></label>${x.img ? `<button class="btn sm" style="padding:4px 8px" onclick="trLoad().items[${i}].img='';render()">✕</button>` : ''}</div>
+      <div class="grow stack" style="gap:6px"><label class="f">ઇમોજી<input value="${h(x.i)}" maxlength="8" oninput="trSet(${i},'i',this.value.trim())"></label>
+        <label class="f">લખાણ <span class="h">Enter = બીજી લાઇન</span><textarea rows="2" maxlength="40" oninput="trSet(${i},'t',this.value)">${h(x.t)}</textarea></label></div></div>
+      ${T.items.length > 2 ? `<button class="btn sm bad" onclick="trLoad().items.splice(${i},1);render()">🗑️ આ ખાનું હટાવો</button>` : ''}</div>`).join('')}
+    <div class="two">${T.items.length < 4 ? `<button class="btn sm" onclick="trLoad().items.push({i:'⭐',img:'',t:''});render()">➕ ખાનું ઉમેરો</button>` : '<span></span>'}<button class="btn sm" onclick="trReset()">↺ મૂળ લખાણ</button></div>
+    <button class="btn ok block" onclick="trSave()">💾 ભરોસાનું બૉક્સ સેવ કરો</button></div>`; }
 
 /* ---------- karigar incoming-request popup (Rapido captain style) ---------- */
 const REQ_WINDOW = 60000; // વિનંતી 1 મિનિટ સુધી રિંગ સાથે
