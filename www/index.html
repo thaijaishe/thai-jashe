@@ -3278,10 +3278,11 @@ async function saveBlob(name, blob){
 
 /* ================= DATA REPORT: PDF + Excel with photos, orders, map, location, IP ================= */
 const LIBS = {
+  qr:['lib/qrcode.js', 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'],
   excel:['lib/exceljs.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'],
   jspdf:['lib/jspdf.umd.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'],
   h2c:['lib/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js']};
-const LIBOK = {excel:() => window.ExcelJS, jspdf:() => window.jspdf && window.jspdf.jsPDF, h2c:() => window.html2canvas};
+const LIBOK = {qr:() => typeof window.qrcode === 'function', excel:() => window.ExcelJS, jspdf:() => window.jspdf && window.jspdf.jsPDF, h2c:() => window.html2canvas};
 async function needLib(k){ if(LIBOK[k]()) return; for(const u of LIBS[k]){ try{ await loadScript(u); if(LIBOK[k]()) return; }catch(e){} } throw new Error('library ' + k + ' not loaded'); }
 const today = () => new Date().toISOString().slice(0, 10);
 const fileSafe = s => String(s || '').replace(/[^\w઀-૿-]+/g, '_').slice(0, 40);

@@ -1372,7 +1372,7 @@ const kNav = () => { const k = me(); const n = k ? openRequestsFor(k).length : 0
 const aNav = () => { const pend = Store.all('karigars').filter(k => k.status === 'pending').length + Store.all('payments').filter(p => p.status === 'pending').length;
   const pk = Store.all('karigars').filter(k => k.status === 'pending').length, pp = Store.all('payments').filter(p => p.status === 'pending').length;
   const tk = Store.all('tickets').filter(t => t.status !== 'closed').length, al = Store.all('alerts').filter(a => a.status === 'open').length;
-  return bnav([['a_home','📊','ડેશબોર્ડ', al],['a_karigars','👷','કારીગર', pk],['a_bookings','📋','બુકિંગ'],['a_tickets','🎧','ફરિયાદ', tk],['a_more','☰','વધુ', pp]]); };
+  return bnav([['a_home','📊','ડેશબોર્ડ', al],['a_karigars','👷','કારીગર', pk],['a_bookings','📋','બુકિંગ'],['a_tickets','🎧','ફરિયાદ', tk],['a_ads','📣','જાહેરાત'],['a_more','☰','વધુ', pp]]); };
 
 const VIEWS = {};
 
@@ -2993,7 +2993,7 @@ VIEWS.a_audit = () => { if(!isAdmin()) return VIEWS.welcome(); const A0 = Store.
   return topbar('એડમિન લૉગ', {back:true}) + `<div class="wrap"><p class="small muted">એડમિને કરેલી દરેક કાર્યવાહીનો રેકોર્ડ (IT નિયમો મુજબ ઓછામાં ઓછા 180 દિવસ રાખો).</p>${rangeBar()}
     <div class="card"><div class="tbl"><table><thead><tr><th>સમય</th><th>કાર્યવાહી</th><th>કોના પર</th><th>નોંધ</th></tr></thead><tbody>${A.map(a => `<tr><td>${dt(a.ts)}</td><td>${h(a.action)}</td><td>${h(((Store.get('karigars', a.target) || Store.get('customers', a.target) || {}).name) || a.target)}</td><td>${h(a.note)}</td></tr>`).join('') || '<tr><td colspan="4">આ ગાળામાં કંઈ નથી</td></tr>'}</tbody></table></div>${PGA.bar}</div></div>` + aNav(); };
 VIEWS.a_more = () => { if(!isAdmin()) return VIEWS.welcome(); const pp = Store.all('payments').filter(p => p.status === 'pending').length, al = Store.all('alerts').filter(a => a.status === 'open').length;
-  const it = [['a_export','📑','ડેટા રિપોર્ટ (PDF / Excel)',''],['a_customers','👥','ગ્રાહકો', Store.all('customers').length],['a_payments','💰','કમીશન ચૂકવણી', pp],['a_map','🗺️','લાઇવ નકશો', Store.all('karigars').filter(k => k.online && k.status === 'approved').length + ' ઓનલાઇન'],
+  const it = [['a_ads','📣','જાહેરાત ફોટો બનાવો',''],['a_export','📑','ડેટા રિપોર્ટ (PDF / Excel)',''],['a_customers','👥','ગ્રાહકો', Store.all('customers').length],['a_payments','💰','કમીશન ચૂકવણી', pp],['a_map','🗺️','લાઇવ નકશો', Store.all('karigars').filter(k => k.online && k.status === 'approved').length + ' ઓનલાઇન'],
     ['a_alerts','🆘','SOS એલર્ટ', al],['a_reports','📈','રિપોર્ટ / CSV',''],['a_audit','🗂️','એડમિન લૉગ',''],['a_refer','🎁','રેફરલ રિપોર્ટ',''],['a_settings','⚙️','સેટિંગ / કંપની વિગત',''],['theme','🎨','થીમ બદલો',''],['help','📜','પોલિસી અને મદદ પેજ','']];
   return topbar('વધુ') + `<div class="wrap"><div class="menu">${it.map(([v, i, l, n]) => `<button onclick="${v === 'theme' ? 'themeSheet()' : `go('${v}')`}"><span class="e">${i}</span><b>${l}</b>${n ? `<span class="pill ${v === 'a_alerts' || v === 'a_payments' ? 'bad' : ''}">${n}</span>` : ''}</button>`).join('')}</div>
     <button class="btn bad block" onclick="logout()">લૉગ આઉટ</button></div>` + aNav(); };
@@ -3770,10 +3770,11 @@ async function saveBlob(name, blob){
 
 /* ================= DATA REPORT: PDF + Excel with photos, orders, map, location, IP ================= */
 const LIBS = {
+  qr:['lib/qrcode.js', 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'],
   excel:['lib/exceljs.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'],
   jspdf:['lib/jspdf.umd.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'],
   h2c:['lib/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js']};
-const LIBOK = {excel:() => window.ExcelJS, jspdf:() => window.jspdf && window.jspdf.jsPDF, h2c:() => window.html2canvas};
+const LIBOK = {qr:() => typeof window.qrcode === 'function', excel:() => window.ExcelJS, jspdf:() => window.jspdf && window.jspdf.jsPDF, h2c:() => window.html2canvas};
 async function needLib(k){ if(LIBOK[k]()) return; for(const u of LIBS[k]){ try{ await loadScript(u); if(LIBOK[k]()) return; }catch(e){} } throw new Error('library ' + k + ' not loaded'); }
 const today = () => new Date().toISOString().slice(0, 10);
 const fileSafe = s => String(s || '').replace(/[^\w઀-૿-]+/g, '_').slice(0, 40);
@@ -4118,6 +4119,291 @@ VIEWS.a_export = p => { if(!isAdmin()) return VIEWS.welcome(); const sc = p.sc |
       <li>🌐 દરેક લૉગિનનો સમય, IP, ડિવાઇસ અને ડિવાઇસ ID</li><li>💰 કમીશન ચૂકવણી, 🎧 ફરિયાદો, 🆘 SOS</li></ul>
       <p class="tiny muted">PDF: દરેક કારીગર/ગ્રાહક નવા પાને, નકશાની લિંક ક્લિક થાય. Excel: અલગ અલગ શીટ, ફોટો સેલમાં, ફિલ્ટર સાથે. ફાઇલ હાલની ભાષા (<span data-notr>${LANGS.find(x => x[0] === LANG)[1]}</span>) માં બનશે.</p>
       <p class="tiny muted">⚠️ આ ફાઇલમાં વ્યક્તિગત માહિતી છે — સુરક્ષિત રાખો, ફક્ત કાયદેસર કામ માટે જ શેર કરો.</p></div></div>` + aNav(); };
+
+/* ---------- એડમિન: 📣 જાહેરાત બનાવો — લખાણ લખો, કામ/તહેવાર મુજબ ફોટો આપમેળે, લિંક + QR ---------- */
+const AD_FONTS = [
+  {id:'baloo', n:'બાલૂ (ગોળ, જાડા)', fam:'Baloo Bhai 2', f:'baloo-bhai-2', w:[500, 800]},
+  {id:'noto', n:'નોટો (સાદા)', fam:'Noto Sans Gujarati', f:'noto-sans-gujarati', w:[400, 700]},
+  {id:'mukta', n:'મુક્તા (આધુનિક)', fam:'Mukta Vaani', f:'mukta-vaani', w:[400, 800]},
+  {id:'anek', n:'અનેક (ઊંચા)', fam:'Anek Gujarati', f:'anek-gujarati', w:[400, 800]},
+  {id:'hind', n:'હિંદ વડોદરા', fam:'Hind Vadodara', f:'hind-vadodara', w:[400, 700]},
+  {id:'rasa', n:'રસા (છાપા જેવા)', fam:'Rasa', f:'rasa', w:[400, 700]},
+  {id:'shrikhand', n:'શ્રીખંડ (તહેવાર)', fam:'Shrikhand', f:'shrikhand', w:[400]},
+  {id:'kumar', n:'કુમાર (બ્લૉક)', fam:'Kumar One', f:'kumar-one', w:[400]},
+  {id:'farsan', n:'ફરસાણ (હાથે લખેલા)', fam:'Farsan', f:'farsan', w:[400]},
+  {id:'mogra', n:'મોગરા (શણગાર)', fam:'Mogra', f:'mogra', w:[400]}];
+const AD_FONT = Object.fromEntries(AD_FONTS.map(x => [x.id, x]));
+const AD_FONT_OK = {};
+async function adFontLoad(id){ const F = AD_FONT[id] || AD_FONTS[0]; if(AD_FONT_OK[F.id]) return true;
+  try{ const L = [];
+    for(const w of F.w) for(const [sub, rng] of [['gujarati', 'U+0951-0952,U+0964-0965,U+0A80-0AFF,U+200C-200D,U+20B9,U+25CC,U+A830-A839'], ['latin', 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD']]){
+      const ff = new FontFace('TJAd ' + F.id, `url(fonts/${F.f}-${sub}-${w}-normal.woff2) format("woff2")`, {weight:String(w), unicodeRange:rng}); document.fonts.add(ff); L.push(ff.load()); }
+    await Promise.all(L); AD_FONT_OK[F.id] = true; return true; }
+  catch(e){ console.warn('ad font', id, e); AD_FONT_OK[F.id] = 'fail'; return false; } }
+const adFam = id => { const F = AD_FONT[id] || AD_FONTS[0]; return (AD_FONT_OK[F.id] === true ? `"TJAd ${F.id}", ` : '') + `"${F.fam}", "Baloo Bhai 2", "Noto Sans Gujarati", "Hind Vadodara", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif`; };
+const adW = (id, bold) => { const F = AD_FONT[id] || AD_FONTS[0]; return bold ? F.w[F.w.length - 1] : F.w[0]; };
+
+/* રંગ: bg1→bg2 પાર્શ્વભૂમિ, fg લખાણ, ac ટૅગ/લાઇન, hl *રંગીન શબ્દ*, card મુદ્દાની પટ્ટી, foot નીચેનો પટ્ટો, tile ચિત્રની ટાઇલ */
+const AD_PAL = {
+  yellow:{bg1:'#FFDC5E', bg2:'#F5B301', fg:'#161A33', ac:'#1E2A78', hl:'#26318A', card:'rgba(255,255,255,.72)', foot:'#1E2A78', tile:'#2563D9', n:'પીળો'},
+  navy:{bg1:'#2A378F', bg2:'#111850', fg:'#FFFFFF', ac:'#F5B301', hl:'#FFD34D', card:'rgba(255,255,255,.12)', foot:'#0A0F38', tile:'#F5B301', n:'નેવી'},
+  ice:{bg1:'#E6F6FF', bg2:'#9DD3F5', fg:'#0D2A4A', ac:'#0B6FB8', hl:'#0B6FB8', card:'rgba(255,255,255,.75)', foot:'#0B3D66', tile:'#0B6FB8', n:'બરફ'},
+  night:{bg1:'#262B55', bg2:'#4A2F8A', fg:'#FFFFFF', ac:'#FFD34D', hl:'#FFD34D', card:'rgba(255,255,255,.12)', foot:'#0E1022', tile:'#FFD34D', n:'રાત'},
+  green:{bg1:'#E8F8EE', bg2:'#9EDDB5', fg:'#0F3B22', ac:'#16A05C', hl:'#0E7A43', card:'rgba(255,255,255,.75)', foot:'#0F3B22', tile:'#16A05C', n:'લીલો'},
+  wood:{bg1:'#F6E2C2', bg2:'#D39A5B', fg:'#3B2410', ac:'#7A3E00', hl:'#8A4300', card:'rgba(255,255,255,.7)', foot:'#3B2410', tile:'#8A4300', n:'લાકડું'},
+  orange:{bg1:'#FFB067', bg2:'#F26B1D', fg:'#2A1200', ac:'#7A1F00', hl:'#FFFFFF', card:'rgba(255,255,255,.55)', foot:'#4A1200', tile:'#7A1F00', n:'કેસરી'},
+  pink:{bg1:'#FFF1F7', bg2:'#FFC6DD', fg:'#3A0F2E', ac:'#E0218A', hl:'#7B2FF7', card:'rgba(255,255,255,.78)', foot:'#3A0F2E', tile:'#E0218A', n:'ગુલાબી'},
+  maroon:{bg1:'#5A1026', bg2:'#1F0610', fg:'#FFF3D6', ac:'#F5B301', hl:'#FFC83D', card:'rgba(255,220,150,.13)', foot:'#120309', tile:'#F5B301', n:'મરૂન'},
+  magenta:{bg1:'#FF3D7F', bg2:'#6E2BE8', fg:'#FFFFFF', ac:'#FFE14D', hl:'#FFE14D', card:'rgba(255,255,255,.16)', foot:'#2A0B4F', tile:'#FFE14D', n:'જાંબલી'},
+  sky:{bg1:'#B9E6FF', bg2:'#3BA0F0', fg:'#0B2545', ac:'#E63946', hl:'#C1121F', card:'rgba(255,255,255,.7)', foot:'#0B2545', tile:'#E63946', n:'આકાશ'},
+  tiranga:{bg1:'#FFFFFF', bg2:'#FFEBD2', fg:'#0B2B5C', ac:'#FF7A00', hl:'#138808', card:'rgba(255,255,255,.8)', foot:'#0B2B5C', tile:'#138808', n:'તિરંગો'},
+  emerald:{bg1:'#0E5440', bg2:'#062A20', fg:'#F4F1DE', ac:'#E9C46A', hl:'#E9C46A', card:'rgba(255,255,255,.1)', foot:'#031912', tile:'#E9C46A', n:'નીલમ'},
+  red:{bg1:'#C3001F', bg2:'#5C000E', fg:'#FFFFFF', ac:'#2E7D32', hl:'#FFD34D', card:'rgba(255,255,255,.13)', foot:'#2B0007', tile:'#2E7D32', n:'લાલ'},
+  violet:{bg1:'#2A0A5E', bg2:'#0E0024', fg:'#FFFFFF', ac:'#FFB703', hl:'#FFB703', card:'rgba(255,255,255,.12)', foot:'#07000F', tile:'#FFB703', n:'વાયોલેટ'},
+  rain:{bg1:'#D6ECF8', bg2:'#7FB3D5', fg:'#0B2545', ac:'#1E2A78', hl:'#1E2A78', card:'rgba(255,255,255,.72)', foot:'#0B2545', tile:'#1E2A78', n:'વરસાદ'},
+  peacock:{bg1:'#11616F', bg2:'#08303A', fg:'#FFFFFF', ac:'#F2C14E', hl:'#F2C14E', card:'rgba(255,255,255,.12)', foot:'#041A20', tile:'#F2C14E', n:'મોર'},
+  marigold:{bg1:'#FFE7B8', bg2:'#FFA53A', fg:'#4A1C00', ac:'#C1121F', hl:'#C1121F', card:'rgba(255,255,255,.7)', foot:'#4A1C00', tile:'#C1121F', n:'ગલગોટો'},
+  sun:{bg1:'#FFF0B3', bg2:'#FFB23F', fg:'#3D1C00', ac:'#0B6FB8', hl:'#0B6FB8', card:'rgba(255,255,255,.72)', foot:'#3D1C00', tile:'#0B6FB8', n:'ઉનાળો'}};
+
+const AD_GEN_PTS = ['નજીકના ચકાસાયેલા કારીગર', 'કામ શરૂ થાય તમારા OTP થી', 'કામ થાય પછી જ ચુકવણી'];
+/* તહેવાર / ખાસ પ્રસંગ */
+const AD_FEST = [
+  {id:'diwali', n:'દિવાળી', e:'🪔', pal:'maroon', re:/દિવાળી|દીવાળી|diwali|deepavali|દીપાવલી|ધનતેરસ|dhanteras|કાળી ચૌદસ|લાભ પાંચમ/i, deco:'diwali',
+    t:{tag:'દિવાળી સ્પેશિયલ', head:'દિવાળી પહેલાં ઘર ચમકાવો!\n*સફાઈ, કલર, લાઇટિંગ —*\nથઈ જશે!', pts:['ઘર સફાઈ • કલરકામ • ડેકોરેશન લાઇટ', 'નજીકના ચકાસાયેલા કારીગર', 'તહેવાર પહેલાં જ બુક કરો'], cta:'શુભ દીપાવલી! આજે જ બુક કરો'}},
+  {id:'newyear', n:'નૂતન વર્ષ', e:'🎊', pal:'violet', re:/નૂતન વર્ષ|નવું વર્ષ|નવા વર્ષ|બેસતું વર્ષ|સાલ મુબારક|new ?year/i, deco:'fireworks',
+    t:{tag:'નૂતન વર્ષાભિનંદન', head:'નવા વર્ષમાં\nઘરનાં કામની ચિંતા છોડો —\n*થઈ જશે!*', pts:AD_GEN_PTS, cta:'સાલ મુબારક! આજે જ એપ ખોલો'}},
+  {id:'navratri', n:'નવરાત્રિ', e:'💃', pal:'magenta', re:/નવરાત્રિ|નવરાત્રી|ગરબા|ગરબો|દશેરા|navratri|garba|dussehra/i, deco:'navratri',
+    t:{tag:'નવરાત્રિ ધમાકો', head:'ગરબાની તૈયારી?\nલાઇટ, ડેકોરેશન, દરજી —\n*થઈ જશે!*', pts:['ઇલેક્ટ્રિશિયન • ડેકોરેશન • દરજી', 'ચણિયાચોળીનું ફિટિંગ નજીકમાં', 'એક ક્લિકમાં નજીકનો કારીગર'], cta:'નવરાત્રિની શુભકામના!'}},
+  {id:'uttarayan', n:'ઉત્તરાયણ', e:'🪁', pal:'sky', re:/ઉત્તરાયણ|ઉતરાયણ|મકર સંક્રાંતિ|સંક્રાંત|પતંગ|uttarayan|sankranti|kite/i, deco:'kites',
+    t:{tag:'ઉત્તરાયણ સ્પેશિયલ', head:'પતંગ ચગાવો નિરાંતે,\nઘરનું કામ અમારું —\n*થઈ જશે!*', pts:['ધાબાની સફાઈ • લાઇટ • પાણીની ટાંકી', 'નજીકના કારીગર એક ક્લિકમાં', 'કામ પછી જ ચુકવણી'], cta:'ઉત્તરાયણની શુભકામના! કાઇપો છે!'}},
+  {id:'holi', n:'હોળી', e:'🎨', pal:'pink', re:/હોળી|ધુળેટી|holi|dhuleti/i, deco:'holi',
+    t:{tag:'હોળી-ધુળેટી', head:'રંગ રમ્યા? હવે\n*દીવાલ અને ઘર ચમકાવો!*', pts:['કલરકામ • ઘર સફાઈ • સોફા સફાઈ', 'અનુભવી કારીગર તમારા વિસ્તારમાં', 'સાફ બિલ, છુપો ચાર્જ નહીં'], cta:'હોળીની રંગીન શુભકામના!'}},
+  {id:'rakhi', n:'રક્ષાબંધન', e:'🎀', pal:'pink', re:/રક્ષાબંધન|રાખડી|રાખી|rakhi|raksha/i, deco:'hearts',
+    t:{tag:'રક્ષાબંધન', head:'ભાઈ-બહેનનો તહેવાર,\nઘરનાં કામની ચિંતા નહીં —\n*થઈ જશે!*', pts:AD_GEN_PTS, cta:'રક્ષાબંધનની શુભકામના!'}},
+  {id:'janmashtami', n:'જન્માષ્ટમી', e:'🦚', pal:'peacock', re:/જન્માષ્ટમી|કૃષ્ણ|janmashtami|krishna|મટકી/i, deco:'feathers',
+    t:{tag:'જન્માષ્ટમી', head:'મટકી ફોડ ઉત્સવ!\nસજાવટ અને લાઇટિંગ —\n*થઈ જશે!*', pts:['ડેકોરેશન લાઇટ • ઇલેક્ટ્રિશિયન', 'ઘર સફાઈ તહેવાર પહેલાં', 'નજીકના ચકાસાયેલા કારીગર'], cta:'જય શ્રી કૃષ્ણ!'}},
+  {id:'ganesh', n:'ગણેશ ઉત્સવ', e:'🌺', pal:'marigold', re:/ગણેશ|ગણપતિ|ganesh|ganpati|ચતુર્થી/i, deco:'garland',
+    t:{tag:'ગણેશ ઉત્સવ', head:'બાપ્પા પધારે છે!\nપંડાલ, લાઇટ, ડેકોરેશન —\n*થઈ જશે!*', pts:['ઇલેક્ટ્રિશિયન • ડેકોરેશન • સુથાર', 'તહેવાર પહેલાં જ બુક કરો', 'નજીકના ચકાસાયેલા કારીગર'], cta:'ગણપતિ બાપ્પા મોરયા!'}},
+  {id:'national', n:'સ્વતંત્રતા / પ્રજાસત્તાક', e:'🇮🇳', pal:'tiranga', re:/સ્વતંત્રતા|પ્રજાસત્તાક|આઝાદી|15 ઓગસ્ટ|26 જાન્યુઆરી|independence|republic|તિરંગ/i, deco:'tiranga',
+    t:{tag:'જય હિન્દ', head:'સ્થાનિક કારીગર,\n*ખુશહાલ ઘર!*', pts:['તમારા વિસ્તારના કારીગરને સીધું કામ', 'ભારત માટે બનાવેલી એપ', 'કામ પછી જ ચુકવણી'], cta:'સ્વતંત્રતા દિવસની શુભકામના!'}},
+  {id:'eid', n:'ઈદ', e:'🌙', pal:'emerald', re:/ઈદ|ઇદ|રમઝાન|રમજાન|eid|ramzan|ramadan/i, deco:'stars',
+    t:{tag:'ઈદ મુબારક', head:'તહેવારની તૈયારી?\nઘરનું દરેક કામ —\n*થઈ જશે!*', pts:AD_GEN_PTS, cta:'ઈદ મુબારક!'}},
+  {id:'christmas', n:'નાતાલ', e:'🎄', pal:'red', re:/ક્રિસમસ|નાતાલ|christmas|xmas/i, deco:'snow',
+    t:{tag:'મેરી ક્રિસમસ', head:'તહેવારની રોશની,\nઘરનાં કામ —\n*થઈ જશે!*', pts:AD_GEN_PTS, cta:'મેરી ક્રિસમસ!'}},
+  {id:'monsoon', n:'ચોમાસું', e:'☔', pal:'rain', re:/ચોમાસ|વરસાદ|monsoon|rain/i, deco:'rain',
+    t:{tag:'ચોમાસું આવ્યું', head:'છત ટપકે છે?\nપાણી ભરાય છે?\n*ચોમાસા પહેલાં — થઈ જશે!*', pts:['છત/પતરાં • વોટરપ્રૂફિંગ • પ્લમ્બર', 'વાયરિંગની ચકાસણી', 'નજીકના કારીગર એક ક્લિકમાં'], cta:'વરસાદ પહેલાં જ બુક કરો'}},
+  {id:'summer', n:'ઉનાળો', e:'☀️', pal:'sun', re:/ઉનાળ|ગરમી|summer|heat/i, deco:'sun',
+    t:{tag:'ગરમી આવી', head:'ગરમી વધી?\nAC સર્વિસ કરાવો —\n*થઈ જશે!*', pts:['AC સર્વિસ • ગેસ ફિલિંગ • રિપેર', 'કૂલર અને પંખા રિપેર', 'નજીકનો અનુભવી મિસ્ત્રી'], cta:'ગરમી પહેલાં જ બુક કરો'}},
+  {id:'offer', n:'ખાસ ઓફર', e:'🎁', pal:'navy', re:/ઓફર|છૂટ|કૂપન|ડિસ્કાઉન્ટ|offer|discount|coupon|sale/i, deco:'confetti',
+    t:{tag:'ખાસ ઓફર', head:'પહેલા બુકિંગ પર\n*ખાસ છૂટ!*', pts:['એપમાં કૂપન કોડ નાખો', 'મિત્રને મોકલો — બંનેને ફાયદો', 'મર્યાદિત સમય માટે'], cta:'આજે જ એપ ખોલો'}},
+  {id:'join', n:'કારીગર જોડાઓ', e:'👷', pal:'orange', re:/કારીગર જોઈએ|જોડાઓ|ભરતી|કારીગર ભાઈ|join|wanted|recruit/i, deco:'tools',
+    t:{tag:'કારીગર ભાઈઓ-બહેનો માટે', head:'હુનર તમારું,\nગ્રાહક અમે લાવીશું!\n*આજે જ જોડાઓ.*', pts:['તમારા વિસ્તારમાં જ નવું કામ', 'ફોન પર બુકિંગની રિંગ', 'કમાણી સીધી તમારા હાથમાં'], cta:'"હું કારીગર છું" માં નોંધણી કરો'}}];
+const AD_FEST_BY = Object.fromEntries(AD_FEST.map(x => [x.id, x]));
+/* કામ (કેટેગરી) — ખાસ લખાણ; બાકીના માટે સામાન્ય */
+const AD_CAT = {
+  ac:{pal:'ice', re:/એસી|એ\.સી|એ સી|\bac\b|a\.c|એર ?કંડિશ|air ?condition/i, t:{tag:'એસી રિપેર', head:'AC ઠંડું નથી કરતું?\n*ચિંતા છોડો,*\nથઈ જશે!', pts:['સર્વિસ • ગેસ ફિલિંગ • રિપેર', 'નજીકનો અનુભવી AC મિસ્ત્રી', 'કામ પછી સાફ બિલ']}},
+  plumber:{pal:'yellow', e:'🚰', re:/પ્લમ્બ|પ્લંબ|નળ|પાઇપ|ટાંકી|plumb|pipe|\btap/i, t:{tag:'પ્લમ્બર હાજર', head:'નળ ટપકે છે?\nપાઇપ લીક છે?\n*એક ક્લિકમાં ઉકેલ!*', pts:['નળ, પાઇપ, ટાંકી, બાથરૂમ ફિટિંગ', 'નજીકના પ્લમ્બરને સીધી બુકિંગ', 'કામ થાય પછી જ ચુકવણી']}},
+  electrician:{pal:'night', re:/ઇલેક્ટ્ર|ઈલેક્ટ્ર|વાયરિંગ|પંખ|સ્વીચ|electric|wiring|\bfan/i, t:{tag:'ઇલેક્ટ્રિશિયન હાજર', head:'લાઇટ ગઈ? પંખો બંધ?\n*અંધારું નહીં રહે —*\nથઈ જશે!', pts:['વાયરિંગ • સ્વીચ બોર્ડ • પંખા • ઇન્વર્ટર', 'ચકાસાયેલા કારીગર', 'કામ શરૂ થાય OTP થી']}},
+  carpenter:{pal:'wood', re:/સુથાર|ફર્નિચર|દરવાજ|carpent|furniture/i, t:{tag:'સુથાર હાજર', head:'દરવાજો અટકે છે?\nફર્નિચર તૂટ્યું?\n*થઈ જશે!*', pts:['દરવાજા • બારી • ફર્નિચર રિપેર', 'નવું ફર્નિચર ફિટિંગ', 'નજીકના અનુભવી સુથાર']}},
+  painter:{pal:'pink', re:/કલરકામ|કલર કામ|રંગકામ|પેઇન્ટ|paint/i, t:{tag:'કલરકામ', head:'ઘરને આપો\n*નવો રંગ, નવો નિખાર!*', pts:['અંદર-બહારનું કલરકામ', 'ટેક્સચર • વોટરપ્રૂફ કલર', 'સમયસર અને સાફ કામ']}},
+  cleaning:{pal:'green', re:/સફાઈ|સફાઇ|ક્લીન|clean/i, t:{tag:'ઘર સફાઈ', head:'ઘર ચમકાવવું છે?\n*ડીપ ક્લીનિંગ —*\nથઈ જશે!', pts:['કિચન • બાથરૂમ • સોફા • ટાંકી', 'અનુભવી કારીગર', 'તમારા સમયે બુકિંગ']}},
+  puncture:{pal:'navy', re:/પંચર|ટાયર|puncture|tyre|tire/i, t:{tag:'ઘર બેઠા પંચર', head:'રસ્તામાં પંચર?\n*કારીગર તમારી પાસે!*', pts:['ઘરે કે રસ્તે — ટુ-વ્હીલર પંચર', 'નજીકનો કારીગર, ઝડપી સેવા', 'એપમાં જ લાઇવ ટ્રેકિંગ']}},
+  appliance:{pal:'ice', re:/ફ્રિજ|ફ્રીજ|વોશિંગ|fridge|washing/i}, ro:{pal:'ice', re:/\bro\b|આર\.?ઓ|પાણીનું મશીન|water purifier/i},
+  pest:{pal:'green', re:/પેસ્ટ|જીવાત|વંદા|ઉધઈ|pest|termite/i}, mechanic:{pal:'night', re:/મિકેનિક|બાઇક|કાર રિપેર|mechanic|bike/i},
+  cctv:{pal:'night', re:/cctv|સીસીટીવી|કેમેરા/i}, solar:{pal:'sun', re:/સોલાર|solar/i}, movers:{pal:'orange', re:/શિફ્ટિંગ|ઘરવખરી|packers|movers/i}};
+const AD_PAL_ROT = ['yellow', 'navy', 'green', 'ice', 'orange', 'night', 'pink', 'wood'];
+const adCatPal = id => (AD_CAT[id] && AD_CAT[id].pal) || AD_PAL_ROT[Math.abs([...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0)) % AD_PAL_ROT.length];
+function adDetect(txt){ txt = String(txt || ''); const fest = (AD_FEST.find(f => f.re.test(txt)) || {}).id || '';
+  let cat = (Object.entries(AD_CAT).find(([, v]) => v.re && v.re.test(txt)) || [])[0] || '';
+  if(!cat){ const t = txt.toLowerCase(); const c = CATS.find(c => c.id !== 'other' && (t.includes(c.name.toLowerCase()) || c.name.split(/[\/ ]/).some(w => w.length > 2 && t.includes(w.toLowerCase())))); cat = c ? c.id : ''; }
+  return {fest, cat}; }
+function adTemplate(fest, cat){ const F = AD_FEST_BY[fest], C = cat && CAT[cat], st = Store.settings();
+  if(F && F.id === 'offer' && st.heroCode) return {...F.t, pts:['કૂપન કોડ: ' + st.heroCode, ...F.t.pts.slice(1)]};
+  if(F) return {...F.t, pts:[...F.t.pts]};
+  if(C){ const T = AD_CAT[cat] && AD_CAT[cat].t; if(T) return {...T, pts:[...T.pts], cta:'આજે જ એપ ખોલો / ડાઉનલોડ કરો'};
+    return {tag:C.name + ' હાજર', head:C.name + ' માટે\nકારીગર જોઈએ?\n*એક ક્લિકમાં — થઈ જશે!*', pts:[...AD_GEN_PTS], cta:'આજે જ એપ ખોલો / ડાઉનલોડ કરો'}; }
+  return {tag:'ઘરનું કોઈ પણ કામ', head:'કારીગર જોઈએ?\nબસ એક ક્લિક…\n*થઈ જશે!*', pts:['એસી • પ્લમ્બર • ઇલેક્ટ્રિશિયન • સુથાર', 'કલરકામ • સફાઈ • બીજાં 25+ કામ', 'કામ થાય પછી જ ચુકવણી'], cta:'આજે જ એપ ખોલો / ડાઉનલોડ કરો'}; }
+const adAppUrl = () => shareBase().replace(/admin\/$/, '');
+const AD_DEF = () => { const T = adTemplate('', 'plumber'); return {topic:'', fest:'', cat:'plumber', ...T, pts:T.pts.join('\n'), font:'baloo', hs:100, ps:100, size:'sq', pal:'', link:true, url:adAppUrl(), qr:true, logo:true, art:'', photo:''}; };
+function adState(){ if(!S.ad){ const d = AD_DEF(); S.ad = {...d, ...LS.get('tj_ad', {}), photo:''}; if(!S.ad.url) S.ad.url = d.url; } if(Array.isArray(S.ad.pts)) S.ad.pts = S.ad.pts.join('\n'); return S.ad; }
+const adSave = () => { try{ const {photo, ...rest} = S.ad; LS.set('tj_ad', rest); }catch(e){} };
+const AD_SIZES = {sq:[1080, 1080, '⬛ ચોરસ પોસ્ટ', 'Instagram / Facebook / WhatsApp'], story:[1080, 1920, '📱 સ્ટેટસ / સ્ટોરી', 'WhatsApp સ્ટેટસ, Reels'], wide:[1200, 628, '▭ પહોળું બેનર', 'Facebook લિંક, વેબસાઇટ']};
+
+/* ---- ચિત્ર દોરવાનાં સાધન ---- */
+function adRnd(seed){ let s = 0; for(const c of String(seed)) s = (s * 31 + c.charCodeAt(0)) >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+function adRR(x, c, X, Y, W, H, r){ x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + W, Y, X + W, Y + H, r); x.arcTo(X + W, Y + H, X, Y + H, r); x.arcTo(X, Y + H, X, Y, r); x.arcTo(X, Y, X + W, Y, r); x.closePath(); if(c){ x.fillStyle = c; x.fill(); } }
+function adEmoji(x, e, X, Y, sz, rot = 0, a = 1){ x.save(); x.globalAlpha = a; x.translate(X, Y); x.rotate(rot); x.font = `${sz}px "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(e, 0, 0); x.restore(); }
+function adScatter(x, W, H, list, n, seed, sz, a, avoid){ const R = adRnd(seed); for(let i = 0; i < n; i++){ const X = R() * W, Y = R() * H; if((avoid && avoid(X, Y)) || (X > 40 && X < W * 0.74 && Y > 170 && Y < H - 70)) continue; adEmoji(x, list[i % list.length], X, Y, sz * (0.6 + R() * 0.7), (R() - 0.5) * 0.9, a); } }
+function adBunting(x, W, y0, cols, n = 14, dep = 70){ x.save(); x.strokeStyle = 'rgba(0,0,0,.35)'; x.lineWidth = 3; x.beginPath(); x.moveTo(0, y0); x.quadraticCurveTo(W / 2, y0 + 50, W, y0); x.stroke();
+  for(let i = 0; i < n; i++){ const t0 = i / n, t1 = (i + 1) / n, P = t => [t * W, y0 + 4 * 50 * t * (1 - t) / 2]; const [a, b] = P(t0), [c, d] = P(t1), m = P((t0 + t1) / 2);
+    x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.lineTo(m[0], m[1] + dep); x.closePath(); x.fillStyle = cols[i % cols.length]; x.fill(); } x.restore(); }
+function adToran(x, W, y0){ x.save(); const n = 22; for(let i = 0; i <= n; i++){ const X = i * W / n, Y = y0 + 14 * Math.sin(i * 0.9);
+    x.beginPath(); x.arc(X, Y, 22, 0, 7); x.fillStyle = i % 2 ? '#FF8C1A' : '#FFC93C'; x.fill(); x.beginPath(); x.arc(X, Y, 9, 0, 7); x.fillStyle = 'rgba(160,60,0,.35)'; x.fill();
+    if(i % 3 === 0){ x.beginPath(); x.moveTo(X - 10, Y + 18); x.lineTo(X + 10, Y + 18); x.lineTo(X, Y + 62); x.closePath(); x.fillStyle = '#2E8B3E'; x.fill(); } } x.restore(); }
+function adDeco(x, W, H, F, footH){ if(!F) return; const d = F.deco, body = H - footH;
+  if(d === 'diwali'){ adToran(x, W, 10); const n = Math.round(W / 150); for(let i = 0; i < n; i++) adEmoji(x, '🪔', (i + 0.5) * W / n, body - 46, 60);
+    adScatter(x, W, body - 90, ['✨', '🌟'], 18, 'dw', 34, 0.55, (X, Y) => Y < 80); }
+  else if(d === 'fireworks'){ const R = adRnd('fw'); for(let k = 0; k < 6; k++){ const cx = R() * W, cy = 120 + R() * (body * 0.6), r = 60 + R() * 90, col = ['#FFB703', '#FB5607', '#FF006E', '#8338EC', '#3A86FF', '#80ED99'][k];
+      x.save(); x.globalAlpha = 0.45; x.strokeStyle = col; x.lineWidth = 4; for(let i = 0; i < 18; i++){ const a = i / 18 * Math.PI * 2; x.beginPath(); x.moveTo(cx + Math.cos(a) * r * 0.3, cy + Math.sin(a) * r * 0.3); x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); x.stroke(); } x.restore(); } }
+  else if(d === 'navratri'){ adBunting(x, W, 0, ['#FFE14D', '#00C2A8', '#FF7A00', '#FFFFFF', '#2EC4F1', '#FF3D7F']); adScatter(x, W, body, ['✨', '🌸'], 14, 'nv', 36, 0.5, (X, Y) => Y < 90); }
+  else if(d === 'kites'){ adScatter(x, W, body * 0.95, ['🪁'], 9, 'kt', 80, 0.55, (X, Y) => Y < 60); x.save(); x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = 2; const R = adRnd('st'); for(let i = 0; i < 5; i++){ x.beginPath(); x.moveTo(R() * W, 0); x.bezierCurveTo(R() * W, body * 0.3, R() * W, body * 0.6, R() * W, body); x.stroke(); } x.restore(); }
+  else if(d === 'holi'){ const R = adRnd('hl'); for(let i = 0; i < 16; i++){ x.save(); x.globalAlpha = 0.18 + R() * 0.15; x.fillStyle = ['#FF006E', '#FB5607', '#FFBE0B', '#3A86FF', '#8338EC', '#06D6A0'][i % 6]; x.beginPath(); x.arc(R() * W, R() * body, 40 + R() * 130, 0, 7); x.fill(); x.restore(); } }
+  else if(d === 'hearts') adScatter(x, W, body, ['🎀', '💖', '✨'], 14, 'rk', 44, 0.4, (X, Y) => Y < 70);
+  else if(d === 'feathers') adScatter(x, W, body, ['🦚', '✨', '🪈'], 10, 'jm', 60, 0.35, (X, Y) => Y < 70);
+  else if(d === 'garland'){ adToran(x, W, 10); adScatter(x, W, body, ['🌺', '🌼', '🪔'], 12, 'gn', 46, 0.4, (X, Y) => Y < 90); }
+  else if(d === 'tiranga'){ x.fillStyle = '#FF9933'; x.fillRect(0, 0, W, 26); x.fillStyle = '#138808'; x.fillRect(0, body - 26, W, 26); x.save(); x.globalAlpha = 0.07; x.strokeStyle = '#000080'; x.lineWidth = 6; const cx = W * 0.82, cy = body * 0.62, r = 170; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.stroke(); for(let i = 0; i < 24; i++){ const a = i / 24 * Math.PI * 2; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); x.stroke(); } x.restore(); }
+  else if(d === 'stars') adScatter(x, W, body, ['⭐', '✨', '🏮'], 14, 'ed', 40, 0.45, (X, Y) => Y < 60);
+  else if(d === 'snow') adScatter(x, W, body, ['❄️', '⭐', '✨'], 22, 'xm', 34, 0.45);
+  else if(d === 'rain'){ x.save(); x.strokeStyle = 'rgba(11,37,69,.18)'; x.lineWidth = 3; const R = adRnd('rn'); for(let i = 0; i < 70; i++){ const X = R() * W, Y = R() * body; x.beginPath(); x.moveTo(X, Y); x.lineTo(X - 14, Y + 42); x.stroke(); } x.restore(); }
+  else if(d === 'sun'){ x.save(); x.globalAlpha = 0.25; x.fillStyle = '#FFE66D'; x.beginPath(); x.arc(W * 0.9, 90, 260, 0, 7); x.fill(); x.restore(); }
+  else if(d === 'confetti'){ const R = adRnd('cf'); for(let i = 0; i < 60; i++){ x.save(); x.globalAlpha = 0.5; x.fillStyle = ['#FFD34D', '#FF6B6B', '#4ECDC4', '#FFFFFF', '#A78BFA'][i % 5]; x.translate(R() * W, R() * body); x.rotate(R() * 3); x.fillRect(-8, -3, 16, 6); x.restore(); } }
+  else if(d === 'tools') adScatter(x, W, body, ['🔧', '🔨', '🪛', '⚡'], 12, 'tl', 40, 0.25); }
+const AD_IMG = {};
+function adImg(src){ if(!src) return null; if(AD_IMG[src]) return AD_IMG[src]; const im = new Image(); AD_IMG[src] = im; im.onload = () => adDraw(); im.src = src; return im; }
+/* *રંગીન* શબ્દો સાથે લખાણ વીંટાળવું */
+function adLines(x, txt, maxW0){ const mw = i => typeof maxW0 === 'function' ? maxW0(i) : maxW0; const out = []; for(const para of String(txt || '').split('\n')){ let hl = false; const words = []; for(const part of para.split('*')){ part.split(/(\s+)/).filter(s => s.length).forEach(w => words.push({w, hl})); hl = !hl; }
+    let line = [], lw = 0; for(const t of words){ const tw = x.measureText(t.w).width; if(lw + tw > mw(out.length) && line.length && !/^\s+$/.test(t.w) && !/^[—–\-!?,.:;।]+$/.test(t.w)){ out.push(line); line = []; lw = 0; } if(!line.length && /^\s+$/.test(t.w)) continue; line.push({...t, tw}); lw += tw; }
+    out.push(line); } return out; }
+function adDrawLines(x, lines, X, Y, lh, fg, hl){ lines.forEach((ln, i) => { let cx = X; ln.forEach(t => { x.fillStyle = t.hl ? hl : fg; x.fillText(t.w, cx, Y + i * lh); cx += t.tw; }); }); return lines.length * lh; }
+
+let adT = null;
+function adDraw(){ const cv = $('#ad_cv'); if(!cv) return; const A = adState(); const [W, H] = AD_SIZES[A.size] || AD_SIZES.sq; if(cv.width !== W) cv.width = W; if(cv.height !== H) cv.height = H;
+  const x = cv.getContext('2d'), F = AD_FEST_BY[A.fest], P = AD_PAL[A.pal] || AD_PAL[F ? F.pal : adCatPal(A.cat || 'other')] || AD_PAL.yellow;
+  const wide = A.size === 'wide', story = A.size === 'story', k = wide ? 0.62 : story ? 1.12 : 1, M = Math.round(64 * (wide ? 0.75 : 1));
+  const fam = adFam(A.font), wb = adW(A.font, true), wr = adW(A.font, false);
+  const footH = (A.qr || A.link || A.cta) ? Math.round((wide ? 150 : story ? 270 : 200)) : 0;
+  // પાર્શ્વભૂમિ
+  const g = x.createLinearGradient(0, 0, W * 0.4, H); g.addColorStop(0, P.bg1); g.addColorStop(1, P.bg2); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.save(); x.globalAlpha = 0.16; x.fillStyle = P.fg === '#FFFFFF' || P.fg === '#FFF3D6' || P.fg === '#F4F1DE' ? '#FFFFFF' : '#B07800'; x.beginPath(); x.arc(W - 60, 300 * k, 380 * k, 0, 7); x.fill(); x.beginPath(); x.arc(40, H - footH - 60, 200 * k, 0, 7); x.fill(); x.restore();
+  adDeco(x, W, H, F, footH);
+  // ચિત્ર: પોતાનો ફોટો અથવા ટાઇલમાં ઇમોજી
+  const C = A.cat && CAT[A.cat], emo = A.art || (C && !F ? ((AD_CAT[A.cat] && AD_CAT[A.cat].e) || C.icon) : F ? (C ? C.icon : F.e) : '🏠');
+  const ts = Math.round((wide ? 250 : story ? 380 : 270)), tx = W - M - ts + (wide ? 0 : 10), ty = wide ? (H - footH - ts) / 2 : story ? 300 : 110;
+  x.save(); x.translate(tx + ts / 2, ty + ts / 2); x.rotate(-0.07);
+  if(A.photo){ const im = adImg(A.photo); x.shadowColor = 'rgba(0,0,0,.3)'; x.shadowBlur = 30; x.shadowOffsetY = 14; adRR(x, '#FFFFFF', -ts / 2 - 10, -ts / 2 - 10, ts + 20, ts + 20, 34); x.shadowColor = 'transparent';
+    if(im && im.complete && im.naturalWidth){ x.save(); adRR(x, null, -ts / 2, -ts / 2, ts, ts, 26); x.clip(); const r = Math.max(ts / im.naturalWidth, ts / im.naturalHeight), iw = im.naturalWidth * r, ih = im.naturalHeight * r; x.drawImage(im, -iw / 2, -ih / 2, iw, ih); x.restore(); } }
+  else { x.shadowColor = 'rgba(0,0,0,.3)'; x.shadowBlur = 30; x.shadowOffsetY = 18; adEmoji(x, emo, 0, 0, ts * 0.92); x.shadowColor = 'transparent'; }
+  x.restore();
+  // લોગો + નામ
+  let y = (wide ? 40 : story ? 90 : 52) + (F && ['diwali', 'garland', 'navratri'].includes(F.deco) ? (wide ? 50 : 62) : F && F.deco === 'tiranga' ? 14 : 0);
+  if(A.logo){ const lg = adImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(logoSVG(256).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')));
+    const ls = wide ? 64 : 84; if(lg && lg.complete && lg.naturalWidth) x.drawImage(lg, M, y, ls, ls);
+    x.fillStyle = P.fg; x.textBaseline = 'alphabetic'; x.font = `${wb} ${Math.round(44 * (wide ? 0.8 : 1))}px ${fam}`; x.fillText(APP.gu || 'થઈ જશે!', M + ls + 18, y + ls * 0.55);
+    x.globalAlpha = 0.8; x.font = `${wr} ${Math.round(22 * (wide ? 0.85 : 1))}px ${fam}`; x.fillText('Thai Jashe • ઘરઆંગણે કારીગર', M + ls + 18, y + ls * 0.92); x.globalAlpha = 1; y += ls; }
+  // ટૅગ
+  const textW = (wide ? W * 0.6 : story ? W - 2 * M : tx - M + 40);
+  if(A.tag){ y += Math.round(44 * k); x.font = `${wb} ${Math.round(28 * k)}px ${fam}`; const tw = x.measureText(A.tag).width, ph = Math.round(56 * k);
+    adRR(x, P.ac, M, y, tw + 48 * k, ph, ph / 2); x.fillStyle = /^#(F|E)/i.test(P.ac) ? '#141C55' : '#FFFFFF'; x.textBaseline = 'middle'; x.fillText(A.tag, M + 24 * k, y + ph / 2 + 2); x.textBaseline = 'alphabetic'; y += ph; }
+  // મુખ્ય લખાણ (જગ્યા મુજબ આપમેળે નાનું)
+  const ptsL = String(A.pts || '').split('\n').map(s => s.trim()).filter(Boolean).slice(0, wide ? 2 : 5);
+  const avail = H - footH - y - (wide ? 30 : 60);
+  let hs = 76 * k * (A.hs || 100) / 100, ps = 33 * k * (A.ps || 100) / 100, HL, PL, ptH, hH;
+  for(let i = 0; i < 14; i++){ x.font = `${wb} ${Math.round(hs)}px ${fam}`; const hy0 = y + Math.round(26 * k) + hs, tileB = ty + ts + 24; HL = adLines(x, A.head, wide ? textW : (i2 => (hy0 + i2 * hs * 1.24 - hs * 0.8 < tileB ? tx - M - 36 : W - 2 * M))); hH = HL.length * hs * 1.24;
+    x.font = `${wb} ${Math.round(ps)}px ${fam}`; PL = ptsL.map(p => adLines(x, '✔️ ' + p, (wide ? W * 0.6 : W - 2 * M) - 48)); ptH = PL.reduce((s, l) => s + l.length * ps * 1.3 + 30 * k, 0) + (ptsL.length ? 34 * k : 0);
+    if(hH + ptH + 30 * k <= avail) break; hs *= 0.93; ps *= 0.95; }
+  const spare = story ? Math.max(0, avail - hH - ptH - 30 * k) : 0; y += spare * 0.3;
+  y += Math.round(26 * k) + hs; x.font = `${wb} ${Math.round(hs)}px ${fam}`; x.shadowColor = P.fg === '#FFFFFF' ? 'rgba(0,0,0,.25)' : 'transparent'; x.shadowBlur = 10;
+  adDrawLines(x, HL, M, y, hs * 1.24, P.fg, P.hl); x.shadowColor = 'transparent'; y += (HL.length - 1) * hs * 1.24;
+  // મુદ્દા
+  if(ptsL.length){ y += 40 * k + spare * 0.3; if(!wide && !A.photo && y < ty + ts * 0.9) y = ty + ts * 0.9; x.font = `${wb} ${Math.round(ps)}px ${fam}`;
+    PL.forEach(L => { const bh = L.length * ps * 1.3 + 22 * k, bw = Math.min((wide ? W * 0.6 : W - 2 * M), Math.max(...L.map(l => l.reduce((s, t) => s + t.tw, 0))) + 48);
+      adRR(x, P.card, M, y, wide ? bw : W - 2 * M, bh, 14); x.fillStyle = P.ac; x.fillRect(M, y + 4, 8, bh - 8); adDrawLines(x, L, M + 32, y + 11 * k + ps * 1.02, ps * 1.3, P.fg, P.hl); y += bh + 12 * k; }); }
+  // નીચેનો પટ્ટો: QR + લિંક + CTA
+  if(footH){ const fy = H - footH; x.fillStyle = P.foot; x.fillRect(0, fy, W, footH); let fx = M;
+    if(A.qr && A.url && window.qrcode){ const qs = footH - (wide ? 34 : 40), qx = M, qy = fy + (footH - qs) / 2; adRR(x, '#FFFFFF', qx, qy, qs, qs, 16);
+      try{ const q = qrcode(0, 'M'); q.addData(A.url); q.make(); const n = q.getModuleCount(), cell = (qs - 24) / n; x.fillStyle = '#111111';
+        for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) x.fillRect(qx + 12 + c * cell, qy + 12 + r * cell, Math.ceil(cell), Math.ceil(cell)); }catch(e){ console.warn('qr', e); }
+      fx = qx + qs + 32; }
+    const fs = wide ? 0.75 : story ? 1.1 : 1; let fyT = fy + (wide ? 50 : story ? 92 : 72);
+    if(A.cta){ x.fillStyle = '#FFD34D'; x.font = `${wb} ${Math.round(40 * fs)}px ${fam}`; const L = adLines(x, A.cta, W - fx - M); adDrawLines(x, L.slice(0, 2), fx, fyT, 46 * fs, '#FFD34D', '#FFFFFF'); fyT += Math.min(L.length, 2) * 46 * fs + 6; }
+    x.fillStyle = '#FFFFFF'; x.font = `${wr} ${Math.round(28 * fs)}px ${fam}`;
+    if(A.qr && A.url){ x.fillText('📷 QR સ્કેન કરો' + (A.link ? ' અથવા લિંક ખોલો' : ''), fx, fyT + 2); fyT += 46 * fs; }
+    if(A.link && A.url){ x.fillText('🔗 ' + A.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), fx, fyT + 2); } } }
+const adQueue = () => { clearTimeout(adT); adT = setTimeout(() => { adDraw(); adSave(); const m = $('#ad_msg'); if(m) m.textContent = adMsg(); }, 90); };
+function adSet(k, v){ const A = adState(); A[k] = v; if(k === 'font') adFontLoad(v).then(adDraw); adQueue(); }
+function adAuto(){ const A = adState(); const t = ($('#ad_topic') || {}).value || A.topic; A.topic = t; const d = adDetect(t);
+  if(!d.fest && !d.cat){ toast('શબ્દ ઓળખાયો નહીં — નીચેથી કામ કે તહેવાર પસંદ કરો'); return render(); }
+  A.fest = d.fest; A.cat = d.cat; A.pal = ''; A.art = ''; const T = adTemplate(A.fest, A.cat); Object.assign(A, T); A.pts = T.pts.join('\n'); adSave(); render();
+  toast('✨ ' + [d.fest && AD_FEST_BY[d.fest].n, d.cat && catName(d.cat)].filter(Boolean).join(' + ') + ' મુજબ જાહેરાત બની'); }
+function adPick(kind, id){ const A = adState(); if(kind === 'fest') A.fest = A.fest === id ? '' : id; else A.cat = A.cat === id ? '' : id; A.pal = ''; A.art = '';
+  const T = adTemplate(A.fest, A.cat); Object.assign(A, T); A.pts = T.pts.join('\n'); adSave(); render(); }
+async function adPhoto(inp){ const f = inp.files && inp.files[0]; if(!f) return; if(f.size > 12e6) return toast('ફોટો બહુ મોટો છે (12 MB સુધી)');
+  const url = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(f); }); adState().photo = url; adDraw(); render(); }
+function adReset(){ S.ad = AD_DEF(); adSave(); render(); toast('નવી શરૂઆત'); }
+async function adBlob(){ adDraw(); const cv = $('#ad_cv'); return await new Promise(ok => cv.toBlob(ok, 'image/png')); }
+const adName = () => 'ThaiJashe_Ad_' + (adState().fest || adState().cat || 'post') + '_' + new Date().toISOString().slice(0, 10) + '.png';
+async function adDownload(){ const b = await adBlob(); await saveBlob(adName(), b); audit('📣 જાહેરાત ફોટો બનાવ્યો', adState().fest || adState().cat || ''); }
+/* WhatsApp સંદેશ: જાહેરાતનું લખાણ + નીચે લિંક (*શબ્દ* WhatsApp માં જાડા અક્ષરે દેખાય) */
+function adMsg(){ const A = adState(), F = AD_FEST_BY[A.fest], C = A.cat && CAT[A.cat];
+  const em = A.art || (F ? F.e : C ? C.icon : '🏠'), head = String(A.head || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => l.replace(/\*\s*([^*]+?)\s*\*/g, '*$1*')).join('\n');
+  const pts = String(A.pts || '').split('\n').map(s => s.trim()).filter(Boolean).map(p => '✅ ' + p).join('\n');
+  return [A.tag ? em + ' *' + A.tag.trim() + '*' : '', head, pts, A.cta ? '👉 ' + A.cta.trim() : '', '— *' + (APP.gu || 'થઈ જશે!') + '* (Thai Jashe) · ઘરઆંગણે કારીગર',
+    A.url ? '📲 એપ ખોલો / ડાઉનલોડ કરો:\n' + A.url : ''].filter(Boolean).join('\n\n'); }
+function adCopyMsg(){ copyText(adMsg()); }
+function adWAText(){ const a = document.createElement('a'); a.href = 'https://wa.me/?text=' + encodeURIComponent(adMsg()); a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
+async function adShare(){ const b = await adBlob(), A = adState(), f = new File([b], adName(), {type:'image/png'}), text = adMsg();
+  try{ if(navigator.canShare && navigator.canShare({files:[f]})){ try{ await navigator.clipboard.writeText(text); }catch(e){} await navigator.share({files:[f], text}); return; } }catch(e){ if(/abort|cancel/i.test(String(e && e.name || e))) return; }
+  await saveBlob(adName(), b); copyText(text); toast('ફોટો સેવ થયો અને લખાણ કૉપિ થયું — WhatsApp માં ફોટો મૂકી નીચે લખાણ Paste કરો'); }
+function adKeep(){ const A = adState(), L = LS.get('tj_ad_saved', []); const {photo, ...rest} = A; const cv = $('#ad_cv'); let th = '';
+  try{ const t = document.createElement('canvas'); t.width = 160; t.height = Math.round(160 * cv.height / cv.width); t.getContext('2d').drawImage(cv, 0, 0, t.width, t.height); th = t.toDataURL('image/jpeg', 0.7); }catch(e){}
+  L.unshift({...rest, th, ts:Date.now()}); LS.set('tj_ad_saved', L.slice(0, 12)); toast('💾 ડિઝાઇન સાચવી'); render(); }
+function adLoad(i){ const L = LS.get('tj_ad_saved', []), d = L[i]; if(!d) return; const {th, ts, ...rest} = d; S.ad = {...AD_DEF(), ...rest, photo:''}; adFontLoad(S.ad.font).then(adDraw); adSave(); render(); window.scrollTo(0, 0); }
+function adDel(i){ const L = LS.get('tj_ad_saved', []); L.splice(i, 1); LS.set('tj_ad_saved', L); render(); }
+
+VIEWS.a_ads = () => { if(!isAdmin()) return VIEWS.welcome(); const A = adState(); needLib('qr').then(adDraw).catch(() => toast('QR લાઇબ્રેરી લોડ ન થઈ'));
+  adFontLoad(A.font).then(adDraw); setTimeout(adDraw, 0);
+  if(!S.adFontsAll){ S.adFontsAll = 1; Promise.all(AD_FONTS.map(f => adFontLoad(f.id))).then(() => { if(S.view === 'a_ads' && !(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) render(); }); } const saved = LS.get('tj_ad_saved', []); const det = adDetect(A.topic);
+  const chip = (on, onclick, label) => `<button class="chipb ${on ? 'on' : ''}" onclick="${onclick}">${label}</button>`;
+  return topbar('📣 જાહેરાત બનાવો') + `<style>
+  .adgrid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}.adgrid > *{min-width:0}.adside{display:contents}
+  .adprev{position:sticky;top:calc(var(--sat) + 58px);z-index:3;background:var(--bg);padding:6px 0;margin:-6px 0}
+  .adprev canvas{display:block;margin:0 auto;max-width:100%;max-height:36vh;width:auto;height:auto;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);background:#eee}
+  .adchips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;flex-wrap:nowrap}.adchips .chipb{white-space:nowrap}
+  .adfonts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .adfonts button{border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;text-align:left;background:var(--surface)}
+  .adfonts button.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand) inset}.adfonts b{display:block;font-size:22px;line-height:1.25}
+  .adpal{display:flex;gap:8px;flex-wrap:wrap}.adpal button{width:38px;height:38px;border-radius:50%;border:2px solid var(--line)}.adpal button.on{outline:3px solid var(--brand);outline-offset:2px}
+  .adsaved{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}.adsaved div{position:relative}.adsaved img{width:100%;border-radius:10px;cursor:pointer;display:block}
+  .adsaved button.x{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;width:26px;height:26px;font-size:13px}
+  @media (min-width:900px){.adgrid{grid-template-columns:minmax(360px,520px) minmax(0,1fr);align-items:start}.adside{display:block;position:sticky;top:16px}.adprev{position:static;margin:0;padding:0}.adprev canvas{max-height:70vh}}
+  </style><div class="wrap"><div class="adgrid">
+  <div class="adside"><div class="adprev"><canvas id="ad_cv" width="1080" height="1080" aria-label="જાહેરાતનો ફોટો"></canvas></div>
+    <div class="two" style="margin-top:10px"><button class="btn pri" onclick="adDownload()">⬇️ ફોટો ડાઉનલોડ</button><button class="btn ok" onclick="adShare()">📤 WhatsApp / શેર</button></div>
+    <div class="two" style="margin-top:8px"><button class="btn" onclick="adKeep()">💾 ડિઝાઇન સાચવો</button><button class="btn" onclick="adReset()">↺ નવી શરૂઆત</button></div><p class="tiny muted" style="text-align:center;margin:6px 0 0">નીચે લખો — ઉપરનો ફોટો તરત બદલાશે</p>
+    <details class="card" style="margin-top:10px"><summary><b>💬 WhatsApp માં ફોટા સાથે જતો સંદેશ</b></summary><pre id="ad_msg" style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:8px 0;background:var(--surface2);padding:10px;border-radius:10px">${h(adMsg())}</pre>
+    <div class="two"><button class="btn sm" onclick="adCopyMsg()">📋 લખાણ કૉપિ</button><button class="btn sm ok" onclick="adWAText()">🟢 ફક્ત લખાણ + લિંક</button></div>
+    <p class="tiny muted">"📤 WhatsApp / શેર" દબાવો એટલે ફોટો અને નીચે આ લખાણ + લિંક સાથે જશે. કોઈ ફોનમાં લખાણ ન આવે તો લખાણ આપમેળે કૉપિ થશે — WhatsApp માં Paste કરો.</p></details></div>
+  <div class="stack">
+  <div class="card"><h3>1. શેની જાહેરાત બનાવવી છે?</h3>
+    <div class="search"><span>✍️</span><input id="ad_topic" value="${h(A.topic || '')}" placeholder="દા.ત. એસી રિપેર, દિવાળી, ઉત્તરાયણ, ચોમાસું, કારીગર જોઈએ…" oninput="adState().topic=this.value" onkeydown="if(event.key==='Enter')adAuto()"></div>
+    <button class="btn pri block" onclick="adAuto()">✨ આપમેળે જાહેરાત બનાવો</button>
+    <p class="tiny muted">લખેલા શબ્દ પરથી કામ કે તહેવાર ઓળખીને રંગ, ચિત્ર અને લખાણ તૈયાર થશે — પછી નીચે બધું બદલી શકો.</p>
+    <b class="small">🎉 તહેવાર / પ્રસંગ</b><div class="adchips">${AD_FEST.map(f => chip(A.fest === f.id, `adPick('fest','${f.id}')`, f.e + ' ' + f.n)).join('')}</div>
+    <b class="small">🛠️ કામ</b><div class="adchips">${CATS.filter(c => c.id !== 'other').map(c => chip(A.cat === c.id, `adPick('cat','${c.id}')`, c.icon + ' ' + h(c.name))).join('')}</div>
+    ${A.fest || A.cat ? `<p class="tiny" style="color:var(--ok);font-weight:700">પસંદ: ${[A.fest && AD_FEST_BY[A.fest].e + ' ' + AD_FEST_BY[A.fest].n, A.cat && catIcon(A.cat) + ' ' + h(catName(A.cat))].filter(Boolean).join(' + ')} — ફરી ટેપ કરો તો હટી જશે</p>` : ''}</div>
+  <div class="card"><h3>2. લખાણ</h3>
+    <label class="f">નાનું ટૅગ (ઉપરની પટ્ટી)<input value="${h(A.tag || '')}" maxlength="40" oninput="adSet('tag',this.value)"></label>
+    <label class="f">મુખ્ય લખાણ <span class="h">નવી લાઇન માટે Enter · *તારા વચ્ચેના શબ્દ* રંગીન દેખાશે</span><textarea rows="4" oninput="adSet('head',this.value)">${h(A.head || '')}</textarea></label>
+    <label class="f">મુદ્દા <span class="h">એક લાઇનમાં એક મુદ્દો (5 સુધી) — ખાલી રાખો તો નહીં આવે</span><textarea rows="4" oninput="adSet('pts',this.value)">${h(Array.isArray(A.pts) ? A.pts.join('\n') : (A.pts || ''))}</textarea></label>
+    <label class="f">નીચેની લાઇન (પીળા અક્ષરે)<input value="${h(A.cta || '')}" maxlength="60" oninput="adSet('cta',this.value)"></label></div>
+  <div class="card"><h3>3. અક્ષર — ફોન્ટ અને માપ</h3>
+    <div class="adfonts">${AD_FONTS.map(f => `<button class="${A.font === f.id ? 'on' : ''}" onclick="adSet('font','${f.id}');render()"><b style="font-family:${h(adFam(f.id).replace(/"/g, "'"))};font-weight:${adW(f.id, true)}">થઈ જશે!</b><span class="tiny muted">${h(f.n)}</span></button>`).join('')}</div>
+    <label class="f">મુખ્ય લખાણનું માપ: <b id="ad_hsv">${A.hs}%</b><input type="range" min="60" max="140" step="5" value="${A.hs}" oninput="$('#ad_hsv').textContent=this.value+'%';adSet('hs',+this.value)"></label>
+    <label class="f">મુદ્દાનું માપ: <b id="ad_psv">${A.ps}%</b><input type="range" min="60" max="140" step="5" value="${A.ps}" oninput="$('#ad_psv').textContent=this.value+'%';adSet('ps',+this.value)"></label>
+    <b class="small">🎨 રંગ</b><div class="adpal"><button class="${A.pal ? '' : 'on'}" title="આપમેળે" style="background:conic-gradient(#F5B301,#E0218A,#3BA0F0,#16A05C,#F5B301)" onclick="adSet('pal','');render()"></button>${Object.entries(AD_PAL).map(([id, p]) => `<button class="${A.pal === id ? 'on' : ''}" title="${h(p.n)}" style="background:linear-gradient(135deg,${p.bg1},${p.bg2})" onclick="adSet('pal','${id}');render()"></button>`).join('')}</div></div>
+  <div class="card"><h3>4. ચિત્ર / ફોટો</h3>
+    <label class="f">ચિત્ર (ઇમોજી) <span class="h">ખાલી = કામ/તહેવાર મુજબ આપમેળે</span><input value="${h(A.art || '')}" maxlength="8" placeholder="${h(det.cat ? catIcon(det.cat) : '❄️ 🚰 🪔 🪁')}" oninput="adSet('art',this.value.trim())"></label>
+    <div class="row" style="flex-wrap:wrap;gap:8px"><label class="btn">📷 મારો ફોટો મૂકો<input type="file" accept="image/*" hidden onchange="adPhoto(this)"></label>${A.photo ? `<button class="btn bad" onclick="adState().photo='';render()">✕ ફોટો હટાવો</button>` : ''}</div>
+    <p class="tiny muted">દા.ત. તમારા કારીગરનો કામ કરતો ફોટો કે AC નો ફોટો — ચિત્રની જગ્યાએ ગોળ ખૂણાવાળી ફ્રેમમાં આવશે. ફોટો ફક્ત આ ફોનમાં રહે છે.</p></div>
+  <div class="card"><h3>5. લિંક, QR અને લોગો</h3>
+    <label class="row small"><input type="checkbox" style="width:auto" ${A.link ? 'checked' : ''} onchange="adSet('link',this.checked)"> 🔗 એપની લિંક લખો</label>
+    <label class="row small"><input type="checkbox" style="width:auto" ${A.qr ? 'checked' : ''} onchange="adSet('qr',this.checked)"> 📷 QR કોડ મૂકો (સ્કેન કરતાં એપ ખૂલે)</label>
+    <label class="row small"><input type="checkbox" style="width:auto" ${A.logo ? 'checked' : ''} onchange="adSet('logo',this.checked)"> 🏠 ઉપર લોગો અને નામ</label>
+    <label class="f">લિંક <span class="h">QR માં પણ આ જ લિંક જશે — રેફરલ લિંક પણ મૂકી શકો</span><input value="${h(A.url || '')}" inputmode="url" oninput="adSet('url',this.value.trim())"></label>
+    <button class="btn sm" onclick="adSet('url',adAppUrl());render()">↺ એપની મૂળ લિંક</button></div>
+  <div class="card"><h3>6. માપ</h3><div class="stack" style="gap:8px">${Object.entries(AD_SIZES).map(([id, s]) => `<button class="chipb ${A.size === id ? 'on' : ''}" style="text-align:left" onclick="adSet('size','${id}');render()">${s[2]} <span class="tiny muted">${s[0]}×${s[1]} · ${s[3]}</span></button>`).join('')}</div></div>
+  ${saved.length ? `<div class="card"><h3>💾 સાચવેલી ડિઝાઇન (${saved.length})</h3><div class="adsaved">${saved.map((d, i) => `<div>${d.th ? `<img src="${h(d.th)}" alt="" onclick="adLoad(${i})">` : `<button class="btn sm" onclick="adLoad(${i})">ખોલો</button>`}<button class="x" title="હટાવો" onclick="adDel(${i})">✕</button></div>`).join('')}</div><p class="tiny muted">ટેપ કરો એટલે ફરી ખૂલશે અને બદલી શકશો.</p></div>` : ''}
+  </div></div></div>` + aNav(); };
 
 /* ---------- karigar incoming-request popup (Rapido captain style) ---------- */
 const REQ_WINDOW = 60000; // વિનંતી 1 મિનિટ સુધી રિંગ સાથે
