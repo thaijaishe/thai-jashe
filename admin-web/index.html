@@ -172,6 +172,7 @@ textarea{min-height:76px;resize:vertical}
 .av.lg{width:76px;height:76px;font-size:30px;border-radius:20px}
 .on-dot{position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
 .kitem{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%}
+.xslist{max-height:360px;overflow:auto;border:1px solid var(--line,#e2e5ee);border-radius:12px;padding:4px 8px}.xsrow{display:flex;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line,#eef0f5);cursor:pointer}.xsrow:last-child{border:0}.xsrow .grow{display:flex;flex-direction:column}.xsrow input{width:22px;height:22px;flex:none}
 @property --ang{syntax:'<angle>';initial-value:0deg;inherits:false}
 .spin{position:relative;isolation:isolate}
 .spin::before{content:'';position:absolute;inset:-2px;border-radius:inherit;padding:2.5px;background:conic-gradient(from var(--ang),transparent 0 55%,var(--spc,#F5B301) 72%,#fff 78%,var(--spc,#F5B301) 84%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spinb 3.2s linear infinite;pointer-events:none;z-index:2}
@@ -915,6 +916,10 @@ const FB = {
     this.dyn[k] = Store.fs.doc(path).onSnapshot(d => { if(d.exists){ const x = d.data(); delete x.custId; delete x.ts; this.setSide('bookings', id, x); } },
       e => { if(this.dyn[k] && n < 8) setTimeout(() => { if(this.dyn[k]) this.listenDyn(k, path, id, n + 1); }, Math.min(15000, 1500 * (n + 1))); }); },
   /* એડમિન: લૉગિન અને લોકેશન લૉગ (અલગ subcollection, 1 વર્ષ) જરૂર પડે ત્યારે જ */
+  /* એડમિન: બધાના ઈમેલ (users/{id}.email) — રિપોર્ટ/Excel/CSV માટે */
+  async loadEmails(){ if(!isAdmin() || Date.now() - (this.emailsAt || 0) < 60000) return; this.emailsAt = Date.now();
+    const sn = await Store.fs.collection('users').get();
+    sn.forEach(d => { const e = d.data().email; if(!e) return; for(const c of ['karigars', 'customers']){ const x = Store.get(c, d.id); if(x && !x.email) this.setSide(c, d.id, {email:e}); } }); },
   async loadSubs(kind, id){ const key = kind + id; if(Date.now() - (this.subLoaded[key] || 0) < 20000) return; this.subLoaded[key] = Date.now();
     try{ const cur = Store.get(kind === 'k' ? 'karigars' : 'customers', id); if(cur && !cur.email){ const u = await Store.fs.doc('users/' + id).get(); if(u.exists && u.data().email) this.setSide(kind === 'k' ? 'karigars' : 'customers', id, {email:u.data().email}); } }catch(e){}
     const [a] = rangeOf(); const from = isFinite(a) ? a : 0;
@@ -923,7 +928,7 @@ const FB = {
       let locAll = null; if(kind === 'k'){ const lc = await Store.fs.collection(`karigars/${id}/locations`).where('ts', '>=', from).orderBy('ts', 'desc').limit(500).get(); locAll = []; lc.forEach(d => locAll.push(d.data())); }
       this.setSide(kind === 'k' ? 'karigars' : 'customers', id, locAll ? {logins, locAll} : {logins}); }
     catch(e){ console.warn(e); this.subLoaded[key] = 0; } },
-  async loadAllSubs(){ const [a] = rangeOf(); const from = isFinite(a) ? a : 0;
+  async loadAllSubs(){ const [a] = rangeOf(S.xr || S.rg); const from = isFinite(a) ? a : 0;
     const lg = await Store.fs.collectionGroup('logins').where('ts', '>=', from).get(); const byU = {}; lg.forEach(d => (byU[d.ref.parent.parent.id] = byU[d.ref.parent.parent.id] || []).push(d.data()));
     const lc = await Store.fs.collectionGroup('locations').where('ts', '>=', from).get(); const byK = {}; lc.forEach(d => (byK[d.ref.parent.parent.id] = byK[d.ref.parent.parent.id] || []).push(d.data()));
     for(const id in byU){ const L = byU[id].sort((x, y) => y.ts - x.ts); if(Store.get('karigars', id)) this.side.karigars[id] = {...(this.side.karigars[id] || {}), logins:L}; else (this.side.customers = this.side.customers || {})[id] = {...((this.side.customers || {})[id] || {}), logins:L}; }
@@ -2000,7 +2005,7 @@ function aSearchRes(q){ const r = aSearchSet(q); if(!r) return q ? '<p class="sm
   const row = (on, t, sub) => `<button class="row" style="text-align:left;width:100%;padding:8px 4px;border-bottom:1px solid var(--line)" onclick="${on}"><div class="grow"><b class="small">${t}</b><div class="tiny muted">${sub}</div></div><span>›</span></button>`;
   const grp = (title, list, f) => list.length ? `<h4 style="margin:12px 0 4px">${title} (${list.length})</h4>${list.slice(0, 25).map(f).join('')}${list.length > 25 ? `<p class="tiny muted">…વધુ ${list.length - 25} — બધું PDF/Excel માં આવશે</p>` : ''}` : '';
   return `<div class="between" style="margin-top:8px"><b class="small">કુલ ${n} પરિણામ</b></div>
-    <div class="two" style="margin:8px 0"><button class="btn ink" onclick="runExport('pdf','q')">📄 શોધ PDF</button><button class="btn ok" onclick="runExport('xlsx','q')">📊 શોધ Excel</button></div>
+    <div class="two" style="margin:8px 0"><button class="btn ink" onclick="exportAsk('pdf','q')">📄 શોધ PDF</button><button class="btn ok" onclick="exportAsk('xlsx','q')">📊 શોધ Excel</button></div>
     ${grp('👷 કારીગર', r.K, k => row(`go('a_karigar',{id:'${k.id}'})`, h(k.name), [h(kCatTxt(k)), h(k.mobile || ''), '📍 ' + h(areaName(k.area))].join(' · ')))}
     ${grp('👤 ગ્રાહક', r.C, c => row(`go('a_customer',{id:'${c.id}'})`, h(c.name), [h(c.mobile || ''), '📍 ' + h(areaName(c.area)), h(c.address || '')].join(' · ')))}
     ${grp('📋 બુકિંગ', r.B, b => row(`go('a_booking',{id:'${b.id}'})`, h(bNo(b)) + ' · ' + h(catName(b.cat)), [h(b.custName || ''), h(stTxt(b.status)), dt(b.createdAt)].join(' · ')))}
@@ -2009,7 +2014,7 @@ let aqT = null;
 function aSearch(v){ S.aq = v; clearTimeout(aqT); aqT = setTimeout(() => { const el = $('#a_qres'); if(el){ el.innerHTML = aSearchRes(v); trTree(el); } }, 200); }
 VIEWS.a_home = () => {
   if(!isAdmin()) return VIEWS.welcome();
-  const B = Store.all('bookings'), K = Store.all('karigars');
+  const BA = Store.all('bookings'), K = Store.all('karigars'), B = BA.filter(b => inRange(b.createdAt));
   const done = B.filter(b => b.status === 'done'); const gmv = done.reduce((s, b) => s + (b.bill ? b.bill.gross : 0), 0);
   const comm = done.reduce((s, b) => s + (b.commission || 0), 0); const due = K.reduce((s, k) => s + Math.max(0, k.commissionDue || 0), 0);
   const byCat = {}; B.forEach(b => byCat[b.cat] = (byCat[b.cat] || 0) + 1); const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 6); const mx = cats.length ? cats[0][1] : 1;
@@ -2020,7 +2025,8 @@ VIEWS.a_home = () => {
     ${openT.length ? `<button class="banner ${lateT ? 'bad' : 'acc'}" style="text-align:left;width:100%" onclick="tab('a_tickets')">🎧 <div><b>${openT.length} ખુલ્લી ફરિયાદ${lateT ? ' · ' + lateT + ' ને 24 કલાકથી જવાબ નથી' : ''}</b>જવાબ આપવા ટેપ કરો</div></button>` : ''}
     ${pendK || pendP ? `<div class="banner warn">🔔 <div><b>ધ્યાન આપવાનું</b>${pendK ? `<button class="btn sm" onclick="tab('a_karigars')">${pendK} કારીગર મંજૂરી</button> ` : ''}${pendP ? `<button class="btn sm" onclick="tab('a_payments')">${pendP} કમીશન ચૂકવણી</button>` : ''}</div></div>` : ''}
     <div class="card"><h3>🔎 બધે શોધો</h3><div class="search"><span>🔍</span><input id="a_q" value="${h(S.aq || '')}" placeholder="નામ, મોબાઇલ, સરનામું, બુકિંગ નંબર, IP, આધાર છેલ્લા 4…" oninput="aSearch(this.value)" autocomplete="off"></div><div id="a_qres">${aSearchRes(S.aq || '')}</div></div>
-    <div class="stats"><div><b>${B.length}</b><span>કુલ બુકિંગ</span></div><div><b>${done.length}</b><span>પૂરા થયેલ</span></div><div><b>${B.filter(b => ACTIVE.includes(b.status)).length}</b><span>ચાલુ</span></div>
+    ${rangeBar()}
+    <div class="stats"><div><b>${B.length}</b><span>બુકિંગ (${h(rangeLabel())})</span></div><div><b>${done.length}</b><span>પૂરા થયેલ</span></div><div><b>${BA.filter(b => ACTIVE.includes(b.status)).length}</b><span>હાલ ચાલુ</span></div>
       <div><b>${rs(gmv)}</b><span>કુલ ધંધો</span></div>${commOn() || comm || due ? `<div><b style="color:var(--ok)">${rs(comm)}</b><span>કમાયેલ કમીશન</span></div><div><b style="color:var(--warn)">${rs(due)}</b><span>બાકી કમીશન</span></div>` : `<div><b>${Store.all('tickets').length}</b><span>કુલ ફરિયાદ</span></div><div><b>0%</b><span>કમીશન (બંધ)</span></div>`}
       <div><b>${K.filter(k => k.status === 'approved').length}</b><span>મંજૂર કારીગર</span></div><div><b>${K.filter(k => k.online && k.status === 'approved').length}</b><span>હાલ ઓનલાઇન</span></div><div><b>${Store.all('customers').length}</b><span>ગ્રાહકો</span></div></div>
     <div class="card"><h3>કામ પ્રમાણે બુકિંગ</h3>${cats.length ? cats.map(([c, n]) => `<div class="lbar"><span>${catIcon(c)} ${h(catName(c))}</span><span class="b"><i style="width:${n / mx * 100}%"></i></span><b class="num">${n}</b></div>`).join('') : '<p class="small muted">હજુ બુકિંગ નથી.</p>'}</div>
@@ -2746,12 +2752,12 @@ function bookingRow(b, who){ const k = Store.get('karigars', b.karigarId);
 VIEWS.a_karigar = p => { if(!isAdmin()) return VIEWS.welcome();
   const k = Store.get('karigars', p.id); if(!k) return topbar('કારીગર', {back:true}) + '<div class="wrap">મળ્યા નહીં (કદાચ ડિલીટ થયા)</div>' + aNav();
   if(Store.mode === 'firebase') FB.loadSubs('k', k.id);
-  const t = p.t || 'info'; const J = jobsOf(k.id); const done = J.filter(b => b.status === 'done');
-  const offered = Store.all('bookings').filter(b => b.karigarId === k.id || (b.rejectedBy || []).includes(k.id));
+  const t = p.t || 'info', inR = ts => t === 'info' || inRange(ts); const J = jobsOf(k.id).filter(b => inR(b.createdAt)); const done = J.filter(b => b.status === 'done');
+  const offered = Store.all('bookings').filter(b => (b.karigarId === k.id || (b.rejectedBy || []).includes(k.id)) && inR(b.createdAt));
   const acc = offered.length ? Math.round(J.filter(b => b.status !== 'rejected').length / offered.length * 100) : 0;
   const gross = done.reduce((s, b) => s + (b.bill ? b.bill.gross : 0), 0), comm = done.reduce((s, b) => s + (b.commission || 0), 0);
-  const TK = Store.all('tickets').filter(x => x.karigarId === k.id || x.userId === k.id).sort((a, b) => b.createdAt - a.createdAt);
-  const AL = Store.all('alerts').filter(x => x.karigarId === k.id || x.userId === k.id).sort((a, b) => b.ts - a.ts);
+  const TK = Store.all('tickets').filter(x => (x.karigarId === k.id || x.userId === k.id) && inR(x.createdAt)).sort((a, b) => b.createdAt - a.createdAt);
+  const AL = Store.all('alerts').filter(x => (x.karigarId === k.id || x.userId === k.id) && inR(x.ts)).sort((a, b) => b.ts - a.ts);
   const st = STATUS_K[k.status] || ['—', ''];
   const tabs = [['info','વિગત'],['loc','લોકેશન'],['log','IP/લૉગિન'],['orders','ઓર્ડર ' + J.length],['money','હિસાબ'],['rev','રિવ્યૂ'],['comp','ફરિયાદ ' + (TK.length + AL.length)]];
   let body = '';
@@ -2771,7 +2777,7 @@ VIEWS.a_karigar = p => { if(!isAdmin()) return VIEWS.welcome();
       ${k.online ? `<button class="btn sm" onclick="Store.patch('karigars','${k.id}',{online:false});audit('ઓફલાઇન કર્યા','${k.id}');toast('ઓફલાઇન કર્યા')">ઓફલાઇન કરો</button>` : ''}
       ${Store.mode === 'firebase' ? '' : `<button class="btn sm" onclick="resetKPin('${k.id}')">🔑 નવો PIN</button>`}<button class="btn sm" onclick="exportCSV('kjobs','${k.id}')">⬇️ ઓર્ડર CSV</button></div>
       <p class="tiny muted">દરેક કાર્યવાહી એડમિન લૉગમાં નોંધાય છે.</p></div>`;
-  if(t === 'loc'){ const L = k.loc, H = (k.locHist || []), home = areaLL(k.area, k.areaGeo);
+  if(t === 'loc'){ const L = k.loc, H = (k.locHist || []).filter(x => inR(x.ts)), home = areaLL(k.area, k.areaGeo);
     const act = J.find(b => ['onway','arrived','working'].includes(b.status)); const dest = act ? (act.geo || areaLL(act.area, act.areaGeo)) : null;
     body = `<div class="card"><h3>હાલનું લોકેશન</h3>${L ? `${kv([['અક્ષાંશ, રેખાંશ', `<span class="num">${llTxt(L)}</span>`], ['ચોકસાઈ', '±' + (L.acc || '?') + ' મીટર'], ['ક્યારે', dt(L.ts) + ' (' + ago(L.ts) + ')'],
         ['સ્થિતિ', fresh(L) ? '<b style="color:var(--ok)">લાઇવ</b>' : 'જૂનું'], ['ઘરના વિસ્તારથી', geoKm(L, home || L).toFixed(1) + ' કિમી'], act && dest ? ['ચાલુ કામ સુધી', geoKm(L, dest).toFixed(1) + ' કિમી'] : null])}
@@ -2780,10 +2786,10 @@ VIEWS.a_karigar = p => { if(!isAdmin()) return VIEWS.welcome();
       : `<p class="small muted">હજુ લોકેશન મળ્યું નથી. કારીગર ઓનલાઇન થાય અને ફોનમાં લોકેશન મંજૂરી આપે પછી દેખાશે.</p>`}
       ${k.locErr ? `<div class="banner warn">⚠️ <div><b>${k.locErr === 'denied' ? 'કારીગરે લોકેશન મંજૂરી આપી નથી' : 'ફોનમાં લોકેશન મળતું નથી'}</b>કારીગરને ફોન સેટિંગમાં લોકેશન ચાલુ કરવા કહો.</div></div>` : ''}</div>
       <div class="card"><h3>લોકેશન ઇતિહાસ (${H.length})</h3>${H.length ? `<div class="tbl"><table><thead><tr><th>સમય</th><th>લોકેશન</th><th>±મી</th><th></th></tr></thead><tbody>${H.slice(0, 30).map(x => `<tr><td>${dt(x.ts)}</td><td class="num">${llTxt(x)}</td><td>${x.acc || ''}</td><td><a target="_blank" rel="noopener" href="${mapsUrl(x)}">નકશો</a></td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">ઇતિહાસ નથી.</p>'}</div>`; }
-  if(t === 'log') body = loginTable(k);
+  if(t === 'log') body = loginTable({...k, logins:(k.logins || []).filter(l => inR(l.ts))});
   if(t === 'orders') body = `<div class="stats"><div><b>${offered.length}</b><span>મળેલી વિનંતી</span></div><div><b>${acc}%</b><span>સ્વીકાર દર</span></div><div><b>${k.cancels || 0}</b><span>પોતે રદ કર્યા</span></div></div>
     <button class="btn sm" onclick="exportCSV('kjobs','${k.id}')">⬇️ CSV ડાઉનલોડ</button>${J.map(b => bookingRow(b, 'k')).join('') || '<p class="small muted">હજુ કોઈ ઓર્ડર નથી.</p>'}`;
-  if(t === 'money'){ const pays = Store.all('payments').filter(x => x.karigarId === k.id).sort((a, b) => b.ts - a.ts);
+  if(t === 'money'){ const pays = Store.all('payments').filter(x => x.karigarId === k.id && inR(x.ts)).sort((a, b) => b.ts - a.ts);
     body = `<div class="stats two-col"><div><b>${rs(gross)}</b><span>કુલ બિલ (પૂરા કામ)</span></div><div><b style="color:var(--ok)">${rs(comm)}</b><span>એપનું કમીશન</span></div><div><b>${rs(k.earnings)}</b><span>કારીગરની ચોખ્ખી કમાણી</span></div>
       <div><b style="color:${dueBlocked(k) ? 'var(--bad)' : 'var(--warn)'}">${rs(k.commissionDue)}</b><span>બાકી કમીશન</span></div><div><b>${rs(k.commissionPaid)}</b><span>ચૂકવેલ કમીશન</span></div><div><b>${done.length}</b><span>પૂરા કામ</span></div></div>
       <div class="card"><h3>ચૂકવણીઓ</h3>${pays.map(x => `<div class="between small"><span>${dt(x.ts)} · UTR ${h(x.ref || '—')}</span><span class="row"><b class="num">${rs(x.amount)}</b><span class="pill ${x.status === 'approved' ? 'ok' : x.status === 'rejected' ? 'bad' : 'warn'}">${x.status === 'approved' ? 'મંજૂર' : x.status === 'rejected' ? 'નામંજૂર' : 'બાકી'}</span></span></div>`).join('') || '<p class="small muted">કોઈ ચૂકવણી નથી.</p>'}</div>`; }
@@ -2798,6 +2804,7 @@ VIEWS.a_karigar = p => { if(!isAdmin()) return VIEWS.welcome();
       <div class="stats"><div><b>${k.jobs || 0}</b><span>કુલ કામ</span></div><div><b class="star">★ ${avg(k).toFixed(1)}</b><span>${k.ratingCount || 0} રેટિંગ</span></div><div><b style="color:var(--warn)">${rs(k.commissionDue)}</b><span>બાકી કમીશન</span></div></div>
       <span class="tiny muted">આ કારીગરનો રિપોર્ટ (ફોટો, ઓર્ડર, નકશો, લોકેશન, IP)</span>${exportBtns('k1', k.id)}</div>
     <div class="tabs">${tabs.map(([v, l]) => `<button class="${t === v ? 'on' : ''}" onclick="S.p.t='${v}';render()">${l}</button>`).join('')}</div>
+    ${t !== 'info' ? rangeBar() : ''}
     ${body}
     <button class="btn block" style="border:2px solid var(--bad);color:var(--bad)" onclick="delUserSheet('k','${k.id}')">🗑️ કારીગર ડિલીટ કરો</button></div>` + aNav(); };
 function saveKyc(id){ const a = $('#ak_aad').value.replace(/\D/g, '');
@@ -2816,9 +2823,9 @@ VIEWS.a_customers = () => { if(!isAdmin()) return VIEWS.welcome(); const C0 = St
       return `<button class="card" style="text-align:left" data-n="${h(c.name + ' ' + c.mobile)}" onclick="go('a_customer',{id:'${c.id}'})"><div class="between"><b>${h(c.name)}</b>${c.blocked ? '<span class="pill bad">બંધ</span>' : ''}</div>
       <div class="meta"><span>${h(c.mobile)}</span><span>📍 ${h(areaName(c.area))}</span><span>${n} બુકિંગ</span>${r ? `<span class="star">★ ${r.toFixed(1)}</span>` : ''}<span>IP ${h(c.lastIp || '—')}</span><span>${ago(c.lastLogin || c.createdAt)}</span></div></button>`; }).join('') || '<p class="small muted">કોઈ ગ્રાહક મળ્યા નહીં.</p>'}</div>${PG.bar}</div>` + aNav(); };
 VIEWS.a_refer = () => { if(!isAdmin()) return VIEWS.welcome(); loadRefs(); const st = Store.settings();
-  const L = Store.all('referrals').sort((a, b) => b.ts - a.ts), who = id => (Store.get('customers', id) || Store.get('karigars', id) || {}).name || id;
+  const L = Store.all('referrals').filter(r => inRange(r.ts)).sort((a, b) => b.ts - a.ts), who = id => (Store.get('customers', id) || Store.get('karigars', id) || {}).name || id;
   const rew = L.filter(r => r.status === 'rewarded'), cust = L.filter(r => r.role !== 'karigar');
-  return topbar('રેફરલ રિપોર્ટ', {back:true}) + `<div class="wrap">
+  return topbar('રેફરલ રિપોર્ટ', {back:true}) + `<div class="wrap">${rangeBar()}
     <div class="stats"><div><b>${cust.length}</b><span>નવા ગ્રાહક</span></div><div><b>${L.length - cust.length}</b><span>નવા કારીગર</span></div><div><b>${rew.length}</b><span>ઇનામ મળ્યું</span></div><div><b>${rs(rew.filter(r => r.role !== 'karigar').reduce((a, r) => a + (r.amt || 0), 0))}</b><span>ગ્રાહક બેલેન્સ આપ્યું</span></div><div><b>${rs(rew.filter(r => r.role === 'karigar').reduce((a, r) => a + (r.amt || 0), 0))}</b><span>કમીશન માફ</span></div></div>
     <p class="tiny muted">ગ્રાહક: ${st.refOn !== false ? 'ચાલુ' : 'બંધ'} (મિત્રને ${rs(st.refFriend)}, મોકલનારને ${rs(st.refMe)}) · કારીગર: ${st.kRefOn !== false ? 'ચાલુ' : 'બંધ'} (${st.kRefJobs} કામ પછી ${rs(st.kRefWaive)} માફ) — <a href="#" onclick="go('a_settings');return false">બદલો</a></p>
     <div class="card">${L.map(r => `<div class="rf-row"><div><b>${h(who(r.referrer))}</b> → ${h(r.friendName || who(r.friend))} ${r.role === 'karigar' ? '<span class="pill">કારીગર</span>' : ''}<div class="tiny muted">${dt(r.ts)} · કોડ ${h(r.code || '')}</div></div>
@@ -2847,18 +2854,19 @@ async function delUser(kind, id){ const col = kind === 'k' ? 'karigars' : 'custo
   }catch(e){ console.error(e); toast('ડિલીટ ન થયું: ' + (e.code === 'permission-denied' ? 'મંજૂરી નથી — નવા firestore.rules Publish કરો' : e.message)); } }
 VIEWS.a_customer = p => { if(!isAdmin()) return VIEWS.welcome(); const c = Store.get('customers', p.id); if(!c) return topbar('ગ્રાહક', {back:true}) + '<div class="wrap">મળ્યા નહીં</div>' + aNav();
   if(Store.mode === 'firebase') FB.loadSubs('c', c.id);
-  const B = bookingsOf(c.id), TK = Store.all('tickets').filter(x => x.custId === c.id || x.userId === c.id), AL = Store.all('alerts').filter(x => x.custId === c.id || x.userId === c.id);
+  const B = bookingsOf(c.id).filter(b => inRange(b.createdAt)), TK = Store.all('tickets').filter(x => (x.custId === c.id || x.userId === c.id) && inRange(x.createdAt)), AL = Store.all('alerts').filter(x => (x.custId === c.id || x.userId === c.id) && inRange(x.ts));
   const spent = B.filter(b => b.status === 'done').reduce((s, b) => s + (b.bill ? b.bill.payable : 0), 0), canc = B.filter(b => b.status === 'cancelled').length;
   return topbar(c.name, {back:true}) + `<div class="wrap">
     <div class="card"><div class="between"><h2>${h(c.name)}</h2>${c.blocked ? '<span class="pill bad">બંધ</span>' : '<span class="pill ok">ચાલુ</span>'}</div>
       ${kv([['મોબાઇલ', `<a href="tel:${h(c.mobile)}">${h(c.mobile)}</a>`], ['ઈમેલ', c.email ? `<a href="mailto:${h(c.email)}">${h(c.email)}</a>` : '—'], ['વિસ્તાર', h(areaName(c.area))], ['સરનામું', h(c.address || '—')], ['નોંધણી', dt(c.createdAt)], ['છેલ્લો IP', h(c.lastIp || '—')], ['ડિવાઇસ', h(c.lastDev || '—')],
         ['કારીગરોએ આપેલ રેટિંગ', c.ratingCount ? '★ ' + custRating(c.id).toFixed(1) + ' (' + c.ratingCount + ')' : '—']])}
       ${(c.addrs || []).length ? `<div class="small"><b>સેવ સરનામાં:</b> ${(c.addrs || []).map(a => h(a.label + ': ' + a.address + ', ' + areaName(a.area))).join(' • ')}</div>` : ''}
-      <div class="stats"><div><b>${B.length}</b><span>બુકિંગ</span></div><div><b>${rs(spent)}</b><span>કુલ ખર્ચ</span></div><div><b>${canc}</b><span>રદ કર્યા</span></div></div>
+      <div class="stats"><div><b>${B.length}</b><span>બુકિંગ (${h(rangeLabel())})</span></div><div><b>${rs(spent)}</b><span>ખર્ચ</span></div><div><b>${canc}</b><span>રદ કર્યા</span></div></div>
       <span class="tiny muted">આ ગ્રાહકનો રિપોર્ટ</span>${exportBtns('c1', c.id)}
       <button class="btn ${c.blocked ? 'ok' : 'bad'} block" onclick="Store.patch('customers','${c.id}',{blocked:${!c.blocked}});audit('${c.blocked ? 'ગ્રાહક ચાલુ' : 'ગ્રાહક બંધ'}','${c.id}');toast('સેવ થયું')">${c.blocked ? 'ખાતું ફરી ચાલુ કરો' : '⛔ ખાતું બ્લોક કરો'}</button>
       <button class="btn block" style="border:2px solid var(--bad);color:var(--bad)" onclick="delUserSheet('c','${c.id}')">🗑️ ગ્રાહક ડિલીટ કરો</button></div>
-    ${loginTable(c)}
+    ${rangeBar()}
+    ${loginTable({...c, logins:(c.logins || []).filter(l => inRange(l.ts))})}
     ${AL.map(alertCard).join('')}${TK.length ? '<h3>ફરિયાદો</h3>' + TK.map(ticketRow).join('') : ''}
     <h3>બુકિંગ (${B.length})</h3>${B.map(b => bookingRow(b, 'c')).join('') || '<p class="small muted">હજુ નથી.</p>'}</div>` + aNav(); };
 
@@ -2909,8 +2917,8 @@ function alertCard(a){ const who = a.role === 'customer' ? 'ગ્રાહક' 
     <div class="row">${a.loc ? `<a class="btn sm ink" target="_blank" rel="noopener" href="${mapsUrl(a.loc)}">🗺️ લોકેશન</a>` : '<span class="small muted">લોકેશન મળ્યું નથી</span>'}
       ${a.bookingId ? `<button class="btn sm" onclick="go('a_booking',{id:'${a.bookingId}'})">બુકિંગ</button>` : ''}
       ${a.status === 'open' ? `<button class="btn sm ok" onclick="Store.patch('alerts','${a.id}',{status:'resolved',resolvedAt:Date.now()});audit('SOS ઉકેલાયું','${a.id}')">✔ ઉકેલાયું</button>` : ''}</div></div>`; }
-VIEWS.a_alerts = () => { if(!isAdmin()) return VIEWS.welcome(); const A = Store.all('alerts').sort((a, b) => (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1) || b.ts - a.ts);
-  return topbar('SOS એલર્ટ', {back:true}) + `<div class="wrap">${A.map(alertCard).join('') || '<div class="card" style="text-align:center;color:var(--muted)">કોઈ SOS નથી 🙏</div>'}</div>` + aNav(); };
+VIEWS.a_alerts = () => { if(!isAdmin()) return VIEWS.welcome(); const A = Store.all('alerts').filter(a => a.status === 'open' || inRange(a.ts)).sort((a, b) => (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1) || b.ts - a.ts);
+  return topbar('SOS એલર્ટ', {back:true}) + `<div class="wrap">${rangeBar()}${A.map(alertCard).join('') || '<div class="card" style="text-align:center;color:var(--muted)">કોઈ SOS નથી 🙏</div>'}</div>` + aNav(); };
 VIEWS.a_tickets = p => { if(!isAdmin()) return VIEWS.welcome(); const f = p.f || 'open';
   const T = Store.all('tickets').filter(t => (f === 'open' || inRange(t.createdAt)) && (f === 'all' || (f === 'open' ? t.status !== 'closed' : t.status === f)))
     .sort((a, b) => (a.priority === 'high' ? 0 : 1) - (b.priority === 'high' ? 0 : 1) || (f === 'closed' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt));
@@ -2984,16 +2992,17 @@ function filterList(q, sel){ q = q.trim().toLowerCase(); document.querySelectorA
 /* ---------- CSV export ---------- */
 function toCSV(rows){ return '﻿' + rows.map(r => r.map(v => { v = v == null ? '' : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n'); }
 const iso = ts => ts ? new Date(ts).toLocaleString('en-IN') : '';
-function exportCSV(kind, id){
+async function exportCSV(kind, id){ if(Store.mode === 'firebase' && ['karigars', 'customers'].includes(kind)){ try{ await FB.loadEmails(); }catch(e){} } return exportCSV0(kind, id); }
+function exportCSV0(kind, id){
   let rows = [];
   const BK = list => [['Booking', 'Date', 'Status', 'Category', 'Customer', 'Cust mobile', 'Karigar', 'Karigar mobile', 'Area', 'Address', 'Cust GPS', 'Gross', 'Discount', 'Payable', 'Commission', 'Rating', 'Karigar→cust rating', 'Cancel reason', 'SOS'],
     ...list.map(b => { const k = Store.get('karigars', b.karigarId) || {}; return [bNo(b), iso(b.createdAt), b.status, catName(b.cat), b.custName, b.custMobile, k.name, k.mobile, areaName(b.area), b.address, b.geo ? llTxt(b.geo) : '',
       b.bill && b.bill.gross, b.bill && b.bill.discount, b.bill && b.bill.payable, b.status === 'done' ? b.commission : '', b.rating, b.kRating, b.cancelReason, b.sos ? iso(b.sos) : '']; })];
-  if(kind === 'karigars') rows = [['ID', 'Name', 'Mobile', 'Category', 'Area', 'Status', 'Online', 'Last seen', 'Last GPS', 'GPS time', 'Maps', 'Last IP', 'Device', 'Aadhaar last4', 'Police no', 'Police date', 'KYC ok', 'UPI', 'Jobs', 'Rating', 'Earnings', 'Comm due', 'Comm paid', 'Joined'],
-    ...Store.all('karigars').map(k => [k.id, k.name, k.mobile, kCatTxt(k), areaName(k.area), k.status, k.online ? 'yes' : 'no', iso(k.lastSeen), k.loc ? llTxt(k.loc) : '', k.loc ? iso(k.loc.ts) : '', k.loc ? mapsUrl(k.loc) : '',
+  if(kind === 'karigars') rows = [['ID', 'Name', 'Mobile', 'Email', 'Category', 'Area', 'Status', 'Online', 'Last seen', 'Last GPS', 'GPS time', 'Maps', 'Last IP', 'Device', 'Aadhaar last4', 'Police no', 'Police date', 'KYC ok', 'UPI', 'Jobs', 'Rating', 'Earnings', 'Comm due', 'Comm paid', 'Joined'],
+    ...Store.all('karigars').map(k => [k.id, k.name, k.mobile, k.email || '', kCatTxt(k), areaName(k.area), k.status, k.online ? 'yes' : 'no', iso(k.lastSeen), k.loc ? llTxt(k.loc) : '', k.loc ? iso(k.loc.ts) : '', k.loc ? mapsUrl(k.loc) : '',
       k.lastIp, k.lastDev, k.aadhaar4, k.policeNo, k.policeDate, k.kycOk ? 'yes' : 'no', k.upi, k.jobs, avg(k).toFixed(1), k.earnings, k.commissionDue, k.commissionPaid, iso(k.createdAt)])];
-  if(kind === 'customers') rows = [['ID', 'Name', 'Mobile', 'Area', 'Address', 'Bookings', 'Rating by karigars', 'Blocked', 'Last IP', 'Device', 'Last login', 'Joined'],
-    ...Store.all('customers').map(c => [c.id, c.name, c.mobile, areaName(c.area), c.address, bookingsOf(c.id).length, custRating(c.id).toFixed(1), c.blocked ? 'yes' : 'no', c.lastIp, c.lastDev, iso(c.lastLogin), iso(c.createdAt)])];
+  if(kind === 'customers') rows = [['ID', 'Name', 'Mobile', 'Email', 'Area', 'Address', 'Bookings', 'Rating by karigars', 'Blocked', 'Last IP', 'Device', 'Last login', 'Joined'],
+    ...Store.all('customers').map(c => [c.id, c.name, c.mobile, c.email || '', areaName(c.area), c.address, bookingsOf(c.id).length, custRating(c.id).toFixed(1), c.blocked ? 'yes' : 'no', c.lastIp, c.lastDev, iso(c.lastLogin), iso(c.createdAt)])];
   if(kind === 'bookings') rows = BK(Store.all('bookings').sort((a, b) => b.createdAt - a.createdAt));
   if(kind === 'kjobs') rows = BK(jobsOf(id));
   if(kind === 'payments') rows = [['Date', 'Karigar', 'Mobile', 'Amount', 'UTR', 'Status', 'Decided'], ...Store.all('payments').sort((a, b) => b.ts - a.ts).map(x => { const k = Store.get('karigars', x.karigarId) || {}; return [iso(x.ts), k.name, k.mobile, x.amount, x.ref, x.status, iso(x.decidedAt)]; })];
@@ -3813,8 +3822,16 @@ function svgMapPng(pts, o = {}){
     img.onerror = () => res(''); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   });
 }
-function exportSet(scope, id){
+/* રિપોર્ટનો તારીખ ગાળો (S.xr): પ્રોફાઇલ આખી, બાકીની વિગતો (બુકિંગ, લૉગિન, લોકેશન, ફરિયાદ, SOS, ચૂકવણી) ફક્ત એ ગાળાની */
+function exportSet(scope, id){ const r = exportSet0(scope, id), X = S.xr; if(!X || X.k === 'all') return r; const inX = ts => inRange(ts, X);
+  return {KS:r.KS.map(k => ({...k, logins:(k.logins || []).filter(l => inX(l.ts)), locHist:(k.locHist || []).filter(L => inX(L.ts)), locAll:(k.locAll || []).filter(L => inX(L.ts))})),
+    CS:r.CS.map(c => ({...c, logins:(c.logins || []).filter(l => inX(l.ts))})), B:r.B.filter(b => inX(b.createdAt)), TK:(r.TK || []).filter(t => inX(t.createdAt || t.ts)),
+    AL:(r.AL || []).filter(a => inX(a.ts || a.createdAt)), PY:(r.PY || []).filter(p => inX(p.ts))}; }
+function exportSet0(scope, id){
   let KS = [], CS = [];
+  if(scope === 'sel'){ KS = (S.xsK || []).map(x => Store.get('karigars', x)).filter(Boolean); CS = (S.xsC || []).map(x => Store.get('customers', x)).filter(Boolean);
+    const kid = new Set(KS.map(k => k.id)), cid = new Set(CS.map(c => c.id)), rel = x => kid.has(x.userId) || cid.has(x.userId) || kid.has(x.karigarId) || cid.has(x.custId);
+    return {KS, CS, B:Store.all('bookings').filter(b => kid.has(b.karigarId) || cid.has(b.custId)).sort((a, b) => b.createdAt - a.createdAt), TK:Store.all('tickets').filter(rel), AL:Store.all('alerts').filter(rel), PY:Store.all('payments').filter(p => kid.has(p.karigarId))}; }
   if(scope === 'q'){ const r = aSearchSet(S.aq || '') || {K:[], C:[], B:[], TK:[]}; const bid = new Set(r.B.map(b => b.id)), kid = new Set(r.K.map(k => k.id)), cid = new Set(r.C.map(c => c.id));
     return {KS:r.K, CS:r.C, B:Store.all('bookings').filter(b => bid.has(b.id) || kid.has(b.karigarId) || cid.has(b.custId)).sort((a, b) => b.createdAt - a.createdAt), TK:r.TK,
       AL:Store.all('alerts').filter(a => kid.has(a.userId) || cid.has(a.userId)), PY:Store.all('payments').filter(p => kid.has(p.karigarId))}; }
@@ -3825,7 +3842,8 @@ function exportSet(scope, id){
   const rel = x => scope === 'all' || kid.has(x.userId) || cid.has(x.userId) || kid.has(x.karigarId) || cid.has(x.custId);
   return {KS, CS, B, TK:Store.all('tickets').filter(rel), AL:Store.all('alerts').filter(rel), PY:Store.all('payments').filter(p => kid.has(p.karigarId))};
 }
-const scopeName = (scope, set) => scope === 'q' ? L2('શોધ: ', 'Search: ') + '"' + (S.aq || '') + '"' : scope === 'k1' ? (set.KS[0] || {}).name : scope === 'c1' ? (set.CS[0] || {}).name : {all:L2('બધા કારીગરો અને ગ્રાહકો', 'All pros and customers'), k:L2('બધા કારીગરો', 'All pros'), c:L2('બધા ગ્રાહકો', 'All customers')}[scope];
+const xrTxt = () => S.xr && S.xr.k !== 'all' ? (S.xr.k === 'custom' ? (S.xr.from || '…') + ' થી ' + (S.xr.to || 'આજ') : rangeLabel(S.xr)) : 'બધો સમય';
+const scopeName = (scope, set) => scope === 'sel' ? L2('પસંદ કરેલા: ', 'Selected: ') + set.KS.length + ' ' + L2('કારીગર', 'pros') + ', ' + set.CS.length + ' ' + L2('ગ્રાહક', 'customers') : scope === 'q' ? L2('શોધ: ', 'Search: ') + '"' + (S.aq || '') + '"' : scope === 'k1' ? (set.KS[0] || {}).name : scope === 'c1' ? (set.CS[0] || {}).name : {all:L2('બધા કારીગરો અને ગ્રાહકો', 'All pros and customers'), k:L2('બધા કારીગરો', 'All pros'), c:L2('બધા ગ્રાહકો', 'All customers')}[scope];
 const kStatusTxt = k => tr((STATUS_K[k.status] || ['—'])[0]);
 const stTxt = s => tr(STATUS[s] || s);
 
@@ -3847,26 +3865,31 @@ async function buildExcel(scope, id, prog){
   const done = B.filter(b => b.status === 'done');
   const s0 = wb.addWorksheet(L2('સારાંશ', 'Summary')); s0.columns = [{width:34}, {width:40}];
   s0.addRow(['Thai Jashe! — ' + L2('ડેટા રિપોર્ટ', 'Data report')]).font = {bold:true, size:16, color:{argb:'FF1E2A78'}};
-  [[L2('રિપોર્ટ', 'Report'), X(scopeName(scope, set))], [L2('બનાવ્યાની તારીખ', 'Generated on'), new Date().toLocaleString(LOC())], [L2('કારીગરો', 'Pros'), KS.length], [L2('ગ્રાહકો', 'Customers'), CS.length],
+  [[L2('રિપોર્ટ', 'Report'), X(scopeName(scope, set))], [L2('તારીખ ગાળો', 'Date range'), X(xrTxt())], [L2('બનાવ્યાની તારીખ', 'Generated on'), new Date().toLocaleString(LOC())], [L2('કારીગરો', 'Pros'), KS.length], [L2('ગ્રાહકો', 'Customers'), CS.length],
    [L2('બુકિંગ', 'Bookings'), B.length], [L2('પૂરા થયેલ', 'Completed'), done.length], [L2('કુલ ધંધો ₹', 'Total business ₹'), done.reduce((a, b) => a + (b.bill ? b.bill.gross : 0), 0)],
    [L2('કમીશન ₹', 'Commission ₹'), done.reduce((a, b) => a + (b.commission || 0), 0)], [L2('ફરિયાદો', 'Complaints'), TK.length], ['SOS', AL.length]].forEach(r => { const x = s0.addRow(r); x.getCell(1).font = {bold:true}; });
   // pros
-  if(KS.length){ prog(2, 9); const ws = sheet(L2('કારીગરો', 'Pros'), [[L2('ફોટો', 'Photo'), 10], ['ID', 12], [L2('નામ', 'Name'), 20], [L2('મોબાઇલ', 'Mobile'), 13], [L2('કામ', 'Service'), 18], [L2('વિસ્તાર', 'Area'), 14],
+  if(KS.length){ prog(2, 9); const ws = sheet(L2('કારીગરો', 'Pros'), [[L2('ફોટો', 'Photo'), 10], ['ID', 12], [L2('નામ', 'Name'), 20], [L2('મોબાઇલ', 'Mobile'), 13], [L2('ઈમેલ', 'Email'), 26], [L2('કામ', 'Service'), 18], [L2('વિસ્તાર', 'Area'), 14],
       [L2('સ્થિતિ', 'Status'), 12], [L2('ઓનલાઇન', 'Online'), 9], [L2('છેલ્લે ઓનલાઇન', 'Last seen'), 18], [L2('કુલ કામ', 'Jobs'), 8], [L2('રેટિંગ', 'Rating'), 8], [L2('ચોખ્ખી કમાણી ₹', 'Net earnings ₹'), 13],
       [L2('બાકી કમીશન ₹', 'Commission due ₹'), 13], [L2('ચૂકવેલ કમીશન ₹', 'Commission paid ₹'), 13], [L2('આધાર છેલ્લા 4', 'Aadhaar last 4'), 10], [L2('પોલીસ વેરિ. નં.', 'Police verif. no'), 16], [L2('પોલીસ વેરિ. તારીખ', 'Police verif. date'), 13],
       [L2('KYC ચકાસ્યું', 'KYC verified'), 9], ['UPI', 18], [L2('છેલ્લો IP', 'Last IP'), 16], [L2('ડિવાઇસ', 'Device'), 26], [L2('GPS અક્ષાંશ', 'GPS lat'), 11], [L2('GPS રેખાંશ', 'GPS lng'), 11], [L2('GPS સમય', 'GPS time'), 18],
       [L2('નકશો', 'Map'), 10], [L2('લોકેશન પોઇન્ટ', 'Location points'), 10], [L2('લૉગિન', 'Logins'), 8], [L2('નોંધણી', 'Joined'), 18], [L2('એડમિન નોંધ', 'Admin note'), 24]]);
-    KS.forEach(k => { const L = k.loc; const r = ws.addRow(['', k.id, X(k.name), k.mobile, X(kCatTxt(k)), X(areaName(k.area)), kStatusTxt(k), k.online ? '✔' : '', iso(k.lastSeen), k.jobs || 0, +avg(k).toFixed(1),
+    KS.forEach(k => { const L = k.loc; const r = ws.addRow(['', k.id, X(k.name), k.mobile, X(k.email || ''), X(kCatTxt(k)), X(areaName(k.area)), kStatusTxt(k), k.online ? '✔' : '', iso(k.lastSeen), k.jobs || 0, +avg(k).toFixed(1),
       k.earnings || 0, k.commissionDue || 0, k.commissionPaid || 0, k.aadhaar4 || '', k.policeNo || '', k.policeDate || '', k.kycOk ? '✔' : '', k.upi || '', k.lastIp || '', k.lastDev || '',
       L ? L.lat : '', L ? L.lng : '', L ? iso(L.ts) : '', L ? link(mapsUrl(L)) : '', (k.locHist || []).length, (k.logins || []).length, iso(k.createdAt), k.adminNote || '']);
       r.height = 50; r.alignment = {vertical:'middle'}; pic(ws, r, avatarPng(k)); }); linkCells(ws); }
   // customers
-  if(CS.length){ prog(3, 9); const ws = sheet(L2('ગ્રાહકો', 'Customers'), [[L2('ફોટો', 'Photo'), 10], ['ID', 12], [L2('નામ', 'Name'), 20], [L2('મોબાઇલ', 'Mobile'), 13], [L2('વિસ્તાર', 'Area'), 14], [L2('સરનામું', 'Address'), 30],
+  if(CS.length){ prog(3, 9); const ws = sheet(L2('ગ્રાહકો', 'Customers'), [[L2('ફોટો', 'Photo'), 10], ['ID', 12], [L2('નામ', 'Name'), 20], [L2('મોબાઇલ', 'Mobile'), 13], [L2('ઈમેલ', 'Email'), 26], [L2('વિસ્તાર', 'Area'), 14], [L2('સરનામું', 'Address'), 30],
       [L2('સેવ સરનામાં', 'Saved addresses'), 34], [L2('બુકિંગ', 'Bookings'), 9], [L2('કુલ ખર્ચ ₹', 'Total spent ₹'), 11], [L2('કારીગરોએ આપેલ રેટિંગ', 'Rating by pros'), 10], [L2('બંધ', 'Blocked'), 8],
       [L2('છેલ્લો IP', 'Last IP'), 16], [L2('ડિવાઇસ', 'Device'), 26], [L2('છેલ્લું લૉગિન', 'Last login'), 18], [L2('નોંધણી', 'Joined'), 18]]);
-    CS.forEach(c => { const bs = bookingsOf(c.id); const r = ws.addRow(['', c.id, X(c.name), c.mobile, X(areaName(c.area)), X(c.address || ''), X((c.addrs || []).map(a => a.label + ': ' + a.address + ', ' + areaName(a.area)).join(' | ')),
+    CS.forEach(c => { const bs = bookingsOf(c.id); const r = ws.addRow(['', c.id, X(c.name), c.mobile, X(c.email || ''), X(areaName(c.area)), X(c.address || ''), X((c.addrs || []).map(a => a.label + ': ' + a.address + ', ' + areaName(a.area)).join(' | ')),
       bs.length, bs.filter(b => b.status === 'done').reduce((a, b) => a + (b.bill ? b.bill.payable : 0), 0), c.ratingCount ? +custRating(c.id).toFixed(1) : '', c.blocked ? '✔' : '', c.lastIp || '', c.lastDev || '', iso(c.lastLogin), iso(c.createdAt)]);
       r.height = 50; r.alignment = {vertical:'middle', wrapText:true}; pic(ws, r, avatarPng(c)); }); }
+  // મોટા પ્રોફાઇલ ફોટા — અલગ શીટ
+  if(KS.length || CS.length){ const ws = sheet(L2('પ્રોફાઇલ ફોટા', 'Profile photos'), [[L2('ફોટો', 'Photo'), 34], [L2('પ્રકાર', 'Type'), 10], [L2('નામ', 'Name'), 22], [L2('મોબાઇલ', 'Mobile'), 14], [L2('ઈમેલ', 'Email'), 28], [L2('કામ / વિસ્તાર', 'Service / Area'), 26], ['ID', 14], [L2('ફોટો છે?', 'Has photo'), 10]]);
+    [...KS.map(x => [x, 'k']), ...CS.map(x => [x, 'c'])].forEach(([x, t]) => { const r = ws.addRow(['', t === 'k' ? L2('કારીગર', 'Pro') : L2('ગ્રાહક', 'Customer'), X(x.name), x.mobile || '', X(x.email || ''), X(t === 'k' ? kCatTxt(x) : areaName(x.area)), x.id, x.photo ? '✔' : '—']);
+      r.height = 176; r.alignment = {vertical:'middle', wrapText:true};
+      const m = /^data:image\/(png|jpe?g);base64,(.*)$/.exec(avatarPng(x, 480) || ''); if(m){ const im = wb.addImage({base64:m[2], extension:m[1] === 'png' ? 'png' : 'jpeg'}); ws.addImage(im, {tl:{col:.06, row:r.number - 1 + .04}, ext:{width:226, height:226}}); } }); }
   // orders
   prog(4, 9); { const ws = sheet(L2('ઓર્ડર', 'Orders'), [[L2('બુકિંગ નં.', 'Booking no'), 11], [L2('તારીખ', 'Date'), 18], [L2('સ્થિતિ', 'Status'), 18], [L2('કામ', 'Service'), 16], [L2('ગ્રાહક', 'Customer'), 18], [L2('ગ્રાહક મોબાઇલ', 'Customer mobile'), 13],
       [L2('કારીગર', 'Pro'), 18], [L2('કારીગર મોબાઇલ', 'Pro mobile'), 13], [L2('વિસ્તાર', 'Area'), 13], [L2('સરનામું', 'Address'), 28], [L2('ગ્રાહક GPS', 'Customer GPS'), 10], [L2('તકલીફ', 'Problem'), 24], [L2('સમય', 'When'), 16],
@@ -3921,19 +3944,19 @@ const LOGIN_HEAD = ['સમય', 'ઘટના', 'IP', 'ડિવાઇસ', '�
 async function pdfBlocks(scope, id){
   const set = exportSet(scope, id), {KS, CS, B, TK, AL} = set, out = []; const done = B.filter(b => b.status === 'done');
   const allPts = KS.filter(k => k.loc).map(k => ({...k.loc, c:k.online ? '#14874A' : '#1E2A78', label:k.name}));
-  out.push({html:`<div class="rb"><div class="hdr">${logoSVG(70)}<div><h1>થઈ જશે! — ડેટા રિપોર્ટ</h1><p>${h(scopeName(scope, set))} · ${new Date().toLocaleString(LOC())}</p></div></div>
+  out.push({html:`<div class="rb"><div class="hdr">${logoSVG(70)}<div><h1>થઈ જશે! — ડેટા રિપોર્ટ</h1><p>${h(scopeName(scope, set))} · ${new Date().toLocaleString(LOC())}</p><p><b>📅 ગાળો: ${h(xrTxt())}</b> (પ્રોફાઇલ આખી, બાકીની વિગતો આ ગાળાની)</p></div></div>
     <div class="st"><div><b>${KS.length}</b>કારીગરો</div><div><b>${CS.length}</b>ગ્રાહકો</div><div><b>${B.length}</b>બુકિંગ</div><div><b>${done.length}</b>પૂરા થયેલ</div>
     <div><b>${rs(done.reduce((a, b) => a + (b.bill ? b.bill.gross : 0), 0))}</b>કુલ ધંધો</div><div><b>${rs(done.reduce((a, b) => a + (b.commission || 0), 0))}</b>કમીશન</div><div><b>${TK.length} / ${AL.length}</b>ફરિયાદ / SOS</div></div>
     <p class="muted" style="margin-top:8px">ગોપનીય: આ રિપોર્ટમાં વ્યક્તિગત માહિતી (મોબાઇલ, સરનામું, IP, લોકેશન) છે. ફક્ત અધિકૃત ઉપયોગ માટે.</p></div>`});
   if(scope !== 'k1' && scope !== 'c1' && allPts.length){ const png = await mapPng(allPts, {labels:allPts.length <= 20});
     out.push({html:`<div class="rb"><h2>કારીગરોનો નકશો</h2>${png ? `<img class="map" src="${png}">` : ''}<p class="muted">લીલું = હાલ ઓનલાઇન · વાદળી = છેલ્લું જાણીતું લોકેશન</p></div>`}); }
-  if(KS.length > 1) tableBlocks('કારીગરોની યાદી', ['નામ', 'મોબાઇલ', 'કામનો પ્રકાર', 'સ્થિતિ', 'કુલ કામ', 'રેટિંગ', 'બાકી', 'છેલ્લો IP', 'લોકેશન'],
-    KS.map(k => [h(k.name), h(k.mobile), h(kCatTxt(k)), kStatusTxt(k), k.jobs || 0, '★ ' + avg(k).toFixed(1), rs(k.commissionDue), h(k.lastIp || '—'), mlink(k.loc)]), 24).forEach(x => out.push({html:x}));
+  if(KS.length > 1) tableBlocks('કારીગરોની યાદી', ['નામ', 'મોબાઇલ', 'ઈમેલ', 'કામનો પ્રકાર', 'સ્થિતિ', 'કુલ કામ', 'રેટિંગ', 'બાકી', 'છેલ્લો IP', 'લોકેશન'],
+    KS.map(k => [h(k.name), h(k.mobile), h(k.email || '—'), h(kCatTxt(k)), kStatusTxt(k), k.jobs || 0, '★ ' + avg(k).toFixed(1), rs(k.commissionDue), h(k.lastIp || '—'), mlink(k.loc)]), 24).forEach(x => out.push({html:x}));
   for(const k of KS){
     const J = jobsOf(k.id), st = STATUS_K[k.status] || ['—', ''];
     out.push({np:true, html:`<div class="rb"><h2>કારીગર: ${h(k.name)}</h2><div class="hdr"><img class="ph" src="${avatarPng(k, 232)}"><div style="flex:1">
       <p><span class="pill ${st[1] === 'ok' ? '' : st[1] === 'warn' ? 'w' : 'b'}">${st[0]}</span>${k.online ? '<span class="pill">● ઓનલાઇન</span>' : ''}${policeOk(k) ? '<span class="pill">પોલીસ વેરિફાઇડ</span>' : '<span class="pill w">KYC બાકી</span>'}</p>
-      <div class="kv"><b>મોબાઇલ</b><span>${h(k.mobile)}</span><b>કામનો પ્રકાર</b><span>${h(kCatTxt(k))}</span><b>વિસ્તાર</b><span>${h(areaName(k.area))}</span><b>અનુભવ</b><span>${k.exp || 0} વર્ષ</span>
+      <div class="kv"><b>મોબાઇલ</b><span>${h(k.mobile)}</span><b>ઈમેલ</b><span>${h(k.email || '—')}</span><b>કામનો પ્રકાર</b><span>${h(kCatTxt(k))}</span><b>વિસ્તાર</b><span>${h(areaName(k.area))}</span><b>અનુભવ</b><span>${k.exp || 0} વર્ષ</span>
       <b>વિઝિટ ચાર્જ</b><span>${rs(k.visit)}</span><b>UPI</b><span>${h(k.upi || '—')}</span><b>નોંધણી</b><span>${dt(k.createdAt)}</span><b>છેલ્લે ઓનલાઇન</b><span>${k.online ? 'હાલ ઓનલાઇન' : dt(k.lastSeen)}</span></div></div></div>
       <div class="st"><div><b>${k.jobs || 0}</b>કુલ કામ</div><div><b>★ ${avg(k).toFixed(1)}</b>${k.ratingCount || 0} રેટિંગ</div><div><b>${rs(k.earnings)}</b>ચોખ્ખી કમાણી</div><div><b>${rs(k.commissionDue)}</b>બાકી કમીશન</div><div><b>${rs(k.commissionPaid)}</b>ચૂકવેલ કમીશન</div></div>
       <h3 style="margin-top:10px">KYC / ચકાસણી</h3><div class="kv"><b>આધાર છેલ્લા 4</b><span>${h(k.aadhaar4 || '—')}</span><b>પોલીસ વેરિ. નં.</b><span>${h(k.policeNo || '—')}</span><b>પોલીસ વેરિ. તારીખ</b><span>${h(k.policeDate || '—')}</span><b>ડૉક્યુમેન્ટ ચકાસ્યા</b><span>${k.kycOk ? '✔' : '—'}</span>
@@ -3950,22 +3973,30 @@ async function pdfBlocks(scope, id){
     const pays = Store.all('payments').filter(x => x.karigarId === k.id).sort((a, b) => b.ts - a.ts);
     if(pays.length) tableBlocks('કમીશન ચૂકવણી', ['તારીખ', 'રકમ', 'UTR', 'સ્થિતિ'], pays.map(x => [dt(x.ts), rs(x.amount), h(x.ref || '—'), x.status === 'approved' ? 'મંજૂર' : x.status === 'rejected' ? 'નામંજૂર' : 'બાકી']), 22).forEach(x => out.push({html:x}));
     const R = J.filter(b => b.rating && b.review); if(R.length) tableBlocks('ગ્રાહકોના રિવ્યૂ', ['ગ્રાહક', 'રેટિંગ', 'રિવ્યૂ'], R.map(b => [h(b.custName), '★'.repeat(b.rating), h(b.review)]), 18).forEach(x => out.push({html:x}));
+    out.push(photoPage(k, 'કારીગર'));
   }
   for(const c of CS){
     const bs = bookingsOf(c.id);
     out.push({np:true, html:`<div class="rb"><h2>ગ્રાહક: ${h(c.name)}</h2><div class="hdr"><img class="ph" src="${avatarPng(c, 232)}"><div style="flex:1">
-      <p>${c.blocked ? '<span class="pill b">બંધ</span>' : '<span class="pill">ચાલુ</span>'}</p><div class="kv"><b>મોબાઇલ</b><span>${h(c.mobile)}</span><b>વિસ્તાર</b><span>${h(areaName(c.area))}</span>
+      <p>${c.blocked ? '<span class="pill b">બંધ</span>' : '<span class="pill">ચાલુ</span>'}</p><div class="kv"><b>મોબાઇલ</b><span>${h(c.mobile)}</span><b>ઈમેલ</b><span>${h(c.email || '—')}</span><b>વિસ્તાર</b><span>${h(areaName(c.area))}</span>
       <b>સરનામું</b><span>${h(c.address || '—')}</span><b>નોંધણી</b><span>${dt(c.createdAt)}</span><b>છેલ્લો IP</b><span>${h(c.lastIp || '—')}</span><b>ડિવાઇસ</b><span>${h(c.lastDev || '—')}</span>
       <b>કારીગરોએ આપેલ રેટિંગ</b><span>${c.ratingCount ? '★ ' + custRating(c.id).toFixed(1) : '—'}</span><b>બુકિંગ</b><span>${bs.length}</span></div></div></div>
       ${(c.addrs || []).length ? `<p style="margin-top:6px"><b>સેવ સરનામાં:</b> ${(c.addrs || []).map(a => h(a.label + ': ' + a.address + ', ' + areaName(a.area)) + (a.geo ? ' (' + mlink(a.geo) + ')' : '')).join(' • ')}</p>` : ''}</div>`});
     tableBlocks('લૉગિન, IP અને ડિવાઇસ', LOGIN_HEAD, loginRows(c), 22).forEach(x => out.push({html:x}));
     tableBlocks('ઓર્ડર', ['નં.', 'તારીખ', 'સ્થિતિ', 'કામનો પ્રકાર', 'કારીગર', 'સરનામું / GPS', 'ચૂકવ્યા'],
       bs.map(b => { const k = Store.get('karigars', b.karigarId); return [bNo(b), dt(b.createdAt), STATUS[b.status] || b.status, h(catName(b.cat)), k ? h(k.name) : '—', h(b.address) + (b.geo ? '<br>' + mlink(b.geo) : ''), b.bill ? rs(b.bill.payable) : '—']; }), 16).forEach(x => out.push({html:x}));
+    out.push(photoPage(c, 'ગ્રાહક'));
   }
   if(TK.length) tableBlocks('ફરિયાદો', ['ટિકિટ', 'તારીખ', 'નામ', 'વિષય', 'વિગત', 'સ્થિતિ'], TK.map(t => [h(t.no), dt(t.createdAt), h(t.userName), h(t.topic), h(t.text), TSTAT[t.status][0]]), 16).forEach((x, i) => out.push({np:i === 0, html:x}));
   if(AL.length) tableBlocks('SOS એલર્ટ', ['સમય', 'નામ', 'મોબાઇલ', 'લોકેશન', 'IP', 'સ્થિતિ'], AL.map(a => [dt(a.ts), h(a.name), h(a.mobile), mlink(a.loc), h(a.ip || ''), a.status === 'open' ? 'ખુલ્લું' : 'ઉકેલાયું']), 20).forEach(x => out.push({html:x}));
   return out;
 }
+/* PDF: દરેક કારીગર/ગ્રાહકનો મોટો પ્રોફાઇલ ફોટો અલગ પાને */
+function photoPage(x, role){ return {np:true, html:`<div class="rb"><h2>${role}નો પ્રોફાઇલ ફોટો: ${h(x.name)}</h2>
+  <div style="text-align:center;padding:14px 0"><img src="${avatarPng(x, 640)}" style="width:560px;max-width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:22px;border:4px solid #e7eaf3;box-shadow:0 6px 24px rgba(0,0,0,.12)"></div>
+  <div class="kv" style="max-width:560px;margin:0 auto"><b>નામ</b><span>${h(x.name)}</span><b>મોબાઇલ</b><span>${h(x.mobile || '—')}</span><b>ઈમેલ</b><span>${h(x.email || '—')}</span>
+  ${role === 'કારીગર' ? `<b>કામ</b><span>${h(kCatTxt(x))}</span>` : `<b>વિસ્તાર</b><span>${h(areaName(x.area))}</span>`}<b>ID</b><span>${h(x.id)}</span></div>
+  ${x.photo ? '' : '<p class="muted" style="text-align:center">ફોટો અપલોડ કરેલ નથી — નામનો પહેલો અક્ષર બતાવ્યો છે.</p>'}</div>`}; }
 async function buildPDF(scope, id, prog){
   await needLib('jspdf'); await needLib('h2c'); try{ await document.fonts.ready; }catch(e){}
   const blocks = await pdfBlocks(scope, id);
@@ -3991,13 +4022,13 @@ async function buildPDF(scope, id, prog){
   return pdf.output('blob');
 }
 async function runExport(fmt, scope, id){
-  if(Store.mode === 'firebase'){ toast(L2('લૉગ લોડ થાય છે…', 'Loading logs…')); try{ await FB.loadAllSubs(); }catch(e){ console.warn(e); } }
+  if(Store.mode === 'firebase'){ toast(L2('લૉગ લોડ થાય છે…', 'Loading logs…')); try{ await FB.loadAllSubs(); }catch(e){ console.warn(e); } try{ await FB.loadEmails(); }catch(e){ console.warn(e); } }
   const set = exportSet(scope, id); if(!set.KS.length && !set.CS.length && !set.B.length && !(set.TK || []).length) return toast(L2('કોઈ ડેટા નથી', 'No data'));
   modal(`<h3>${fmt === 'pdf' ? '📄 ' + L2('PDF બની રહી છે…', 'Creating PDF…') : '📊 ' + L2('Excel બની રહી છે…', 'Creating Excel…')}</h3><div class="bar"><i id="ex_bar" style="width:3%"></i></div><p class="small muted" id="ex_txt">${L2('ફોટા, ઓર્ડર, નકશો, લોકેશન, IP — બધું એક ફાઇલમાં', 'Photos, orders, map, location, IP — everything in one file')}</p>`);
   const prog = (a, b) => { const e = $('#ex_bar'); if(e) e.style.width = Math.max(3, a / b * 100) + '%'; const t = $('#ex_txt'); if(t) t.textContent = a + ' / ' + b; };
   try{
     const blob = fmt === 'pdf' ? await buildPDF(scope, id, prog) : await buildExcel(scope, id, prog);
-    const base = scope === 'k1' ? 'karigar_' + fileSafe((set.KS[0] || {}).mobile) : scope === 'c1' ? 'customer_' + fileSafe((set.CS[0] || {}).mobile) : {all:'all', k:'karigars', c:'customers', q:'search_' + fileSafe(S.aq || '')}[scope];
+    const base = scope === 'k1' ? 'karigar_' + fileSafe((set.KS[0] || {}).mobile) : scope === 'c1' ? 'customer_' + fileSafe((set.CS[0] || {}).mobile) : {all:'all', k:'karigars', c:'customers', sel:'selected', q:'search_' + fileSafe(S.aq || '')}[scope];
     const name = `ThaiJashe_${base}_${today()}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}`;
     audit(fmt === 'pdf' ? 'PDF રિપોર્ટ' : 'Excel રિપોર્ટ', id || '', scope);
     modal(`<h3>✔ ${L2('ફાઇલ તૈયાર', 'File ready')}</h3><p class="small">${h(name)} · ${(blob.size / 1048576).toFixed(1)} MB</p><button class="btn pri block" id="ex_save">⬇️ ${L2('ફાઇલ સેવ કરો', 'Save file')}</button><button class="btn block" onclick="closeModal()">${L2('બંધ કરો', 'Close')}</button>`);
@@ -4005,12 +4036,44 @@ async function runExport(fmt, scope, id){
   }catch(e){ console.error(e);
     modal(`<h3 style="color:var(--bad)">${L2('ફાઇલ બનાવી શકાઈ નહીં', 'Could not create the file')}</h3><p class="small muted">${h(e.message || e)}</p><p class="small">${L2('ઇન્ટરનેટ ચાલુ રાખો — પહેલી વાર લાઇબ્રેરી લોડ થાય છે', 'Keep internet on — the library loads the first time')}</p><button class="btn block" onclick="closeModal()">${L2('બંધ કરો', 'Close')}</button>`); }
 }
-const exportBtns = (scope, id) => `<div class="two"><button class="btn ink" onclick="runExport('pdf','${scope}','${id || ''}')">📄 PDF</button><button class="btn ok" onclick="runExport('xlsx','${scope}','${id || ''}')">📊 Excel</button></div>`;
+const exportBtns = (scope, id) => `<div class="two"><button class="btn ink" onclick="exportAsk('pdf','${scope}','${id || ''}')">📄 PDF</button><button class="btn ok" onclick="exportAsk('xlsx','${scope}','${id || ''}')">📊 Excel</button></div>`;
+/* રિપોર્ટ પહેલાં: તારીખથી — તારીખ સુધી */
+function exportAsk(fmt, scope, id){ if(scope === 'sel' && !(S.xsK || []).length && !(S.xsC || []).length) return toast('પહેલાં કારીગર કે ગ્રાહક પસંદ કરો'); const d = x => { const t = new Date(x); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
+  S.xq = {fmt, scope, id}; const r0 = S.xr || {k:'30'}; const [a, b] = rangeOf(r0);
+  modal(`<h2>📅 રિપોર્ટ કયા ગાળાનો?</h2><p class="small muted">${fmt === 'pdf' ? '📄 PDF' : '📊 Excel'} · ${h(scopeName(scope, exportSet0(scope, id)) || '')}<br>પ્રોફાઇલ (નામ, મોબાઇલ, ઈમેલ, KYC વગેરે) આખી આવશે. બુકિંગ, લૉગિન/IP, લોકેશન, ફરિયાદ, SOS અને ચૂકવણી ફક્ત પસંદ કરેલ ગાળાની આવશે.</p>
+    <div class="chips" id="xr_ch">${RANGES.filter(x => x[0] !== 'custom').map(([k, l]) => `<button class="chipb ${r0.k === k ? 'on' : ''}" onclick="exportPick('${k}')">${l}</button>`).join('')}</div>
+    <div class="two"><label class="f">તારીખથી<input type="date" id="xr_from" value="${isFinite(a) && a > 0 ? d(a) : ''}" oninput="exportCustom()"></label><label class="f">તારીખ સુધી<input type="date" id="xr_to" value="${d(isFinite(b) ? b - DAY : Date.now())}" oninput="exportCustom()"></label></div>
+    <p class="tiny muted" id="xr_cnt"></p>
+    <div class="row"><button class="btn block" onclick="closeModal()">રદ કરો</button><button class="btn pri block" onclick="exportGo()">${fmt === 'pdf' ? '📄 PDF બનાવો' : '📊 Excel બનાવો'}</button></div>`);
+  S.xr = r0.k === 'custom' ? r0 : {k:r0.k}; exportCnt(); }
+function exportPick(k){ const d = x => { const t = new Date(x); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
+  S.xr = {k}; const [a, b] = rangeOf(S.xr); $('#xr_from').value = isFinite(a) && a > 0 ? d(a) : ''; $('#xr_to').value = d(isFinite(b) ? b - DAY : Date.now());
+  document.querySelectorAll('#xr_ch .chipb').forEach(x => x.classList.toggle('on', x.getAttribute('onclick') === `exportPick('${k}')`)); exportCnt(); }
+function exportCustom(){ S.xr = {k:'custom', from:$('#xr_from').value, to:$('#xr_to').value}; document.querySelectorAll('#xr_ch .chipb').forEach(x => x.classList.remove('on')); exportCnt(); }
+function exportCnt(){ const q = S.xq; if(!q) return; const r = exportSet(q.scope, q.id); const e = $('#xr_cnt'); if(e) e.textContent = `આ ગાળામાં: ${r.B.length} બુકિંગ · ${(r.TK || []).length} ફરિયાદ · ${(r.AL || []).length} SOS · ${(r.PY || []).length} ચૂકવણી`; }
+function exportGo(){ const q = S.xq; if(!q) return; if(S.xr.k === 'custom' && S.xr.from && S.xr.to && S.xr.from > S.xr.to) return toast('"તારીખથી" પહેલાંની તારીખ રાખો'); closeModal(); runExport(q.fmt, q.scope, q.id); }
+/* રિપોર્ટ માટે પસંદગી */
+function xsRows(){ const q = String(S.xsQ || '').trim().toLowerCase(), T = S.xsT || 'k';
+  return (T === 'k' ? Store.all('karigars') : Store.all('customers')).filter(x => !q || [x.name, x.mobile, x.email, areaName(x.area), T === 'k' ? kCatTxt(x) : x.address].join(' ').toLowerCase().includes(q)).sort((a, b) => String(a.name).localeCompare(String(b.name))); }
+function xsList(){ const T = S.xsT || 'k', sel = new Set(T === 'k' ? (S.xsK || []) : (S.xsC || [])), L = xsRows();
+  return L.slice(0, 80).map(x => `<label class="xsrow"><input type="checkbox" ${sel.has(x.id) ? 'checked' : ''} onchange="xsTog('${x.id}',this.checked)"><span class="grow"><b>${h(x.name)}</b><span class="tiny muted">${h(x.mobile || '')}${x.email ? ' · ' + h(x.email) : ''} · ${h(T === 'k' ? kCatTxt(x) : areaName(x.area))}</span></span></label>`).join('')
+    + (L.length > 80 ? `<p class="tiny muted">બીજા ${L.length - 80} — શોધમાં વધુ લખો</p>` : '') || '<p class="small muted">કોઈ મળ્યું નહીં.</p>'; }
+const xsCnt = () => `પસંદ કર્યા: ${(S.xsK || []).length} કારીગર, ${(S.xsC || []).length} ગ્રાહક`;
+function xsDraw(){ const l = $('#xs_list'); if(l){ l.innerHTML = xsList(); trTree(l); } const c = $('#xs_cnt'); if(c) c.innerHTML = '<b>' + xsCnt() + '</b>';
+  document.querySelectorAll('.card .chips .chipb').forEach(b => { const m = /S\.xsT='(\w)'/.exec(b.getAttribute('onclick') || ''); if(m) b.classList.toggle('on', m[1] === (S.xsT || 'k')); }); }
+function xsTog(id, on){ const key = (S.xsT || 'k') === 'k' ? 'xsK' : 'xsC'; const a = new Set(S[key] || []); on ? a.add(id) : a.delete(id); S[key] = [...a]; const c = $('#xs_cnt'); if(c) c.innerHTML = '<b>' + xsCnt() + '</b>'; }
+function xsAll(on){ const key = (S.xsT || 'k') === 'k' ? 'xsK' : 'xsC'; const a = new Set(S[key] || []); xsRows().slice(0, 80).forEach(x => on ? a.add(x.id) : a.delete(x.id)); S[key] = [...a]; xsDraw(); }
 VIEWS.a_export = p => { if(!isAdmin()) return VIEWS.welcome(); const sc = p.sc || 'all';
   const nK = Store.all('karigars').length, nC = Store.all('customers').length, nB = Store.all('bookings').length;
   return topbar('ડેટા રિપોર્ટ (PDF / Excel)', {back:true}) + `<div class="wrap">
     <div class="card"><h3>કોનો ડેટા?</h3><div class="chips">${[['all','બધા કારીગરો અને ગ્રાહકો'],['k','ફક્ત કારીગરો'],['c','ફક્ત ગ્રાહકો']].map(([v, l]) => `<button class="chipb ${sc === v ? 'on' : ''}" onclick="S.p.sc='${v}';render()">${l}</button>`).join('')}</div>
       <p class="small muted">${nK} કારીગરો · ${nC} ગ્રાહકો · ${nB} બુકિંગ</p>${exportBtns(sc)}</div>
+    <div class="card"><h3>✅ જરૂરી કારીગર / ગ્રાહક પસંદ કરીને રિપોર્ટ</h3>
+      <div class="chips">${[['k', '👷 કારીગરો'], ['c', '👥 ગ્રાહકો']].map(([v, l]) => `<button class="chipb ${(S.xsT || 'k') === v ? 'on' : ''}" onclick="S.xsT='${v}';xsDraw()">${l}</button>`).join('')}</div>
+      <div class="search"><span>🔍</span><input id="xs_q" value="${h(S.xsQ || '')}" placeholder="નામ, મોબાઇલ, ઈમેલ, વિસ્તાર, કામ…" oninput="S.xsQ=this.value;xsDraw()"></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="xsAll(true)">☑ દેખાતા બધા પસંદ</button><button class="btn sm" onclick="xsAll(false)">☐ દેખાતા બધા હટાવો</button><button class="btn sm" onclick="S.xsK=[];S.xsC=[];xsDraw()">✕ પસંદગી ખાલી</button></div>
+      <div id="xs_list" class="xslist">${xsList()}</div>
+      <p class="small" id="xs_cnt"><b>${xsCnt()}</b></p>${exportBtns('sel')}</div>
     <div class="card"><h3>ફાઇલમાં શું આવશે</h3><ul class="small" style="margin:0;padding-left:18px;line-height:1.8">
       <li>📷 દરેક કારીગર/ગ્રાહકનો ફોટો (ફોટો ન હોય તો નામનો અક્ષર)</li><li>👤 પ્રોફાઇલ, મોબાઇલ, સરનામાં, KYC (આધાર છેલ્લા 4, પોલીસ વેરિફિકેશન)</li>
       <li>📋 બધા ઓર્ડર — બિલ, કમીશન, રેટિંગ, રદ કારણ, SOS</li><li>🗺️ નકશો, હાલનું લોકેશન અને લોકેશન ઇતિહાસ (Google Maps લિંક સાથે)</li>

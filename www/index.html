@@ -172,6 +172,7 @@ textarea{min-height:76px;resize:vertical}
 .av.lg{width:76px;height:76px;font-size:30px;border-radius:20px}
 .on-dot{position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
 .kitem{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%}
+.xslist{max-height:360px;overflow:auto;border:1px solid var(--line,#e2e5ee);border-radius:12px;padding:4px 8px}.xsrow{display:flex;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line,#eef0f5);cursor:pointer}.xsrow:last-child{border:0}.xsrow .grow{display:flex;flex-direction:column}.xsrow input{width:22px;height:22px;flex:none}
 @property --ang{syntax:'<angle>';initial-value:0deg;inherits:false}
 .spin{position:relative;isolation:isolate}
 .spin::before{content:'';position:absolute;inset:-2px;border-radius:inherit;padding:2.5px;background:conic-gradient(from var(--ang),transparent 0 55%,var(--spc,#F5B301) 72%,#fff 78%,var(--spc,#F5B301) 84%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spinb 3.2s linear infinite;pointer-events:none;z-index:2}
@@ -891,6 +892,10 @@ const FB = {
     this.dyn[k] = Store.fs.doc(path).onSnapshot(d => { if(d.exists){ const x = d.data(); delete x.custId; delete x.ts; this.setSide('bookings', id, x); } },
       e => { if(this.dyn[k] && n < 8) setTimeout(() => { if(this.dyn[k]) this.listenDyn(k, path, id, n + 1); }, Math.min(15000, 1500 * (n + 1))); }); },
   /* એડમિન: લૉગિન અને લોકેશન લૉગ (અલગ subcollection, 1 વર્ષ) જરૂર પડે ત્યારે જ */
+  /* એડમિન: બધાના ઈમેલ (users/{id}.email) — રિપોર્ટ/Excel/CSV માટે */
+  async loadEmails(){ if(!isAdmin() || Date.now() - (this.emailsAt || 0) < 60000) return; this.emailsAt = Date.now();
+    const sn = await Store.fs.collection('users').get();
+    sn.forEach(d => { const e = d.data().email; if(!e) return; for(const c of ['karigars', 'customers']){ const x = Store.get(c, d.id); if(x && !x.email) this.setSide(c, d.id, {email:e}); } }); },
   async loadSubs(kind, id){ const key = kind + id; if(Date.now() - (this.subLoaded[key] || 0) < 20000) return; this.subLoaded[key] = Date.now();
     try{ const cur = Store.get(kind === 'k' ? 'karigars' : 'customers', id); if(cur && !cur.email){ const u = await Store.fs.doc('users/' + id).get(); if(u.exists && u.data().email) this.setSide(kind === 'k' ? 'karigars' : 'customers', id, {email:u.data().email}); } }catch(e){}
     const [a] = rangeOf(); const from = isFinite(a) ? a : 0;
@@ -899,7 +904,7 @@ const FB = {
       let locAll = null; if(kind === 'k'){ const lc = await Store.fs.collection(`karigars/${id}/locations`).where('ts', '>=', from).orderBy('ts', 'desc').limit(500).get(); locAll = []; lc.forEach(d => locAll.push(d.data())); }
       this.setSide(kind === 'k' ? 'karigars' : 'customers', id, locAll ? {logins, locAll} : {logins}); }
     catch(e){ console.warn(e); this.subLoaded[key] = 0; } },
-  async loadAllSubs(){ const [a] = rangeOf(); const from = isFinite(a) ? a : 0;
+  async loadAllSubs(){ const [a] = rangeOf(S.xr || S.rg); const from = isFinite(a) ? a : 0;
     const lg = await Store.fs.collectionGroup('logins').where('ts', '>=', from).get(); const byU = {}; lg.forEach(d => (byU[d.ref.parent.parent.id] = byU[d.ref.parent.parent.id] || []).push(d.data()));
     const lc = await Store.fs.collectionGroup('locations').where('ts', '>=', from).get(); const byK = {}; lc.forEach(d => (byK[d.ref.parent.parent.id] = byK[d.ref.parent.parent.id] || []).push(d.data()));
     for(const id in byU){ const L = byU[id].sort((x, y) => y.ts - x.ts); if(Store.get('karigars', id)) this.side.karigars[id] = {...(this.side.karigars[id] || {}), logins:L}; else (this.side.customers = this.side.customers || {})[id] = {...((this.side.customers || {})[id] || {}), logins:L}; }
