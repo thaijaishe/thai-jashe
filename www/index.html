@@ -172,6 +172,53 @@ textarea{min-height:76px;resize:vertical}
 .av.lg{width:76px;height:76px;font-size:30px;border-radius:20px}
 .on-dot{position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
 .kitem{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%}
+@property --ang{syntax:'<angle>';initial-value:0deg;inherits:false}
+.spin{position:relative;isolation:isolate}
+.spin::before{content:'';position:absolute;inset:-2px;border-radius:inherit;padding:2.5px;background:conic-gradient(from var(--ang),transparent 0 55%,var(--spc,#F5B301) 72%,#fff 78%,var(--spc,#F5B301) 84%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spinb 3.2s linear infinite;pointer-events:none;z-index:2}
+@keyframes spinb{to{--ang:360deg}}
+@media (prefers-reduced-motion:reduce){.spin::before,.q-rider{animation:none}}
+.quick.qlite{position:relative;background:#FFF6D6;background:color-mix(in srgb,var(--accent) 16%,var(--surface));color:var(--ink);border:2px solid var(--accent);box-shadow:0 0 0 3px rgba(245,179,1,.18),0 0 18px rgba(245,179,1,.55);padding-bottom:30px;overflow:hidden;animation:qglow 2.2s ease-in-out infinite}
+@keyframes qglow{50%{box-shadow:0 0 0 3px rgba(245,179,1,.28),0 0 28px rgba(245,179,1,.85)}}
+.q-rider{position:absolute;bottom:-1px;left:-44px;width:38px;height:38px;animation:qride 7s linear infinite;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+@keyframes qride{from{left:-44px}to{left:calc(100% + 6px)}}
+.offer.lite{background:#EEF0FF;background:color-mix(in srgb,#6C5CE7 10%,var(--surface));color:var(--ink);border:1.5px solid color-mix(in srgb,#6C5CE7 30%,transparent)}
+.offer.lite .code{background:#6C5CE7;color:#fff}
+.hero-off{display:flex;align-items:center;width:100%;border:0;font:inherit;text-align:left;border-radius:16px;min-height:96px;padding:12px 0 12px 20px;color:#0E5A33;cursor:pointer;
+  background:linear-gradient(110deg,#E9FBF1 0%,#F6FFFA 60%,#E3F7EC 100%);
+  -webkit-mask:radial-gradient(circle 9px at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 9px at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat}
+.hero-off.spin::before{inset:0;padding:2px}
+.ho-txt{flex:1;display:flex;flex-direction:column}.ho-up{font-size:13px;font-weight:700;opacity:.8}.ho-txt b{font-family:var(--f-display);font-size:30px;line-height:1.1;color:#0B7A43}
+.ho-sub{font-size:13px;font-weight:600}.ho-sub i{font-style:normal;font-weight:800;background:#1FAF55;color:#fff;border-radius:6px;padding:1px 7px;margin-left:2px;letter-spacing:.5px}
+.ho-gift{flex:none;margin-right:6px;animation:gbob 2.6s ease-in-out infinite}@keyframes gbob{50%{transform:translateY(-4px) rotate(-4deg)}}
+.ho-edge{align-self:stretch;width:16px;margin:-12px 0 -12px 8px;background:linear-gradient(#2FBF71,#159A55);border-radius:0 14px 14px 0}
+.trust{display:flex;align-items:stretch;background:var(--surface);border-radius:16px;padding:12px 6px;border:1.5px solid color-mix(in srgb,#9B4DCA 25%,transparent)}
+.trust>div{flex:1;display:flex;align-items:center;gap:8px;justify-content:center;font-size:13px;line-height:1.25}.trust>div:nth-child(1) b,.trust>div:nth-child(5) b{color:#8E3BBE}
+.trust .ti{font-size:26px}.trust>i{width:1px;background:var(--line,#e2e5ee);margin:4px 0}
+.rf-ban.lite{background:#E8F8EF;background:color-mix(in srgb,#16A05C 12%,var(--surface));color:#0B6B3A;border:1.5px solid color-mix(in srgb,#16A05C 30%,transparent)}
+.rf-ban.lite .small{opacity:.85}
+.fA{margin:18px -16px -12px;padding:26px 20px 30px;border-radius:26px 26px 0 0;background:linear-gradient(160deg,#1E2A78,#2D3DAA);color:#fff;position:relative;overflow:hidden}
+.fA .wm{position:absolute;right:-30px;bottom:-20px;opacity:.10;transform:rotate(-10deg)}.fA .br{display:flex;align-items:center;gap:10px}.fA .br b{font-family:var(--f-display);font-size:34px;color:#FFD84D;line-height:1}
+.fA .tg{font-size:17px;margin:10px 0 14px;opacity:.95;font-weight:600}.fA .ch{display:flex;flex-wrap:wrap;gap:8px}.fA .ch span{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.fA hr{border:0;border-top:1px dashed rgba(255,255,255,.3);margin:18px 0 12px}.fA .sg{font-size:14px;opacity:.9;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.fB{margin:18px -16px -12px;padding:0 20px 28px;position:relative;overflow:hidden;text-align:center;color:#7A1F2B;background:radial-gradient(circle,#E8B4A0 1.6px,transparent 2px) 0 0/18px 18px,radial-gradient(circle,#F5CF6A 1.4px,transparent 1.8px) 9px 9px/18px 18px,#FFF7E6}
+.fB .toran{display:block;width:calc(100% + 40px);margin:0 -20px 14px;height:46px}.fB h3{font-family:var(--f-display);font-size:26px;margin:6px 0 4px;color:#7A1F2B}.fB .s1{font-size:16px;font-weight:700;color:#1E2A78}
+.fB .bx{display:inline-flex;gap:10px;margin-top:14px;background:#fff;border:2px solid #E9B949;border-radius:14px;padding:8px 14px;font-size:13px;font-weight:700;color:#5A3A00}
+.ftedit{border:1px solid var(--line,#e2e5ee);border-radius:12px;padding:8px 12px;margin-top:8px}.ftedit summary{cursor:pointer;padding:4px 0}.ftedit[open]{display:flex;flex-direction:column;gap:8px}
+.fC{margin:18px -16px -12px;padding:22px 18px 30px;background:linear-gradient(var(--surface),color-mix(in srgb,#6C7BD9 12%,var(--surface)));position:relative;overflow:hidden;text-align:center}
+.fC .arc{position:relative;width:360px;max-width:100%;height:132px;margin:0 auto 4px}
+.fC .arc span{position:absolute;left:0;top:0;width:48px;height:48px;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(30,42,120,.16);display:flex;align-items:center;justify-content:center;font-size:24px;
+  offset-path:path('M 24 128 A 156 104 0 0 1 336 128');offset-rotate:0deg;offset-anchor:50% 50%;opacity:0}
+.fC h3{font-family:var(--f-display);font-size:27px;line-height:1.25;color:var(--ink);margin:0}.fC h3 em{font-style:normal;background:linear-gradient(transparent 55%,#FFD84D 55%);padding:0 2px}
+.fC .s1{margin-top:10px;font-size:15px;font-weight:700;color:var(--ink)}.fC .s1 b{color:#E09A00}.fC .s2{margin-top:12px;font-size:13px;color:var(--muted);display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.fC .arc span{animation:none!important;opacity:1}}
+.pfhead{display:flex;gap:12px;align-items:center;width:100%;background:none;border:0;font:inherit;text-align:left;color:inherit;padding:0;cursor:pointer}
+.pfhead img,.pfav{width:64px;height:64px;border-radius:16px;object-fit:cover;flex:none}.pfav{display:flex;align-items:center;justify-content:center;background:var(--bar);color:var(--bar-ink);font-size:26px;font-weight:800}
+.pfhead .grow{display:flex;flex-direction:column;gap:2px;min-width:0}.pfhead b{font-size:18px}.pfchev{flex:none;font-size:13px;color:var(--muted);background:var(--surface2);border-radius:10px;padding:6px 10px}
+.pfbody{display:flex;flex-direction:column;gap:12px;margin-top:12px;border-top:1px solid var(--line,#e5e7ef);padding-top:12px}
+.kfab-sp{height:64px}
+.kfab{position:fixed;left:0;right:0;bottom:calc(var(--sab) + 66px);z-index:19;padding:0 14px;max-width:520px;margin:0 auto}
+.kfab-b{width:100%;border:0;font:inherit;font-weight:800;font-size:18px;padding:16px;border-radius:16px;color:#3A2A00;cursor:pointer;background:#FFF4CC;background:color-mix(in srgb,var(--accent) 22%,var(--surface));box-shadow:0 6px 22px rgba(245,179,1,.45),0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
+.kfab-b.spin::before{padding:3px}
 .rf-ban{display:flex;gap:12px;align-items:center;border-radius:18px;padding:14px 16px;background:linear-gradient(135deg,#0F7A45,#16A05C);color:#fff;border:0;width:100%;text-align:left;font:inherit;cursor:pointer}
 .rf-ban b{font-family:var(--f-display);font-size:17px;display:block}.rf-ban .small{opacity:.92;display:block}
 .rf-hero{text-align:center;padding:22px 16px;border-radius:20px;background:linear-gradient(160deg,#1E2A78,#2E3DA8);color:#fff}.rf-hero h2{color:#fff;margin:6px 0}
@@ -641,11 +688,41 @@ const KEEP_LOGOS = ['tjf', 'kc4', 'house', 'hp1', 'hp2', 'hp3', 'hp4', 'hp5', 'h
 for(let i = LOGOS.length - 1; i >= 0; i--) if(!KEEP_LOGOS.includes(LOGOS[i].id.replace(/^(kc\d)q$/, '$1'))) LOGOS.splice(i, 1);
 const logoSvg = (l, size) => `<svg width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="${l.name}">${l.svg}</svg>`;
 function curLogo(){ const id = (Store.ready && Store.settings().logo) || 'tjf'; return LOGOS.find(l => l.id === id) || LOGOS[0]; }
-/* કૂપન બેનર: દર 5 સેકન્ડે બીજું કૂપન, છેલ્લા પછી ફરી પહેલું */
-function offerInner(c, n, i){ return `<div style="font-size:30px">🎁</div><div class="grow"><b style="font-family:var(--f-display);font-size:17px">${h(tr(c.note || ''))}</b><div class="small" style="margin-top:4px">${tr('કોડ વાપરો')}: <span class="code">${h(c.code)}</span></div>
+/* કૂપન બેનર: દર 5 સેકન્ડે બીજું કૂપન, છેલ્લા પછી ફરી પહેલું (મોટા "પહેલા કામ" બોક્ષ વાળો કૂપન આમાં નહીં) */
+function heroCp(){ const st = Store.settings(); if(!couponOn() || st.heroOn === false) return null; const code = String(st.heroCode || 'FIRST50').toUpperCase(); return (st.coupons || []).find(c => c && c.code && c.code.toUpperCase() === code) || null; }
+function couponsRot(){ if(!couponOn()) return []; const hc = heroCp(); return (Store.settings().coupons || []).filter(c => c && c.code && (!hc || c.code !== hc.code)); }
+const GIFT_SVG = `<svg viewBox="0 0 64 64" width="58" height="58" aria-hidden="true"><path d="M10 28h44v28a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3z" fill="#FFB020"/><path d="M6 20h52v10H6z" fill="#FFC94D"/><path d="M28 20h8v39h-8z" fill="#9B4DCA"/><path d="M32 20c-6-12-20-12-18-3 1 5 11 5 18 3zM32 20c6-12 20-12 18-3-1 5-11 5-18 3z" fill="#B964E8"/><path d="M50 6l1.6 4 4 1.6-4 1.6L50 17l-1.6-3.8-4-1.6 4-1.6z" fill="#FFD84D"/><path d="M8 40l1 2.4 2.4 1-2.4 1L8 47l-1-2.6-2.4-1 2.4-1z" fill="#FFD84D"/></svg>`;
+function heroOffer(){ const c = heroCp(); if(!c) return ''; const st = Store.settings();
+  return `<button class="hero-off spin" style="--spc:#1FAF55" onclick="copyText('${h(c.code)}')" title="કોડ કૉપિ કરો"><span class="ho-txt"><span class="ho-up">${h(st.heroTop || 'સુધી')}</span><b>${h(st.heroTitle || '₹' + c.amount + ' છૂટ')}</b><span class="ho-sub">${h(st.heroSub || 'પહેલા કામ પર')} · કોડ <i>${h(c.code)}</i></span></span><span class="ho-gift">${GIFT_SVG}</span><span class="ho-edge"></span></button>`; }
+function trustStrip(){ return `<div class="trust spin" style="--spc:#9B4DCA"><div><span class="ti">🏠</span><b>ઘરે જ<br>કામ કરાવો</b></div><i></i><div><span class="ti">💵</span><b>કેશ ઓન<br>ડિલિવરી</b></div><i></i><div><span class="ti">🏷️</span><b>લોએસ્ટ<br>પ્રાઇસ</b></div></div>`; }
+/* હોમના તળિયે ફૂટર — એડમિન સેટિંગમાંથી A / B / C */
+const FT_TORAN = `<svg class="toran" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true"><path d="M0 4h400" stroke="#7A1F2B" stroke-width="3"/>${Array.from({length:14}, (_, i) => { const x = 14 + i * 28.6, c = ['#2E9D57','#E9B949','#C0392B'][i % 3]; return `<path d="M${x - 9} 5 Q${x} 40 ${x + 9} 5Z" fill="${c}"/><circle cx="${x}" cy="${i % 2 ? 30 : 36}" r="2.6" fill="#7A1F2B"/>`; }).join('')}</svg>`;
+/* ફૂટરનું લખાણ — એડમિન બદલી શકે. *શબ્દ* = હાઇલાઇટ, નવી લાઇન = નવી લીટી, {N} = કુલ કામ */
+const FOOT_DEF = {C:{t:'દરેક હુનરને કામ,\nદરેક ઘરને *આરામ*.', s:'*થઈ જશે!* — ગુજરાતની પોતાની ઘરસેવા એપ', l1:'🇮🇳 ભારત માટે બનાવેલી', l2:'❤️ રાજકોટમાં રચાયેલી'},
+  A:{t:'થઈ જશે!', s:'ઘરનું દરેક કામ — હવે ચિંતા વગર.', c:'🛠️ {N}+ સેવાઓ, ✔ ચકાસાયેલા કારીગર, 💵 કામ પછી ચુકવણી, 📍 તમારા વિસ્તારમાં', l1:'❤️ રાજકોટથી પ્રેમ સાથે બનાવેલ', l2:'🇮🇳 ભારતની પોતાની એપ'},
+  B:{t:'આપણું ગુજરાત, આપણા કારીગર', s:'ઘર બેઠા દરેક કામ — બસ એક ક્લિક, થઈ જશે!', l1:'🇮🇳 ભારતમાં બનેલી', l2:'❤️ રાજકોટમાં રચાયેલી'}};
+const footT = (v, k) => { const f = (Store.settings().foot || {})[v] || {}; const x = f[k]; return String(x != null && String(x).trim() !== '' ? x : FOOT_DEF[v][k]).replace(/\{N\}/g, catList().length); };
+const footF = (t, tag = 'em') => h(t).replace(/\*(.+?)\*/g, `<${tag}>$1</${tag}>`).replace(/\n/g, '<br>');
+function homeFooter(){ const st = Store.settings(), v = ['A', 'B', 'C'].includes(st.footStyle) ? st.footStyle : 'C', T = k => footT(v, k);
+  if(v === 'A') return `<div class="fA"><div class="wm">${logoSVG(220)}</div><div class="br">${logoSVG(44)}<b>${footF(T('t'))}</b></div>
+    <div class="tg">${footF(T('s'))}</div>
+    <div class="ch">${T('c').split(',').map(x => x.trim()).filter(Boolean).map(x => `<span>${footF(x)}</span>`).join('')}</div>
+    <hr><div class="sg"><span>${footF(T('l1'))}</span><span>${footF(T('l2'))}</span></div></div>`;
+  if(v === 'B') return `<div class="fB">${FT_TORAN}<div style="font-size:30px">🏠🤝🛠️</div><h3>${footF(T('t'))}</h3>
+    <div class="s1">${footF(T('s'))}</div>
+    <div class="bx"><span>${footF(T('l1'))}</span><span>|</span><span>${footF(T('l2'))}</span></div></div>`;
+  /* C: બધા કામના આઇકન અર્ધગોળ પર ડાબેથી જમણે સતત ફરે — એક સમયે 9 દેખાય */
+  const ic = catList().map(c => c.icon), n = ic.length, vis = 9, gap = 1.5, P = n * gap, on = Math.min(99, vis / n * 100);
+  const kf = `@keyframes ftarc{0%{offset-distance:0%;opacity:0}${(on * .06).toFixed(2)}%{opacity:1}${(on * .94).toFixed(2)}%{opacity:1}${on.toFixed(2)}%{offset-distance:100%;opacity:0}100%{offset-distance:100%;opacity:0}}`;
+  return `<div class="fC"><style>${kf}.fC .arc span{animation:ftarc ${P}s linear infinite}</style><div class="arc" aria-hidden="true">${ic.map((e, i) => `<span style="animation-delay:${(i * gap - P).toFixed(2)}s">${e}</span>`).join('')}</div>
+    <h3>${footF(T('t'))}</h3>
+    <div class="s1">${footF(T('s'), 'b')}</div>
+    <div class="s2"><span>${footF(T('l1'))}</span><span>·</span><span>${footF(T('l2'))}</span></div></div>`; }
+
+function offerInner(c, n, i){ return `<div style="font-size:30px">🏷️</div><div class="grow"><b style="font-family:var(--f-display);font-size:17px">${h(tr(c.note || ''))}</b><div class="small" style="margin-top:4px">${tr('કોડ વાપરો')}: <span class="code">${h(c.code)}</span></div>
   ${n > 1 ? `<div class="odots">${Array.from({length:n}, (_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div>`; }
 setInterval(() => { const el = document.getElementById('offerbox'); if(!el || !Store.ready || !couponOn()) return;
-  const CPS = (Store.settings().coupons || []).filter(c => c && c.code); if(CPS.length < 2) return;
+  const CPS = couponsRot(); if(CPS.length < 2) return;
   S.ci = ((S.ci || 0) + 1) % CPS.length; el.classList.add('ofade');
   setTimeout(() => { el.innerHTML = offerInner(CPS[S.ci], CPS.length, S.ci); el.classList.remove('ofade'); }, 250); }, 5000);
 const isKarigarView = () => (S.session && S.session.role === 'karigar') || /^k_/.test(S.view || '');
@@ -722,7 +799,7 @@ async function loadFirebase(){
   catch(e){ for(const m of mods){ const f = `firebase-${m}-compat.js`; if(!(window.firebase && (m === 'app' || firebase[m === 'app-check' ? 'appCheck' : m]))) await loadScript(`https://www.gstatic.com/firebasejs/${FB_V}/${f}`); } }
 }
 /* ખાનગી ફીલ્ડ અલગ દસ્તાવેજમાં: ગ્રાહકને કારીગરનો મોબાઇલ/લોકેશન/આધાર/IP ક્યારેય ન દેખાય */
-const PRIVATE_K = ['mobile', 'pin', 'loc', 'locHist', 'locErr', 'lastIp', 'lastDev', 'lastLogin', 'logins', 'aadhaar4', 'aadhaarMasked', 'policeNo', 'policeDate', 'adminNote',
+const PRIVATE_K = ['mobile', 'email', 'pin', 'loc', 'locHist', 'locErr', 'lastIp', 'lastDev', 'lastLogin', 'logins', 'aadhaar4', 'aadhaarMasked', 'policeNo', 'policeDate', 'adminNote',
   'earnings', 'commissionDue', 'commissionPaid', 'upi', 'consentAt', 'cancels', 'kycDocs'];
 const CONTACT_B = ['custMobile', 'address', 'geo', 'kMobile', 'kUpi', 'kLoc', 'kLocPrev'];
 const FB = {
@@ -811,6 +888,7 @@ const FB = {
       e => { if(this.dyn[k] && n < 8) setTimeout(() => { if(this.dyn[k]) this.listenDyn(k, path, id, n + 1); }, Math.min(15000, 1500 * (n + 1))); }); },
   /* એડમિન: લૉગિન અને લોકેશન લૉગ (અલગ subcollection, 1 વર્ષ) જરૂર પડે ત્યારે જ */
   async loadSubs(kind, id){ const key = kind + id; if(Date.now() - (this.subLoaded[key] || 0) < 20000) return; this.subLoaded[key] = Date.now();
+    try{ const cur = Store.get(kind === 'k' ? 'karigars' : 'customers', id); if(cur && !cur.email){ const u = await Store.fs.doc('users/' + id).get(); if(u.exists && u.data().email) this.setSide(kind === 'k' ? 'karigars' : 'customers', id, {email:u.data().email}); } }catch(e){}
     const [a] = rangeOf(); const from = isFinite(a) ? a : 0;
     try{ const lg = await Store.fs.collection(`users/${id}/logins`).where('ts', '>=', from).orderBy('ts', 'desc').limit(300).get();
       const logins = []; lg.forEach(d => logins.push(d.data()));
@@ -1094,7 +1172,7 @@ function refShareMsg(code, role){ const st = Store.settings(), link = shareBase(
 function refShareWA(code, role){ const a = document.createElement('a'); a.href = 'https://wa.me/?text=' + encodeURIComponent(refShareMsg(code, role)); a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
 async function refShareLink(code, role){ const t = refShareMsg(code, role); try{ if(navigator.share){ await navigator.share({text:t}); return; } }catch(e){ return; } copyText(t); }
 function refBanner(){ const st = Store.settings(); if(!refOn('customer')) return '';
-  return `<button class="rf-ban" onclick="go('c_refer')"><span style="font-size:34px">🎁</span><span class="grow"><b>મિત્રને બોલાવો, ₹${st.refMe} કમાઓ</b><span class="small">મિત્રને પણ પહેલા કામ પર ₹${st.refFriend} છૂટ</span></span><span style="font-size:22px">›</span></button>`; }
+  return `<button class="rf-ban lite spin" style="--spc:#16A05C" onclick="go('c_refer')"><span style="font-size:34px">🎁</span><span class="grow"><b>મિત્રને બોલાવો, ₹${st.refMe} કમાઓ</b><span class="small">મિત્રને પણ પહેલા કામ પર ₹${st.refFriend} છૂટ</span></span><span style="font-size:22px">›</span></button>`; }
 const effRate = () => commOn() ? Math.max(0, +Store.settings().commRate || 0) : 0;
 const payWord = () => upiOn() ? 'રોકડા / UPI' : 'રોકડા';
 function upiLink(pa, name, amt, note){ return 'upi://pay?pa=' + encodeURIComponent(pa) + '&pn=' + encodeURIComponent(name || 'Thai Jashe') + (amt ? '&am=' + (+amt).toFixed(2) : '') + '&cu=INR&tn=' + encodeURIComponent(note || 'Thai Jashe'); }
@@ -1129,7 +1207,7 @@ function finishJob(b){ setTimeout(() => refAfterDone(b.id), 0);
 }
 
 /* ---------- navigation & render ---------- */
-function go(v, p = {}, push = true){ if(push) S.stack.push([S.view, S.p]); S.view = v; S.p = p; S.ag = {}; S.krCat = ''; armBack(); render(); window.scrollTo(0, 0); }
+function go(v, p = {}, push = true){ if(push) S.stack.push([S.view, S.p]); if(v !== S.view) S.pfOpen = false; S.view = v; S.p = p; S.ag = {}; S.krCat = ''; armBack(); render(); window.scrollTo(0, 0); }
 function back(){ const x = S.stack.pop(); if(x){ S.view = x[0]; S.p = x[1]; render(); window.scrollTo(0, 0); } else home(); }
 function home(){ S.stack = []; const r = S.session && S.session.role;
   go(r === 'customer' ? 'c_home' : r === 'karigar' ? 'k_home' : r === 'admin' ? 'a_home' : APP_MODE === 'admin' ? 'a_login' : 'welcome', {}, false); }
@@ -1310,20 +1388,23 @@ VIEWS.c_home = () => {
   const c = me(); if(!c){ if(Store.syncing) return `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`; setSession(null); return VIEWS.welcome(); }
   const st = Store.settings(); const act = bookingsOf(c.id).filter(b => ACTIVE.includes(b.status));
   const top = Store.all('karigars').filter(k => k.status === 'approved' && k.online).sort((a, b) => distKm(c.area, a.area) - distKm(c.area, b.area)).slice(0, 4);
-  const CPS = couponOn() ? (st.coupons || []).filter(c => c && c.code) : [], coupon = CPS.length ? CPS[(S.ci || 0) % CPS.length] : null;
+  const CPS = couponsRot(), coupon = CPS.length ? CPS[(S.ci || 0) % CPS.length] : null;
   return topbar(APP.name, {right:`<button class="chip" onclick="go('c_profile')">📍 ${h(areaName(c.area))}</button>`}) + `<div class="wrap">
     <div><p class="muted small">નમસ્તે, ${h(c.name)}</p><h2>આજે કયું કામ કરાવવું છે?</h2></div>
     ${act.map(b => `<button class="card" style="text-align:left;border:2px solid var(--accent)" onclick="go('c_track',{id:'${b.id}'})">
       <div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
       <span class="small muted">ચાલુ બુકિંગ · ટ્રેક કરવા ટેપ કરો</span></button>`).join('')}
     <div class="search"><span>🔍</span><input id="c_q" placeholder="કામ શોધો — દા.ત. એસી, નળ, પંખો" oninput="filterCats(this.value)"></div>
-    <button class="quick" onclick="go('c_quick')"><span style="font-size:30px">⚡</span><div><b>ઝડપી બોલાવો</b><span class="small">કામ પસંદ કરો — નજીકના બધા કારીગરોને એકસાથે વિનંતી જશે</span></div></button>
-    ${coupon ? `<div class="offer" id="offerbox">${offerInner(coupon, CPS.length, (S.ci || 0) % CPS.length)}</div>` : ''}
+    <button class="quick qlite" onclick="go('c_quick')"><img class="q-rider" src="${RIDER[2]}" alt=""><span style="font-size:30px">⚡</span><div><b>ઝડપી બોલાવો</b><span class="small">કામ પસંદ કરો — નજીકના બધા કારીગરોને એકસાથે વિનંતી જશે</span></div></button>
+    ${heroOffer()}
+    ${trustStrip()}
+    ${coupon ? `<div class="offer lite spin" style="--spc:#6C5CE7" id="offerbox">${offerInner(coupon, CPS.length, (S.ci || 0) % CPS.length)}</div>` : ''}
     ${refBanner()}
     <div class="between"><h3>બધા કામ</h3><span class="tiny muted">${catList().length} પ્રકાર</span></div>
     <div class="grid" id="catgrid">${catList().map(x => `<button class="cat" data-n="${h(x.name + ' ' + x.id)}" onclick="go('c_cat',{cat:'${x.id}'})"><span class="e">${x.icon}</span>${h(x.name)}</button>`).join('')}</div>
     ${(c.favs || []).length ? `<h3>❤️ મારા મનપસંદ કારીગરો</h3><div class="stack">${(c.favs || []).map(id => Store.get('karigars', id)).filter(k => k && k.status === 'approved').map(k => kCard(k, c.area)).join('')}</div>` : ''}
     ${top.length ? `<h3>તમારી નજીકના ઓનલાઇન કારીગરો</h3><div class="stack">${top.map(k => kCard(k, c.area)).join('')}</div>` : ''}
+    ${homeFooter()}
   </div>` + cNav();
 };
 function filterCats(q){ q = q.trim().toLowerCase(); document.querySelectorAll('#catgrid .cat').forEach(el => el.hidden = !!q && !el.dataset.n.toLowerCase().includes(q)); }
@@ -1480,7 +1561,7 @@ VIEWS.c_track = p => {
       <button class="btn block" onclick="go('c_book',{cat:'${b.cat}',kid:'${b.karigarId}',mode:'direct'})">આ જ કારીગરને ફરી બોલાવો</button></div>`
     : `<div class="card"><h3>${k ? h(k.name) : 'કારીગર'} નું કામ કેવું લાગ્યું?</h3><div class="stars" id="rate_stars">${[1,2,3,4,5].map(n => `<button aria-label="${n} સ્ટાર" onclick="pickStar(${n})">★</button>`).join('')}</div>
       <textarea id="rv_text" placeholder="બે શબ્દ લખો (વૈકલ્પિક)"></textarea><button class="btn pri block" onclick="submitRating('${b.id}')">રેટિંગ મોકલો</button></div>`;
-  if(b.status === 'done' && refOn('customer')) body += `<button class="rf-ban" onclick="go('c_refer')"><span style="font-size:34px">🎁</span><span class="grow"><b>કામ ગમ્યું? મિત્રને કહો!</b><span class="small">મિત્રને ₹${Store.settings().refFriend} છૂટ, તમને ₹${Store.settings().refMe}${me() && me().refCode ? ' — કોડ ' + h(me().refCode) : ''}</span></span><span style="font-size:22px">›</span></button>`;
+  if(b.status === 'done' && refOn('customer')) body += `<button class="rf-ban lite spin" style="--spc:#16A05C" onclick="go('c_refer')"><span style="font-size:34px">🎁</span><span class="grow"><b>કામ ગમ્યું? મિત્રને કહો!</b><span class="small">મિત્રને ₹${Store.settings().refFriend} છૂટ, તમને ₹${Store.settings().refMe}${me() && me().refCode ? ' — કોડ ' + h(me().refCode) : ''}</span></span><span style="font-size:22px">›</span></button>`;
   if(b.status === 'cancelled') body += `<div class="banner bad">✕ <div><b>બુકિંગ રદ થયું</b>${h(b.cancelReason || '')}</div></div><button class="btn pri block" onclick="go('c_book',{cat:'${b.cat}',mode:'broadcast'})">ફરી બુક કરો</button>`;
   if(k && ['accepted','onway','arrived','working','billed'].includes(b.status)) body += chatCard(b, 'customer');
   body += `<div class="card"><h3>બુકિંગ વિગત</h3><div class="bill small"><span class="muted">કામનો પ્રકાર</span><span>${h(catName(b.cat))}</span><span class="muted">તકલીફ</span><span>${h(b.problem)}</span>
@@ -1550,13 +1631,17 @@ VIEWS.c_refer = () => { const c = me(), st = Store.settings(); if(!c) return VIE
   <div class="card"><h3>તમારા મિત્રો (${L.length})</h3>${L.map(r => `<div class="rf-row"><div><b>${h(r.friendName || 'મિત્ર')}</b><div class="tiny muted">જોડાયા ${dt(r.ts)}</div></div>${r.status === 'rewarded' ? `<span class="pill ok">✔ ${rs(r.amt || 0)} મળ્યા</span>` : '<span class="pill warn">⏳ પહેલું કામ બાકી</span>'}</div>`).join('') || '<p class="small muted">હજુ કોઈ મિત્ર જોડાયા નથી — ઉપરથી કોડ મોકલો.</p>'}</div>
   <p class="tiny muted" style="text-align:center">નિયમ: એક મોબાઇલ પર એક જ વાર. બેલેન્સ રોકડમાં નહીં, ફક્ત કામના બિલમાં છૂટ (એક બુકિંગમાં વધુમાં વધુ ₹${st.refMax}). ઓછામાં ઓછું બિલ ₹${st.refMin}.</p></div>` + cNav(); };
 VIEWS.c_profile = () => { const c = me(); const st = Store.settings();
+  const open = !!S.pfOpen;
   return topbar('પ્રોફાઇલ') + `<div class="wrap"><div class="card">
+    <button class="pfhead" onclick="S.pfOpen=!S.pfOpen;render()" aria-expanded="${open}">${c.photo ? `<img src="${h(c.photo)}" alt="">` : `<span class="pfav">${h((c.name || '?').trim().charAt(0))}</span>`}
+      <span class="grow"><b>${h(c.name)}</b><span class="small muted">📞 ${h(c.mobile)}</span><span class="tiny muted">📍 ${h(areaName(c.area))}</span></span><span class="pfchev">${open ? '▲' : '✏️ ▼'}</span></button>
+    <div class="pfbody" ${open ? '' : 'hidden'}>
     <label class="f">ફોટો <span class="h">વૈકલ્પિક — કાપીને ગોઠવી શકાય</span><input type="file" id="cp_photo" accept="image/*" onchange="readPhoto(this)"></label><div id="cp_prev">${c.photo ? `<img src="${c.photo}" style="width:72px;height:72px;border-radius:16px;object-fit:cover" alt="">` : ''}</div>
     <label class="f">નામ<input id="cp_name" value="${h(c.name)}"></label>
     <label class="f">મોબાઇલ<input value="${h(c.mobile)}" disabled></label>
     ${areaField('cp_area', c.area, c.areaGeo)}
     <label class="f">સરનામું<textarea id="cp_addr">${h(c.address || '')}</textarea></label>
-    <button class="btn pri block" onclick="saveCProfile()">સેવ કરો</button></div>${refBanner()}${pushCard()}
+    <button class="btn pri block" onclick="saveCProfile()">સેવ કરો</button></div></div>${refBanner()}
     ${addrCard(c)}
     ${helpCard()}
     <button class="btn bad block" onclick="logout()">લૉગ આઉટ</button>
@@ -1691,7 +1776,7 @@ async function karRegister(){
   const st = Store.settings(); const kid = FBM ? S.pendingAuth.uid : uid('k_');
   if(FBM){ toast('નોંધણી થઈ રહી છે… ફોટા અપલોડ થાય છે'); try{ await Store.fs.doc('users/' + kid).set({role:'karigar', mobile:mob, email:S.pendingAuth.email || '', createdAt:Date.now()}); }catch(e){ return toast(authErr(e)); }
  }
-  const k = {id:kid, name:v('kr_name'), mobile:mob, pin, cat, cats, agentFor, ...(rf ? {referredBy:rf.uid, refBy:rf.code} : {}), skills:v('kr_skills'), exp:+v('kr_exp') || 0, visit:+v('kr_visit') || catVisit(cat),
+  const k = {id:kid, name:v('kr_name'), mobile:mob, email:(FBM && S.pendingAuth.email) || '', pin, cat, cats, agentFor, ...(rf ? {referredBy:rf.uid, refBy:rf.code} : {}), skills:v('kr_skills'), exp:+v('kr_exp') || 0, visit:+v('kr_visit') || catVisit(cat),
     area:areaVal('kr_area'), areaGeo:areaGeoVal('kr_area', 2), about:v('kr_about'), photo:photoData || '', status:st.autoApprove ? 'approved' : 'pending', online:false, ratingSum:0, ratingCount:0, jobs:0,
     earnings:0, commissionDue:0, commissionPaid:0, createdAt:Date.now(), aadhaar4:kyc.last4, aadhaarMasked:kyc.masked, kycDocs:kyc.docs, upi:v('kr_upi'), policeNo:kyc.policeNo, kycOk:false, consentAt:Date.now()};
   Store.put('karigars', k); try{ await Store.saveKyc(k.id, kyc.priv); }catch(e){} photoData = ''; S.cp_kr = null; S.cpo_kr = S.cpa_kr = '';
@@ -1746,8 +1831,8 @@ function rejectReq(id){
 VIEWS.k_job = p => {
   const b = Store.get('bookings', p.id), k = me(); if(!b || b.karigarId !== k.id) return topbar('કામ') + '<div class="wrap"><div class="banner bad">આ કામ તમારી પાસે નથી.</div></div>' + kNav();
   const si = STEPS.indexOf(b.status); let act = '';
-  if(b.status === 'accepted') act = `<button class="btn pri block" style="padding:14px" onclick="kStep('${b.id}','onway')">🛵 હું નીકળી ગયો</button>`;
-  if(b.status === 'onway') act = `<button class="btn pri block" style="padding:14px" onclick="kStep('${b.id}','arrived')">📍 હું પહોંચી ગયો</button>`;
+  if(b.status === 'accepted') act = `<div class="kfab-sp"></div><div class="kfab"><button class="kfab-b spin" style="--spc:#F5B301" onclick="kStep('${b.id}','onway')">🛵 હું નીકળી ગયો</button></div>`;
+  if(b.status === 'onway') act = `<div class="kfab-sp"></div><div class="kfab"><button class="kfab-b spin" style="--spc:#F5B301" onclick="kStep('${b.id}','arrived')">📍 હું પહોંચી ગયો</button></div>`;
   if(b.status === 'arrived') act = `<div class="card"><h3>ગ્રાહક પાસેથી OTP લો</h3><input id="kj_otp" inputmode="numeric" maxlength="4" placeholder="4 આંકડાનો OTP" style="font-size:22px;letter-spacing:8px;text-align:center"><button class="btn pri block" onclick="verifyOtp('${b.id}')">OTP ચકાસો અને કામ શરૂ કરો</button></div>`;
   if(b.status === 'working') act = `<div class="card"><h3>કામ પૂરું થયું? બિલ બનાવો</h3>
     <div class="two"><label class="f">મજૂરી / સર્વિસ ₹<input id="kj_lab" inputmode="numeric" value="${k.visit}"></label><label class="f">પાર્ટ્સ / સામાન ₹<input id="kj_parts" inputmode="numeric" value="0"></label></div>
@@ -1822,8 +1907,10 @@ function payComm(){ const k = me(); const amt = +$('#kw_amt').value || 0; if(amt
   Store.put('payments', {id:uid('p_'), karigarId:k.id, amount:amt, ref:$('#kw_ref').value.trim(), status:'pending', ts:Date.now()}); toast('એડમિનને જાણ કરી'); }
 
 VIEWS.k_profile = () => { const k = me();
-  return topbar('મારી પ્રોફાઇલ') + `<div class="wrap"><div class="card"><div class="row">${avatar(k, 'lg')}<div class="grow"><h2>${h(k.name)}</h2><div class="small muted">${h(k.mobile)} · ${h(kCatTxt(k))}</div>
-    <span class="pill ${k.status === 'approved' ? 'ok' : k.status === 'pending' ? 'warn' : 'bad'}">${k.status === 'approved' ? '✔ મંજૂર' : k.status === 'pending' ? 'મંજૂરી બાકી' : 'બંધ'}</span></div></div>
+  const open = !!S.pfOpen;
+  return topbar('મારી પ્રોફાઇલ') + `<div class="wrap"><div class="card"><button class="pfhead" onclick="S.pfOpen=!S.pfOpen;render()" aria-expanded="${open}">${avatar(k, 'lg')}<span class="grow"><b>${h(k.name)}</b><span class="small muted">🛠️ ${h(kCatTxt(k))}</span><span class="small muted">📞 ${h(k.mobile)}</span>
+    <span class="pill ${k.status === 'approved' ? 'ok' : k.status === 'pending' ? 'warn' : 'bad'}" style="align-self:flex-start">${k.status === 'approved' ? '✔ મંજૂર' : k.status === 'pending' ? 'મંજૂરી બાકી' : 'બંધ'}</span></span><span class="pfchev">${open ? '▲' : '✏️ ▼'}</span></button>
+    <div class="pfbody" ${open ? '' : 'hidden'}>
     <label class="f">ફોટો બદલો<input type="file" id="kp_photo" accept="image/*" onchange="readPhoto(this)"></label><div id="kp_prev"></div>
     <label class="f">કામનો પ્રકાર <span class="h">એક થી વધુ પસંદ કરો / બદલો</span></label>${(ps => catPicker('kp', S.cp_kp || ps.sel, ps.other, k.agentFor || ''))(kPickSel(k))}
     <label class="f">કયા કામ કરો છો<input id="kp_skills" value="${h(k.skills || '')}"></label>
@@ -1831,7 +1918,7 @@ VIEWS.k_profile = () => { const k = me();
     ${areaField('kp_area', k.area, k.areaGeo)}
     <label class="f">તમારા વિશે<textarea id="kp_about">${h(k.about || '')}</textarea></label>
     ${upiOn() ? `<label class="f">UPI ID <span class="h">ગ્રાહક પાસેથી UPI થી પૈસા મેળવવા</span><input id="kp_upi" value="${h(k.upi || '')}" placeholder="name@upi"></label>` : ''}
-    <button class="btn pri block" onclick="saveKProfile()">સેવ કરો</button></div>${kRefCard(k)}${pushCard()}
+    <button class="btn pri block" onclick="saveKProfile()">સેવ કરો</button></div></div>${kRefCard(k)}
     ${!(k.kycDocs && k.kycDocs.aad) ? `<div class="card" style="border:2px solid var(--warn)"><h3>⚠️ આધાર અપલોડ બાકી</h3><p class="small muted">નવા નિયમ મુજબ આધાર નંબર અને ફોટો ફરજિયાત છે. ફક્ત એડમિન જોઈ શકે.</p>${kycFields('kp')}<button class="btn pri block" onclick="kycUpdate()">KYC મોકલો</button></div>` : ''}
     <div class="card"><h3>ચકાસણી (KYC)</h3><div class="meta"><span>આધાર: ${k.aadhaarMasked ? h(k.aadhaarMasked) : k.aadhaar4 ? 'XXXX XXXX ' + h(k.aadhaar4) : 'બાકી'}</span>${k.kycDocs && k.kycDocs.aad ? '<span class="pill ok">📎 આધાર ફોટો મોકલ્યો</span>' : ''}${k.kycDocs && k.kycDocs.pol ? '<span class="pill ok">📎 પોલીસ સર્ટિ. મોકલ્યું</span>' : ''}<span>પોલીસ વેરિફિકેશન: ${k.policeNo ? h(k.policeNo) : 'બાકી'}</span>${policeOk(k) ? '<span class="pill ok">🛡️ ચકાસાયેલ</span>' : '<span class="pill warn">એડમિન ચકાસણી બાકી</span>'}</div>
       <p class="tiny muted">પોલીસ વેરિફિકેશન નજીકના પોલીસ સ્ટેશન / Gujarat Police Citizen First એપમાંથી કઢાવી એડમિનને બતાવો.</p></div>
@@ -1850,7 +1937,7 @@ function kRefCard(k){ if(!refOn('karigar') || !k || k.status !== 'approved') ret
     <div class="tiny muted" style="margin-top:6px">જોડાયેલા: ${L.length}${L.length ? ' (' + L.map(r => h(r.friendName || '') + (r.status === 'rewarded' ? ' ✔' : ' ⏳')).join(', ') + ')' : ''} · કમીશન માફી મળી: ${rs(got)}</div></div>`; }
 async function saveKProfile(){ const k = me(); const CC = catCollect('kp'); if(!CC) return;
   const p = {cat:CC.cat, cats:CC.cats, agentFor:CC.agentFor, skills:$('#kp_skills').value.trim(), visit:+$('#kp_visit').value || k.visit, exp:+$('#kp_exp').value || 0, area:areaVal('kp_area') || k.area, areaGeo:areaGeoVal('kp_area', 2), about:$('#kp_about').value.trim()}; if($('#kp_upi')) p.upi = $('#kp_upi').value.trim();
-  if(photoData){ p.photo = photoData; photoData = ''; } Store.patch('karigars', k.id, p); S.cp_kp = null; S.cpo_kp = S.cpa_kp = ''; FB.reqCat = null; if(Store.mode === 'firebase') FB.watchReq(); toast('સેવ થયું'); render(); }
+  if(photoData){ p.photo = photoData; photoData = ''; } Store.patch('karigars', k.id, p); S.cp_kp = null; S.cpo_kp = S.cpa_kp = ''; FB.reqCat = null; if(Store.mode === 'firebase') FB.watchReq(); S.pfOpen = false; toast('સેવ થયું'); render(); }
 
 /* ================= LOGGING: IP, device, location, audit ================= */
 const DID = (() => { let d = LS.get('karigo_did', null); if(!d){ d = 'D' + Math.random().toString(36).slice(2, 10).toUpperCase(); LS.set('karigo_did', d); } return d; })();
