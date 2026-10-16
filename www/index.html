@@ -219,6 +219,10 @@ textarea{min-height:76px;resize:vertical}
 .kfab{position:fixed;left:0;right:0;bottom:calc(var(--sab) + 66px);z-index:19;padding:0 14px;max-width:520px;margin:0 auto}
 .kfab-b{width:100%;border:0;font:inherit;font-weight:800;font-size:18px;padding:16px;border-radius:16px;color:#3A2A00;cursor:pointer;background:#FFF4CC;background:color-mix(in srgb,var(--accent) 22%,var(--surface));box-shadow:0 6px 22px rgba(245,179,1,.45),0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
 .kfab-b.spin::before{padding:3px}
+.kfab-b.ok{color:#0B5A31;background:#E3F7EC;background:color-mix(in srgb,#16A05C 16%,var(--surface));box-shadow:0 6px 22px rgba(22,160,92,.35),0 0 0 2px color-mix(in srgb,#16A05C 45%,transparent)}
+.kfab-p{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:18px;background:#FFF8DD;background:color-mix(in srgb,var(--accent) 14%,var(--surface));box-shadow:0 8px 26px rgba(0,0,0,.18),0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
+.kfab-p h3{margin:0;font-size:16px}.kfab-p .f{margin:0}.kfab-p .two{gap:8px}.kfab-p input{background:var(--surface)}.kfab-p.spin::before{padding:3px}
+.kfab-p p{margin:0}
 .rf-ban{display:flex;gap:12px;align-items:center;border-radius:18px;padding:14px 16px;background:linear-gradient(135deg,#0F7A45,#16A05C);color:#fff;border:0;width:100%;text-align:left;font:inherit;cursor:pointer}
 .rf-ban b{font-family:var(--f-display);font-size:17px;display:block}.rf-ban .small{opacity:.92;display:block}
 .rf-hero{text-align:center;padding:22px 16px;border-radius:20px;background:linear-gradient(160deg,#1E2A78,#2E3DA8);color:#fff}.rf-hero h2{color:#fff;margin:6px 0}
@@ -1833,14 +1837,14 @@ VIEWS.k_job = p => {
   const si = STEPS.indexOf(b.status); let act = '';
   if(b.status === 'accepted') act = `<div class="kfab-sp"></div><div class="kfab"><button class="kfab-b spin" style="--spc:#F5B301" onclick="kStep('${b.id}','onway')">🛵 હું નીકળી ગયો</button></div>`;
   if(b.status === 'onway') act = `<div class="kfab-sp"></div><div class="kfab"><button class="kfab-b spin" style="--spc:#F5B301" onclick="kStep('${b.id}','arrived')">📍 હું પહોંચી ગયો</button></div>`;
-  if(b.status === 'arrived') act = `<div class="card"><h3>ગ્રાહક પાસેથી OTP લો</h3><input id="kj_otp" inputmode="numeric" maxlength="4" placeholder="4 આંકડાનો OTP" style="font-size:22px;letter-spacing:8px;text-align:center"><button class="btn pri block" onclick="verifyOtp('${b.id}')">OTP ચકાસો અને કામ શરૂ કરો</button></div>`;
-  if(b.status === 'working') act = `<div class="card"><h3>કામ પૂરું થયું? બિલ બનાવો</h3>
+  if(b.status === 'arrived') act = `<div class="kfab-sp" style="height:178px"></div><div class="kfab"><div class="kfab-p spin" style="--spc:#F5B301"><h3>🔐 ગ્રાહક પાસેથી OTP લો</h3><input id="kj_otp" inputmode="numeric" maxlength="4" placeholder="4 આંકડાનો OTP" style="font-size:22px;letter-spacing:8px;text-align:center"><button class="btn pri block" onclick="verifyOtp('${b.id}')">✔ OTP ચકાસો અને કામ શરૂ કરો</button></div></div>`;
+  if(b.status === 'working') act = `<div class="kfab-sp" style="height:${b.coupon ? 300 : 262}px"></div><div class="kfab"><div class="kfab-p spin" style="--spc:#F5B301"><h3>🧾 કામ પૂરું થયું? બિલ બનાવો</h3>
     <div class="two"><label class="f">મજૂરી / સર્વિસ ₹<input id="kj_lab" inputmode="numeric" value="${k.visit}"></label><label class="f">પાર્ટ્સ / સામાન ₹<input id="kj_parts" inputmode="numeric" value="0"></label></div>
     <label class="f">નોંધ <span class="h">દા.ત. ગેસ ભર્યો, કેપેસિટર બદલ્યું</span><input id="kj_note"></label>
     ${b.coupon ? `<p class="small" style="color:var(--ok)">ગ્રાહકનો કૂપન ${h(b.coupon.code)}: ${rs(b.coupon.amount)} ઓછા લેવાના — આ રકમ એપ તમને સરભર કરી આપશે.</p>` : ''}
-    <button class="btn pri block" onclick="makeBill('${b.id}')">બિલ ગ્રાહકને મોકલો</button></div>`;
+    <button class="btn pri block" onclick="makeBill('${b.id}')">📤 બિલ ગ્રાહકને મોકલો</button></div></div>`;
   if(b.status === 'billed') act = billCard(b, 'karigar') + (b.custPaid ? '<div class="banner ok">✔ <div><b>ગ્રાહકે ચૂકવણી કરી હોવાનું જણાવ્યું</b>રોકડા મળ્યા હોય તો કન્ફર્મ કરો.</div></div>' : '') +
-    `<button class="btn ok block" style="padding:14px" onclick="cashReceived('${b.id}')">💵 ${rs(b.bill.payable)} રોકડા મળી ગયા — કામ પૂરું</button>`;
+    `<div class="kfab-sp"></div><div class="kfab"><button class="kfab-b ok spin" style="--spc:#16A05C" onclick="cashReceived('${b.id}')">💵 ${rs(b.bill.payable)} રોકડા મળી ગયા — કામ પૂરું</button></div>`;
   if(b.status === 'done') act = billCard(b, 'karigar') + billBtns(b, 'karigar') + `<div class="banner ok">✔ <div><b>કામ પૂરું</b>${b.rating ? 'ગ્રાહકનું રેટિંગ: ' + '★'.repeat(b.rating) + (b.review ? ' — ' + h(b.review) : '') : 'ગ્રાહકના રેટિંગની રાહ'}</div></div>` + (b.kRating ? `<p class="small muted">તમે ગ્રાહકને ${'★'.repeat(b.kRating)} આપ્યા</p>` : kRateCard(b));
   if(b.status === 'cancelled') act = `<div class="banner bad">✕ <div><b>બુકિંગ રદ થયું</b>${h(b.cancelReason || '')}</div></div>`;
   return topbar('કામ · ' + b.custName) + `<div class="wrap">
