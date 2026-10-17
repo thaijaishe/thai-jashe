@@ -289,6 +289,9 @@ textarea{min-height:76px;resize:vertical}
 .stats b{display:block;font-family:var(--f-display);font-size:20px;font-variant-numeric:tabular-nums}
 .stats span{font-size:12px;color:var(--muted)}
 .stats.two-col{grid-template-columns:repeat(2,1fr)}
+.stats.clk > div{cursor:pointer;position:relative;transition:transform .12s,box-shadow .12s}.stats.clk > div:hover,.stats.clk > div:focus-visible{transform:translateY(-2px);box-shadow:0 0 0 2px var(--brand),var(--shadow);outline:0}
+.stats .go{position:absolute;right:10px;top:8px;font-style:normal;color:var(--muted);font-size:18px}
+.lbar.clk{cursor:pointer;border-radius:8px}.lbar.clk:hover,.lbar.clk:focus-visible{background:var(--surface2);outline:0}
 
 /* overlay */
 #overlay{position:fixed;inset:0;z-index:50;background:rgba(10,12,25,.55);display:flex;align-items:flex-end;justify-content:center;padding:calc(16px + var(--sat)) 16px 16px}
@@ -2099,10 +2102,13 @@ VIEWS.a_home = () => {
     <div class="card"><h3>🔎 બધે શોધો</h3><div class="search"><span>🔍</span><input id="a_q" value="${h(S.aq || '')}" placeholder="નામ, મોબાઇલ, સરનામું, બુકિંગ નંબર, IP, આધાર છેલ્લા 4…" oninput="aSearch(this.value)" autocomplete="off"></div><div id="a_qres">${aSearchRes(S.aq || '')}</div></div>
     ${catsCard()}
     ${rangeBar()}
-    <div class="stats"><div><b>${B.length}</b><span>બુકિંગ (${h(rangeLabel())})</span></div><div><b>${done.length}</b><span>પૂરા થયેલ</span></div><div><b>${BA.filter(b => ACTIVE.includes(b.status)).length}</b><span>હાલ ચાલુ</span></div>
-      <div><b>${rs(gmv)}</b><span>કુલ ધંધો</span></div>${commOn() || comm || due ? `<div><b style="color:var(--ok)">${rs(comm)}</b><span>કમાયેલ કમીશન</span></div><div><b style="color:var(--warn)">${rs(due)}</b><span>બાકી કમીશન</span></div>` : `<div><b>${Store.all('tickets').length}</b><span>કુલ ફરિયાદ</span></div><div><b>0%</b><span>કમીશન (બંધ)</span></div>`}
-      <div><b>${K.filter(k => k.status === 'approved').length}</b><span>મંજૂર કારીગર</span></div><div><b>${K.filter(k => k.online && k.status === 'approved').length}</b><span>હાલ ઓનલાઇન</span></div><div><b>${Store.all('customers').length}</b><span>ગ્રાહકો</span></div></div>
-    <div class="card"><h3>કામ પ્રમાણે બુકિંગ</h3>${cats.length ? cats.map(([c, n]) => `<div class="lbar"><span>${catIcon(c)} ${h(catName(c))}</span><span class="b"><i style="width:${n / mx * 100}%"></i></span><b class="num">${n}</b></div>`).join('') : '<p class="small muted">હજુ બુકિંગ નથી.</p>'}</div>
+    <div class="stats clk">${[[B.length, 'બુકિંગ (' + h(rangeLabel()) + ')', "go('a_bookings',{f:'all'})"], [done.length, 'પૂરા થયેલ', "go('a_bookings',{f:'done'})"], [BA.filter(b => ACTIVE.includes(b.status)).length, 'હાલ ચાલુ', "go('a_bookings',{f:'active'})"],
+      [rs(gmv), 'કુલ ધંધો', "go('a_bookings',{f:'done',money:1})"],
+      ...(commOn() || comm || due ? [[rs(comm), 'કમાયેલ કમીશન', "go('a_bookings',{f:'done',money:1})", 'var(--ok)'], [rs(due), 'બાકી કમીશન', "go('a_payments')", 'var(--warn)']]
+        : [[Store.all('tickets').length, 'કુલ ફરિયાદ', "tab('a_tickets')"], ['0%', 'કમીશન (બંધ)', "go('a_settings')"]]),
+      [K.filter(k => k.status === 'approved').length, 'મંજૂર કારીગર', "go('a_karigars',{f:'approved'})"], [K.filter(k => k.online && k.status === 'approved').length, 'હાલ ઓનલાઇન', "go('a_karigars',{f:'online'})"], [Store.all('customers').length, 'ગ્રાહકો', "go('a_customers')"]]
+      .map(([v, l, on, col]) => `<div role="button" tabindex="0" onclick="${on}" onkeydown="if(event.key==='Enter')this.click()" title="વિગત જોવા ટેપ કરો"><b${col ? ` style="color:${col}"` : ''}>${v}</b><span>${l}</span><i class="go">›</i></div>`).join('')}</div>
+    <div class="card"><h3>કામ પ્રમાણે બુકિંગ <span class="tiny muted" style="font-weight:400">— કામ પર ટેપ કરો</span></h3>${cats.length ? cats.map(([c, n]) => `<div class="lbar clk" role="button" tabindex="0" title="આ કામનાં બુકિંગ જુઓ" onclick="go('a_bookings',{f:'all',cat:'${h(c)}'})"><span>${catIcon(c)} ${h(catName(c))}</span><span class="b"><i style="width:${n / mx * 100}%"></i></span><b class="num">${n}</b></div>`).join('') : '<p class="small muted">હજુ બુકિંગ નથી.</p>'}</div>
     <div class="menu">${[['a_export','📑','ડેટા રિપોર્ટ (PDF / Excel)'],['a_map','🗺️','લાઇવ નકશો'],['a_customers','👥','ગ્રાહકો'],['a_reports','📈','રિપોર્ટ / CSV']].map(([v, i, l]) => `<button onclick="go('${v}')"><span class="e">${i}</span><b>${l}</b></button>`).join('')}</div>
     <button class="btn bad block" onclick="logout()">લૉગ આઉટ</button></div>` + aNav();
 };
@@ -2121,10 +2127,11 @@ VIEWS.a_karigars = p => { if(!isAdmin()) return VIEWS.welcome(); const f = p.f |
     : '<div class="card" style="text-align:center;color:var(--muted)">આ યાદી ખાલી છે.</div>'}</div>${PG.bar}</div>` + aNav(); };
 VIEWS.a_bookings = p => { if(!isAdmin()) return VIEWS.welcome(); const f = p.f || 'all';
   const qOn = qn(S.q.ab || '').trim().length >= 2;
-  const B = Store.all('bookings').filter(b => (f === 'active' || qOn || inRange(b.createdAt)) && (f === 'all' || (f === 'active' ? ACTIVE.includes(b.status) : b.status === f)))
+  const B = Store.all('bookings').filter(b => (f === 'active' || qOn || inRange(b.createdAt)) && (f === 'all' || (f === 'active' ? ACTIVE.includes(b.status) : b.status === f)) && (!p.cat || b.cat === p.cat))
     .filter(b => qMatch('ab', bSearchTxt(b))).sort((a, b) => b.createdAt - a.createdAt);
   const PG = pageList('ab' + f, B);
-  return topbar('બધા બુકિંગ') + `<div class="wrap">${f === 'active' ? '' : rangeBar()}${qBox('ab', 'બુકિંગ નં., ગ્રાહક, કારીગર, મોબાઇલ, સરનામું, તકલીફ, સ્થિતિ… કંઈ પણ')}${qOn && f !== 'active' ? '<p class="tiny muted">🔎 શોધ બધી તારીખમાં થાય છે (તારીખ ગાળો શોધ વખતે લાગુ નથી)</p>' : ''}<div class="chips">${[['all','બધા'],['active','ચાલુ'],['done','પૂરા'],['cancelled','રદ']].map(([v, l]) => `<button class="chipb ${f === v ? 'on' : ''}" onclick="S.p.f='${v}';render()">${l}</button>`).join('')}</div>
+  return topbar('બધા બુકિંગ') + `<div class="wrap">${f === 'active' ? '' : rangeBar()}${qBox('ab', 'બુકિંગ નં., ગ્રાહક, કારીગર, મોબાઇલ, સરનામું, તકલીફ, સ્થિતિ… કંઈ પણ')}${qOn && f !== 'active' ? '<p class="tiny muted">🔎 શોધ બધી તારીખમાં થાય છે (તારીખ ગાળો શોધ વખતે લાગુ નથી)</p>' : ''}${p.cat ? `<div class="chips"><button class="chipb on" onclick="S.p.cat='';render()">${catIcon(p.cat)} ${h(catName(p.cat))} ✕</button></div>` : ''}
+    ${(() => { const D = B.filter(b => b.status === 'done'), g = D.reduce((s, b) => s + (b.bill ? b.bill.gross : 0), 0), cm = D.reduce((s, b) => s + (b.commission || 0), 0); return `<div class="stats"><div><b>${B.length}</b><span>બુકિંગ</span></div><div><b>${rs(g)}</b><span>ધંધો (પૂરાં ${D.length})</span></div><div><b>${rs(cm)}</b><span>કમીશન</span></div></div>`; })()}<div class="chips">${[['all','બધા'],['active','ચાલુ'],['done','પૂરા'],['cancelled','રદ']].map(([v, l]) => `<button class="chipb ${f === v ? 'on' : ''}" onclick="S.p.f='${v}';render()">${l}</button>`).join('')}</div>
     ${PG.items.map(b => { const k = Store.get('karigars', b.karigarId); return `<div class="card" style="cursor:pointer" onclick="go('a_booking',{id:'${b.id}'})"><div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
       <div class="meta"><span>ગ્રાહક: ${h(b.custName)}</span><span>કારીગર: ${k ? h(k.name) : '—'}</span><span>${h(areaName(b.area))}</span><span>${ago(b.createdAt)}</span></div>${qHint('ab', bSearchTxt(b))}
       ${b.bill ? `<div class="meta"><span>બિલ ${rs(b.bill.gross)}</span>${b.bill.discount ? `<span>છૂટ ${rs(b.bill.discount)}</span>` : ''}${b.commission != null ? `<b style="color:var(--ok)">કમીશન ${rs(b.commission)}</b>` : ''}${b.rating ? `<span class="star">${'★'.repeat(b.rating)}</span>` : ''}</div>` : ''}</div>`; }).join('') || '<div class="card" style="text-align:center;color:var(--muted)">આ ગાળામાં કોઈ બુકિંગ નથી.</div>'}${PG.bar}</div>` + aNav(); };
