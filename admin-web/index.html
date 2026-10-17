@@ -4454,9 +4454,26 @@ VIEWS.a_cats = () => { if(!isAdmin()) return VIEWS.welcome(); const KC = catKCou
     <p class="tiny muted">ગ્રાહકની "બધા કામ" યાદીમાં આ જ ક્રમે દેખાય છે. ✏️ = નામ, ઇમોજી, ફોટો અને વિઝિટ ચાર્જ બદલો · 🗑️ = ગ્રાહકની યાદીમાંથી હટાવો (જૂનાં બુકિંગ સલામત રહે, ગમે ત્યારે પાછું લાવી શકો).</p>
     <h3>ચાલુ કામ (${on.length})</h3><div class="stack" style="gap:8px">${on.map(row).join('')}</div>
     ${off.length ? `<h3>🗑️ ડિલીટ કરેલાં (${off.length})</h3><div class="stack" style="gap:8px">${off.map(row).join('')}</div>` : ''}
-    ${X.length ? `<h3>✍️ કારીગરોએ જાતે લખેલાં કામ (${X.length})</h3><div class="card"><div class="chips">${X.map(x => `<span class="pill">${h(catName(x))} · ${KC[x] || 0}</span>`).join('')}</div><p class="tiny muted">આ કામ "અન્ય કામ" ની વિનંતીમાં આવે છે. કાયમી બનાવવું હોય તો ➕ નવું કામ ઉમેરો.</p></div>` : ''}
+    ${X.length ? `<h3>✍️ કારીગરોએ જાતે લખેલાં કામ (${X.length})</h3><p class="tiny muted">"અન્ય કામ" માં કારીગરે લખેલાં કામ. ⬆️ = ગ્રાહકની યાદીમાં નવું કામ બનાવો · 🔀 = હાલના કોઈ કામમાં ભેળવો — બંનેમાં એ કારીગરો આપમેળે નવા કામમાં ખસી જશે.</p>
+      <div class="stack" style="gap:8px">${X.map(x => { const n = xKars(x).length; return `<div class="card crow"><span class="e">✍️</span><div class="grow"><b>${h(catName(x))}</b><div class="tiny muted">${n} કારીગર: ${xKars(x).slice(0, 3).map(k => h(k.name)).join(', ')}${n > 3 ? '…' : ''}</div></div>
+        <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:190px"><button class="btn sm ok" title="ચાલુ કામમાં ઉમેરો" onclick="xPromote('${h(x)}')">⬆️ ચાલુ કામમાં</button><button class="btn sm" title="હાલના કામમાં ભેળવો" onclick="xMerge('${h(x)}')">🔀</button><button class="btn sm" title="નામ બદલો" onclick="xRename('${h(x)}')">✏️</button><button class="btn sm bad" title="હટાવો" onclick="xDel('${h(x)}')">🗑️</button></div></div>`; }).join('')}</div>` : ''}
   </div>` + aNav(); };
 let CED = null;
+/* કારીગરે લખેલું કામ (x:નામ) → નવું કામ / હાલનું કામ / નવું નામ / હટાવો — એ કારીગરોના cats આપમેળે બદલાય */
+const xKars = x => Store.all('karigars').filter(k => kCats(k).includes(x));
+function xRepl(x, to){ let n = 0; xKars(x).forEach(k => { let cs = [...new Set(kCats(k).map(c => c === x ? to : c).filter(Boolean))]; if(!cs.length) cs = ['other']; Store.patch('karigars', k.id, {cats:cs, cat:cs[0]}); n++; }); return n; }
+function xPromote(x){ catEdit(''); CED.from = x; $('#ced_n').value = catName(x); const t = $('#modal h3'); if(t) t.innerHTML = '⬆️ "' + h(catName(x)) + '" ને ચાલુ કામમાં ઉમેરો';
+  const m = $('#modal .two:last-child'); if(m) m.insertAdjacentHTML('beforebegin', `<p class="tiny" style="color:var(--ok)">✔ સેવ કરતાં ${xKars(x).length} કારીગર આપમેળે આ નવા કામમાં ખસી જશે.</p>`); }
+function xMerge(x){ modal(`<h3>🔀 "${h(catName(x))}" ને હાલના કામમાં ભેળવો</h3><p class="small muted">${xKars(x).length} કારીગર પસંદ કરેલા કામમાં ખસી જશે, અને આ લખેલું કામ યાદીમાંથી જશે.</p>
+  <label class="f">કયા કામમાં?<select id="xm_to">${CATS.filter(c => c.id !== 'other').map(c => `<option value="${c.id}">${c.icon} ${h(c.name)}</option>`).join('')}</select></label>
+  <div class="two"><button class="btn" onclick="closeModal()">રદ</button><button class="btn pri" onclick="xMergeGo('${h(x)}')">🔀 ભેળવો</button></div>`); }
+function xMergeGo(x){ const to = $('#xm_to').value; const n = xRepl(x, to); audit('🔀 લખેલું કામ ભેળવ્યું', catName(x) + ' → ' + catName(to)); closeModal(); toast(n + ' કારીગર "' + catName(to) + '" માં ખસ્યા'); render(); }
+function xRename(x){ modal(`<h3>✏️ નામ બદલો</h3><label class="f">નવું નામ<input id="xr_n" maxlength="30" value="${h(catName(x))}"></label><p class="tiny muted">${xKars(x).length} કારીગરની પ્રોફાઇલમાં નવું નામ દેખાશે.</p>
+  <div class="two"><button class="btn" onclick="closeModal()">રદ</button><button class="btn pri" onclick="xRenameGo('${h(x)}')">💾 સેવ</button></div>`); }
+function xRenameGo(x){ const n = normWork($('#xr_n').value); if(!n) return toast('નામ લખો'); const ex = CATS.find(c => c.name.trim() === n);
+  if(ex && !confirm(`"${n}" નામનું કામ યાદીમાં પહેલેથી છે — એમાં જ ભેળવી દઉં?`)) return; const k = xRepl(x, ex ? ex.id : 'x:' + n); audit('✏️ લખેલું કામ નવું નામ', catName(x) + ' → ' + n); closeModal(); toast(k + ' કારીગરમાં બદલાયું'); render(); }
+function xDel(x){ const n = xKars(x).length; if(!confirm(`"${catName(x)}" હટાવવું છે?\n\n${n} કારીગરની પ્રોફાઇલમાંથી આ કામ નીકળી જશે (બીજાં કામ રહેશે; બીજું કોઈ કામ ન હોય તો "અન્ય કામ" રહેશે).`)) return;
+  xRepl(x, null); audit('🗑️ લખેલું કામ હટાવ્યું', catName(x)); toast('હટાવ્યું'); render(); }
 function catEdit(id){ const c = id ? CAT[id] : null; CED = {id, img:c ? c.img || '' : '', base:c ? c.base : false};
   modal(`<h3>${c ? '✏️ કામ બદલો' : '➕ નવું કામ'}</h3>
     <div class="row" style="gap:12px;align-items:center"><span id="ced_pv" style="font-size:44px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border-radius:16px">${c ? catPic(c) : '🛠️'}</span>
@@ -4468,12 +4485,13 @@ function catEdit(id){ const c = id ? CAT[id] : null; CED = {id, img:c ? c.img ||
     <div class="two"><button class="btn" onclick="closeModal()">રદ</button><button class="btn pri" onclick="catSave()">💾 સેવ કરો</button></div>`); }
 function catPv(){ const pv = $('#ced_pv'); if(pv) pv.innerHTML = CED.img ? `<img class="cimg" style="width:56px;height:56px" src="${CED.img}" alt="">` : h(($('#ced_i') || {}).value || '🛠️'); }
 async function catPhoto(inp){ const f = inp.files && inp.files[0]; inp.value = ''; if(!f) return; if(!/^image\//.test(f.type)) return toast('ફક્ત ફોટો પસંદ કરો');
-  const keep = {n:$('#ced_n').value, i:$('#ced_i').value, v:$('#ced_v').value}; const d = await smallPic(f); if(!d) return;
-  catEdit(CED.id); CED.img = d; $('#ced_n').value = keep.n; $('#ced_i').value = keep.i; $('#ced_v').value = keep.v; catPv(); }
+  const keep = {n:$('#ced_n').value, i:$('#ced_i').value, v:$('#ced_v').value}, fr = CED.from; const d = await smallPic(f); if(!d) return;
+  if(fr) xPromote(fr); else catEdit(CED.id); CED.img = d; $('#ced_n').value = keep.n; $('#ced_i').value = keep.i; $('#ced_v').value = keep.v; catPv(); }
 function catSave(){ const n = $('#ced_n').value.replace(/[<>"'`\\]/g, '').trim().slice(0, 30), i = $('#ced_i').value.trim().slice(0, 8) || '🛠️', v = Math.max(0, Math.round(+$('#ced_v').value || 0));
   if(!n) return toast('કામનું નામ લખો'); const st = Store.settings();
   if(allCatsAdmin().some(c => c.id !== CED.id && !c.off && c.name.trim() === n)) return toast('આ નામનું કામ પહેલેથી છે');
-  if(!CED.id){ const id = 'c' + Date.now().toString(36); Store.put('settings', {...st, id:'main', catNew:[...(st.catNew || []), {id, name:n, icon:i, visit:v || 199}], catEd:{...(st.catEd || {}), ...(CED.img ? {[id]:{img:CED.img}} : {})}}); applyCatEd(true); audit('➕ નવું કામ', n); }
+  if(!CED.id){ const id = 'c' + Date.now().toString(36); Store.put('settings', {...st, id:'main', catNew:[...(st.catNew || []), {id, name:n, icon:i, visit:v || 199}], catEd:{...(st.catEd || {}), ...(CED.img ? {[id]:{img:CED.img}} : {})}}); applyCatEd(true); audit('➕ નવું કામ', n);
+    if(CED.from){ const k = xRepl(CED.from, id); audit('⬆️ લખેલું કામ ચાલુ કામમાં', catName(CED.from) + ' → ' + n + ' (' + k + ' કારીગર)'); } }
   else { const b = CAT_BASE.find(x => x.id === CED.id); if(b) catEdPut(CED.id, {n:n !== b.name ? n : '', i:i !== b.icon ? i : '', v:v !== b.visit ? v : '', img:CED.img});
     else { const nw = (st.catNew || []).map(x => x.id === CED.id ? {...x, name:n, icon:i, visit:v || 199} : x); Store.put('settings', {...st, id:'main', catNew:nw}); applyCatEd(true); catEdPut(CED.id, {n:'', i:'', v:'', img:CED.img}); }
     audit('✏️ કામ બદલ્યું', n); }
