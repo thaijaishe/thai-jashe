@@ -165,6 +165,10 @@ textarea{min-height:76px;resize:vertical}
 .cat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;background:var(--surface);font-size:12px;font-weight:600;text-align:center;line-height:1.25;box-shadow:var(--shadow)}
 .cat .e{font-size:26px;line-height:1}
 .acats{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}.acats button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;background:var(--surface2);font-size:12px;text-align:center;line-height:1.2}.acats .e{font-size:26px;line-height:1.1}
+.card.fold > h3{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;user-select:none}
+.card.fold > h3::after{content:"▾";font-size:18px;color:var(--muted);transition:transform .2s;transform:rotate(-90deg)}.card.fold.open > h3::after{transform:none}
+.card.fold:not(.open) > :not(h3){display:none!important}.card.fold:not(.open){padding-top:14px;padding-bottom:14px}
+.foldbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .cimg{width:1.15em;height:1.15em;object-fit:cover;border-radius:24%;display:inline-block;vertical-align:middle}
 .search{position:relative} .search input{padding-left:38px} .search span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
 
@@ -1364,6 +1368,15 @@ function deleteAccount(){
 function logout(){ if(S.session && S.session.role === 'karigar'){ const k = me(); if(k) Store.patch('karigars', k.id, {online:false}); } Ring.stop();
   if(Store.mode === 'firebase') return doLogout().then(() => home()); setSession(null); home(); }
 
+/* એડમિન સેટિંગ: દરેક ખાનું શીર્ષક પર ટેપ કરતાં ખૂલે/બંધ થાય (શરૂઆતમાં બધાં બંધ) */
+const FOLD_VIEWS = ['a_settings'];
+function foldCards(){ if(!FOLD_VIEWS.includes(S.view)) return; S.fold = S.fold || {}; const W = document.querySelector('#app .wrap'); if(!W) return;
+  const cards = [...W.querySelectorAll(':scope > .card')].filter(c => c.firstElementChild && c.firstElementChild.tagName === 'H3');
+  cards.forEach(c => { const h = c.firstElementChild, k = h.textContent.trim().slice(0, 40); c.classList.add('fold'); c.classList.toggle('open', !!S.fold[k]);
+    h.setAttribute('role', 'button'); h.tabIndex = 0; h.onclick = () => { S.fold[k] = !S.fold[k]; c.classList.toggle('open', !!S.fold[k]); };
+    h.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); h.onclick(); } }; });
+  if(cards.length > 1 && !W.querySelector('.foldbar')){ W.insertAdjacentHTML('afterbegin', `<div class="foldbar"><span class="small muted">ખાનાના નામ પર ટેપ કરો એટલે ખૂલશે</span><span><button class="btn sm" onclick="foldAll(1)">▾ બધાં ખોલો</button> <button class="btn sm" onclick="foldAll(0)">▸ બધાં બંધ</button></span></div>`); } }
+function foldAll(on){ document.querySelectorAll('#app .wrap > .card.fold').forEach(c => { const k = c.firstElementChild.textContent.trim().slice(0, 40); S.fold[k] = !!on; c.classList.toggle('open', !!on); }); }
 function render(){
   try{ applyCatEd(); }catch(e){ console.warn('cat', e); }
   const app = $('#app'); const key = S.view + JSON.stringify(S.p); const same = key === S.renderKey;
@@ -1374,7 +1387,7 @@ function render(){
   const scroller = same && $('.chat') ? $('.chat').scrollTop : null;
   const V = VIEWS[S.view] || VIEWS.welcome;
   let html; try{ html = V(S.p); }catch(e){ console.error(e); html = topbar('ભૂલ') + `<div class="wrap"><div class="banner bad">આ સ્ક્રીન ખોલી શકાઈ નહીં. <button class="btn sm" onclick="home()">હોમ</button></div></div>`; }
-  app.innerHTML = html; trTree(app);
+  app.innerHTML = html; trTree(app); try{ foldCards(); }catch(e){}
   S.renderKey = key;
   if(same){ for(const id in keep){ const el = document.getElementById(id); if(!el) continue; if('c' in keep[id]) el.checked = keep[id].c; else el.value = keep[id].v; }
     if(fid){ const el = document.getElementById(fid); if(el){ el.focus(); if(caret != null && el.setSelectionRange) try{ el.setSelectionRange(caret, caret); }catch(e){} } } }
