@@ -181,6 +181,10 @@ textarea{min-height:76px;resize:vertical}
 .cat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;background:var(--surface);font-size:12px;font-weight:600;text-align:center;line-height:1.25;box-shadow:var(--shadow)}
 .cat .e{font-size:26px;line-height:1}
 .acats{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}.acats button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;background:var(--surface2);font-size:12px;text-align:center;line-height:1.2}.acats .e{font-size:26px;line-height:1.1}
+.card.fold > h3{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;user-select:none}
+.card.fold > h3::after{content:"▾";font-size:18px;color:var(--muted);transition:transform .2s;transform:rotate(-90deg)}.card.fold.open > h3::after{transform:none}
+.card.fold:not(.open) > :not(h3){display:none!important}.card.fold:not(.open){padding-top:14px;padding-bottom:14px}
+.foldbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .cimg{width:1.15em;height:1.15em;object-fit:cover;border-radius:24%;display:inline-block;vertical-align:middle}
 .search{position:relative} .search input{padding-left:38px} .search span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
 
@@ -301,6 +305,9 @@ textarea{min-height:76px;resize:vertical}
 .stats b{display:block;font-family:var(--f-display);font-size:20px;font-variant-numeric:tabular-nums}
 .stats span{font-size:12px;color:var(--muted)}
 .stats.two-col{grid-template-columns:repeat(2,1fr)}
+.stats.clk > div{cursor:pointer;position:relative;transition:transform .12s,box-shadow .12s}.stats.clk > div:hover,.stats.clk > div:focus-visible{transform:translateY(-2px);box-shadow:0 0 0 2px var(--brand),var(--shadow);outline:0}
+.stats .go{position:absolute;right:10px;top:8px;font-style:normal;color:var(--muted);font-size:18px}
+.lbar.clk{cursor:pointer;border-radius:8px}.lbar.clk:hover,.lbar.clk:focus-visible{background:var(--surface2);outline:0}
 
 /* overlay */
 #overlay{position:fixed;inset:0;z-index:50;background:rgba(10,12,25,.55);display:flex;align-items:flex-end;justify-content:center;padding:calc(16px + var(--sat)) 16px 16px}
@@ -776,9 +783,45 @@ const CATS = [
   ['tailor','દરજી','🧵',99],['cobbler','મોચી','👞',49],['gardener','માળી','🌱',199],['pest','પેસ્ટ કંટ્રોલ','🐜',499],
   ['cook','રસોઇયા','🍳',399],['beauty','બ્યુટીશિયન','💄',299],['locksmith','ચાવીવાળો','🔑',149],['roofing','છત/પતરાં','🏠',299],
   ['glass','કાચકામ','🪟',249],['tiles','ટાઇલ્સ','🔲',299],['generator','ઇન્વર્ટર/જનરેટર','🔋',249],['solar','સોલાર','☀️',399],
-  ['movers','ઘરવખરી શિફ્ટિંગ','🚚',999],['pop','ઇન્ટિરિયર/POP','🛋️',499],['maid','ઘરકામ','🧽',199],['driver','ડ્રાઇવર','🚗',399],['puncture','ઘર બેઠા પંચર','🛵',149],['agent','એજન્ટ','🤝',199],['other','અન્ય કામ','➕',199]
+  ['movers','ઘરવખરી શિફ્ટિંગ','🚚',999],['pop','ઇન્ટિરિયર/POP','🛋️',499],['maid','ઘરકામ','🧽',199],['driver','ડ્રાઇવર','🚗',399],['puncture','ઘર બેઠા પંચર','🛵',149],['agent','એજન્ટ','🤝',199],['watchman','ચોકીદાર','💂',499],['lab','લેબોરેટરી (ઘરે સેમ્પલ)','🧪',199],['other','અન્ય કામ','➕',199]
 ].map(([id, name, icon, visit]) => ({id, name, icon, visit}));
 const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+/* બુકિંગ વખતે "શું તકલીફ છે?" નીચેનાં ઝડપી બટન — દરેક કામ મુજબ (છેલ્લે હંમેશાં "તાત્કાલિક") */
+const CAT_CHIPS = {
+  ac:['રિપેર','સર્વિસ','ઇન્સ્ટોલેશન','ગેસ ભરવો','ઠંડક નથી','પાણી ટપકે છે','તપાસ કરવી'],
+  plumber:['નળ લીક','પાઇપ લીકેજ','બ્લોકેજ / ગટર','ટાંકી / મોટર','બાથરૂમ ફિટિંગ','નવું ફિટિંગ','તપાસ કરવી'],
+  electrician:['લાઇટ નથી','પંખો / લાઇટ ફિટિંગ','સ્વીચ / બોર્ડ','વાયરિંગ','MCB / શોર્ટ સર્કિટ','ઇન્વર્ટર જોડાણ','તપાસ કરવી'],
+  carpenter:['દરવાજો / બારી','ફર્નિચર રિપેર','નવું ફર્નિચર','તાળું / હેન્ડલ','કબાટ / પલંગ','ફિટિંગ'],
+  painter:['આખું ઘર','એક રૂમ','બહારની દીવાલ','વોટરપ્રૂફ','ટેક્સચર','ભાવ માટે મુલાકાત'],
+  cleaning:['આખું ઘર','કિચન','બાથરૂમ','સોફા / ગાદલા','ટાંકી સફાઈ','દિવાળી સફાઈ'],
+  mason:['પ્લાસ્ટર','ચણતર','તિરાડ રિપેર','ટાઇલ્સ નીચે','નવું બાંધકામ','ભાવ માટે મુલાકાત'],
+  welder:['ગેટ / ગ્રીલ','રેલિંગ','શેડ / પતરાં','નવું ફેબ્રિકેશન','રિપેર'],
+  mechanic:['સર્વિસ','પંચર','સ્ટાર્ટ નથી થતું','બ્રેક / ક્લચ','બેટરી','ઘરે આવીને રિપેર'],
+  appliance:['ફ્રિજ ઠંડું નથી','વોશિંગ મશીન રિપેર','માઇક્રોવેવ','ગીઝર','સર્વિસ','ઇન્સ્ટોલેશન'],
+  ro:['પાણી નથી આવતું','સ્વાદ બદલાયો','ફિલ્ટર બદલવા','સર્વિસ','નવું RO ફિટિંગ','લીકેજ'],
+  cctv:['નવા કેમેરા','કેમેરા બંધ','DVR / રેકોર્ડિંગ','કમ્પ્યુટર / લેપટોપ','પ્રિન્ટર','વાઇ-ફાઇ / નેટ'],
+  tailor:['ફિટિંગ / અલ્ટર','નવું સીવણ','બ્લાઉઝ','ચણિયાચોળી','પડદા','ઝિપ / બટન'],
+  cobbler:['ચંપલ રિપેર','બૂટ સિલાઈ','સોલ બદલવો','પોલિશ','બેગ રિપેર'],
+  gardener:['બગીચો સફાઈ','છોડ રોપવા','ઘાસ કાપવું','કુંડા / માટી','નિયમિત માળી'],
+  pest:['વંદા','ઉધઈ','માખી / મચ્છર','ઉંદર','માંકડ','આખું ઘર'],
+  cook:['એક ટાઇમ જમવાનું','બંને ટાઇમ','પ્રસંગ / પાર્ટી','ગુજરાતી','પંજાબી / ચાઇનીઝ','નિયમિત રસોઇયા'],
+  beauty:['ફેશિયલ','વેક્સ','થ્રેડિંગ','મહેંદી','બ્રાઇડલ મેકઅપ','હેર કટ'],
+  locksmith:['તાળું ખૂલતું નથી','ચાવી ખોવાઈ','નવું તાળું','ડુપ્લિકેટ ચાવી','લૉકર / તિજોરી'],
+  roofing:['છત લીકેજ','પતરાં બદલવાં','શેડ','વોટરપ્રૂફિંગ','ભાવ માટે મુલાકાત'],
+  glass:['કાચ તૂટ્યો','નવી બારી','અરીસો','શાવર પાર્ટીશન','એલ્યુમિનિયમ સેક્શન'],
+  tiles:['નવી ટાઇલ્સ','તૂટેલી ટાઇલ્સ','બાથરૂમ ટાઇલ્સ','કિચન પ્લેટફોર્મ','ગ્રાઉટિંગ / સાંધા'],
+  generator:['ઇન્વર્ટર ચાલુ નથી','બેટરી બદલવી','નવું ઇન્વર્ટર','જનરેટર રિપેર','સર્વિસ','પાણી ભરવું'],
+  solar:['નવી સોલાર સિસ્ટમ','પેનલ સફાઈ','ઉત્પાદન ઓછું','ઇન્વર્ટર તકલીફ','સર્વિસ','ભાવ માટે મુલાકાત'],
+  movers:['ઘર શિફ્ટિંગ','ઓફિસ શિફ્ટિંગ','થોડો સામાન','પેકિંગ','ટેમ્પો જોઈએ','બહારગામ'],
+  pop:['ફોલ્સ સીલિંગ','POP ડિઝાઇન','મોડ્યુલર કિચન','વોર્ડરોબ','ઇન્ટિરિયર ડિઝાઇન','ભાવ માટે મુલાકાત'],
+  maid:['ઝાડુ-પોતાં','વાસણ','કપડાં','રોજનું ઘરકામ','એક દિવસ','બાળક / વડીલ સંભાળ'],
+  driver:['લોકલ','બહારગામ','એક દિવસ','રોજનો ડ્રાઇવર','એરપોર્ટ / સ્ટેશન','લગ્ન / પ્રસંગ'],
+  puncture:['ટુ-વ્હીલર પંચર','કાર પંચર','ટ્યૂબ બદલવી','હવા ભરવી','રસ્તામાં ફસાયા'],
+  agent:['ડોક્યુમેન્ટ / ફોર્મ','લાઇટ બિલ / ગેસ','ભાડા કરાર','પાસપોર્ટ / આધાર','વીમો','બીજું કામ'],
+  watchman:['દિવસની પાળી','રાતની પાળી','24 કલાક','સોસાયટી','દુકાન / ગોડાઉન','પ્રસંગ / પાર્ટી'],
+  lab:['બ્લડ ટેસ્ટ','સુગર','થાઇરોઇડ','આખા શરીરની તપાસ','પેશાબ ટેસ્ટ','ઘરેથી સેમ્પલ લેવું'],
+  other:['રિપેર','નવું કામ','ફિટિંગ','તપાસ કરવી','ભાવ માટે મુલાકાત']};
+const catChips = id => [...(CAT_CHIPS[id] || CAT_CHIPS.other), 'તાત્કાલિક'];
 /* એડમિન કામની યાદી બદલી શકે (settings.catEd = {id:{n,i,img,v,off}}, settings.catNew = [{id,name,icon,visit}]) */
 const CAT_BASE = CATS.map(c => ({...c}));
 let CAT_ED_R = [0, 0];
@@ -1356,6 +1399,15 @@ function deleteAccount(){
 function logout(){ if(S.session && S.session.role === 'karigar'){ const k = me(); if(k) Store.patch('karigars', k.id, {online:false}); } Ring.stop();
   if(Store.mode === 'firebase') return doLogout().then(() => home()); setSession(null); home(); }
 
+/* એડમિન સેટિંગ: દરેક ખાનું શીર્ષક પર ટેપ કરતાં ખૂલે/બંધ થાય (શરૂઆતમાં બધાં બંધ) */
+const FOLD_VIEWS = ['a_settings'];
+function foldCards(){ if(!FOLD_VIEWS.includes(S.view)) return; S.fold = S.fold || {}; const W = document.querySelector('#app .wrap'); if(!W) return;
+  const cards = [...W.querySelectorAll(':scope > .card')].filter(c => c.firstElementChild && c.firstElementChild.tagName === 'H3');
+  cards.forEach(c => { const h = c.firstElementChild, k = h.textContent.trim().slice(0, 40); c.classList.add('fold'); c.classList.toggle('open', !!S.fold[k]);
+    h.setAttribute('role', 'button'); h.tabIndex = 0; h.onclick = () => { S.fold[k] = !S.fold[k]; c.classList.toggle('open', !!S.fold[k]); };
+    h.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); h.onclick(); } }; });
+  if(cards.length > 1 && !W.querySelector('.foldbar')){ W.insertAdjacentHTML('afterbegin', `<div class="foldbar"><span class="small muted">ખાનાના નામ પર ટેપ કરો એટલે ખૂલશે</span><span><button class="btn sm" onclick="foldAll(1)">▾ બધાં ખોલો</button> <button class="btn sm" onclick="foldAll(0)">▸ બધાં બંધ</button></span></div>`); } }
+function foldAll(on){ document.querySelectorAll('#app .wrap > .card.fold').forEach(c => { const k = c.firstElementChild.textContent.trim().slice(0, 40); S.fold[k] = !!on; c.classList.toggle('open', !!on); }); }
 function render(){
   try{ applyCatEd(); }catch(e){ console.warn('cat', e); }
   const app = $('#app'); const key = S.view + JSON.stringify(S.p); const same = key === S.renderKey;
@@ -1366,7 +1418,7 @@ function render(){
   const scroller = same && $('.chat') ? $('.chat').scrollTop : null;
   const V = VIEWS[S.view] || VIEWS.welcome;
   let html; try{ html = V(S.p); }catch(e){ console.error(e); html = topbar('ભૂલ') + `<div class="wrap"><div class="banner bad">આ સ્ક્રીન ખોલી શકાઈ નહીં. <button class="btn sm" onclick="home()">હોમ</button></div></div>`; }
-  app.innerHTML = html; trTree(app);
+  app.innerHTML = html; trTree(app); try{ foldCards(); }catch(e){}
   S.renderKey = key;
   if(same){ for(const id in keep){ const el = document.getElementById(id); if(!el) continue; if('c' in keep[id]) el.checked = keep[id].c; else el.value = keep[id].v; }
     if(fid){ const el = document.getElementById(fid); if(el){ el.focus(); if(caret != null && el.setSelectionRange) try{ el.setSelectionRange(caret, caret); }catch(e){} } } }
@@ -1537,17 +1589,17 @@ VIEWS.c_karigar = p => {
 
 VIEWS.c_book = p => {
   const c = me(); const k = p.kid && Store.get('karigars', p.kid); const cat = CAT[p.cat] || {id:p.cat, name:catName(p.cat), icon:catIcon(p.cat), visit:catVisit(p.cat)};
-  if(S.bkKey !== JSON.stringify(p)){ S.bkKey = JSON.stringify(p); S.bkGeo = null; setTimeout(() => { if(S.view === 'c_book' && !S.bkGeo) takeHere(); }, 400); }
+  if(S.bkKey !== JSON.stringify(p)){ S.bkKey = JSON.stringify(p); S.bkGeo = null; S.bkSel = []; setTimeout(() => { if(S.view === 'c_book' && !S.bkGeo) takeHere(); }, 400); }
   const visit = k ? k.visit : cat.visit;
-  const chips = ['રિપેર','સર્વિસ','ઇન્સ્ટોલેશન','તપાસ કરવી','તાત્કાલિક'];
+  const chips = catChips(p.cat);
   const later = p.when === 'later';
   const minDT = new Date(Date.now() + 3600000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   return topbar('બુકિંગ') + `<div class="wrap">
     <div class="card"><div class="row">${k ? avatar(k) : `<div class="av" style="background:var(--accent);color:var(--accent-ink)">${cat.icon}</div>`}
       <div class="grow"><b>${h(cat.name)}</b><div class="small muted">${k ? h(k.name) + ' · ★ ' + avg(k).toFixed(1) : 'નજીકના બધા ઓનલાઇન કારીગરોને વિનંતી'}</div></div></div></div>
     <div class="card">
-      <label class="f">શું તકલીફ છે?<textarea id="bk_prob" placeholder="દા.ત. એસી ઠંડક નથી આપતું, પાણી ટપકે છે"></textarea></label>
-      <div class="chips">${chips.map(x => `<button class="chipb" onclick="addProb('${x}')">${x}</button>`).join('')}</div>
+      <label class="f">શું તકલીફ છે?<textarea id="bk_prob" placeholder="${p.cat === 'ac' ? 'દા.ત. એસી ઠંડક નથી આપતું, પાણી ટપકે છે' : 'દા.ત. ' + h(catChips(p.cat).slice(0, 2).join(', ')) + ' — નીચેથી પસંદ કરો કે લખો'}" oninput="S.bkSel=this.value.split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean)"></textarea></label>
+      <div class="chips">${chips.map(x => `<button type="button" class="chipb ${(S.bkSel || []).includes(x) ? 'on' : ''}" onclick="addProb('${x}',this)">${x}</button>`).join('')}</div>
       <div class="seg" role="radiogroup"><label><input type="radio" name="bk_when" id="bk_now" ${later ? '' : 'checked'} ${k && !k.online ? 'disabled' : ''} onchange="$('#bk_dtw').hidden=true"><span>હમણાં જ</span></label>
         <label><input type="radio" name="bk_when" id="bk_later" ${later ? 'checked' : ''} onchange="$('#bk_dtw').hidden=false"><span>સમય નક્કી કરો</span></label></div>
       <label class="f" id="bk_dtw" ${later ? '' : 'hidden'}>તારીખ અને સમય<input type="datetime-local" id="bk_dt" min="${minDT}" value="${minDT}"></label>
@@ -1569,7 +1621,7 @@ VIEWS.c_book = p => {
     <button class="btn pri block" style="padding:15px;font-size:17px" onclick="placeBooking()">${p.mode === 'broadcast' ? 'નજીકના કારીગરોને વિનંતી મોકલો' : 'બુકિંગ કન્ફર્મ કરો'}</button>
   </div>`;
 };
-function addProb(t){ const el = $('#bk_prob'); el.value = (el.value ? el.value + ', ' : '') + t; }
+function addProb(t, b){ const el = $('#bk_prob'); const L = el.value.split(/\s*,\s*/).map(x => x.trim()).filter(Boolean); const i = L.indexOf(t); if(i >= 0) L.splice(i, 1); else L.push(t); el.value = L.join(', '); S.bkSel = L; if(b) b.classList.toggle('on', i < 0); }
 function refFirst(c){ return refOn('customer') && c && c.referredBy && !c.refDone && !bookingsOf(c.id).some(x => x.status !== 'cancelled'); }
 function refBookBox(c){ if(!c || !refOn('customer')) return ''; const st = Store.settings();
   if(refFirst(c)) return `<div class="banner ok" style="background:var(--ok-soft);color:var(--ok)">🎉 <div><b>મિત્રના કોડથી પહેલા કામ પર ₹${st.refFriend} છૂટ</b>આપોઆપ લાગશે (બિલ ₹${st.refMin} કે વધુ હોય તો). એક બુકિંગ પર એક જ છૂટ.</div></div>`;
