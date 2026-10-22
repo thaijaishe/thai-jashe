@@ -169,6 +169,7 @@ textarea{min-height:76px;resize:vertical}
 .card.fold > h3::after{content:"▾";font-size:18px;color:var(--muted);transition:transform .2s;transform:rotate(-90deg)}.card.fold.open > h3::after{transform:none}
 .card.fold:not(.open) > :not(h3){display:none!important}.card.fold:not(.open){padding-top:14px;padding-bottom:14px}
 .foldbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.role.roleoff{opacity:.55;filter:grayscale(1);position:relative}.role.roleoff::after{content:"🔒 હાલ બંધ";position:absolute;right:12px;top:10px;font-size:12px;font-weight:700;background:var(--bad-solid,#C62828);color:#fff;border-radius:10px;padding:2px 8px}
 .cimg{width:1.15em;height:1.15em;object-fit:cover;border-radius:24%;display:inline-block;vertical-align:middle}
 .search{position:relative} .search input{padding-left:38px} .search span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
 
@@ -390,7 +391,10 @@ let THEME = (t => THEMES.some(x => x[0] === t) ? t : 'light')(LS.get('tj_theme',
 function applyTheme(){ try{ const r = document.documentElement; if(THEME === 'light') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', THEME);
   const m = document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', THEMES.find(x => x[0] === THEME)[2][1]); }catch(e){} }
 applyTheme();
-let LANG = ['en', 'hi'].includes(LS.get('tj_lang', 'gu')) ? LS.get('tj_lang', 'gu') : 'gu';
+/* ભાષા: યુઝરે પસંદ કરી હોય તો એ, નહીં તો ફોનની ભાષા મુજબ (ગુજરાતી → ગુજરાતી, હિન્દી/બીજી ભારતીય → हिन्दी, English → English) */
+const phoneLang = () => { let L = []; try{ L = (navigator.languages && navigator.languages.length ? [...navigator.languages] : [navigator.language || '']).map(x => String(x).toLowerCase()); }catch(e){}
+  for(const x of L){ if(x.startsWith('gu')) return 'gu'; if(/^(hi|mr|bn|pa|ta|te|kn|ml|or|ur|ne|as|kok|sd)\b/.test(x)) return 'hi'; if(x.startsWith('en')) return 'en'; } return 'gu'; };
+let LANG = (() => { const s = LS.get('tj_lang', ''); return ['gu', 'en', 'hi'].includes(s) ? s : phoneLang(); })();
 const LOC = () => LANG === 'en' ? 'en-IN' : LANG === 'hi' ? 'hi-IN' : 'gu-IN';
 try{ document.documentElement.lang = LANG; }catch(e){}
 function ago(ts){ if(!ts) return ''; const s = Math.max(0, (Date.now() - ts) / 1000);
@@ -765,7 +769,7 @@ function homeFooter(){ const st = Store.settings(), v = ['A', 'B', 'C'].includes
     <div class="s1">${footF(T('s'))}</div>
     <div class="bx"><span>${footF(T('l1'))}</span><span>|</span><span>${footF(T('l2'))}</span></div></div>`;
   /* C: બધા કામના આઇકન અર્ધગોળ પર ડાબેથી જમણે સતત ફરે — એક સમયે 9 દેખાય */
-  const ic = catList().map(c => c.icon), n = ic.length, vis = 9, gap = 1.5, P = n * gap, on = Math.min(99, vis / n * 100);
+  const ic = catList().map(c => catPic(c)), n = ic.length, vis = 9, gap = 1.5, P = n * gap, on = Math.min(99, vis / n * 100);
   const kf = `@keyframes ftarc{0%{offset-distance:0%;opacity:0}${(on * .06).toFixed(2)}%{opacity:1}${(on * .94).toFixed(2)}%{opacity:1}${on.toFixed(2)}%{offset-distance:100%;opacity:0}100%{offset-distance:100%;opacity:0}}`;
   return `<div class="fC"><style>${kf}.fC .arc span{animation:ftarc ${P}s linear infinite}</style><div class="arc" aria-hidden="true">${ic.map((e, i) => `<span style="animation-delay:${(i * gap - P).toFixed(2)}s">${e}</span>`).join('')}</div>
     <h3>${footF(T('t'))}</h3>
@@ -791,7 +795,7 @@ const CATS = [
   ['tailor','દરજી','🧵',99],['cobbler','મોચી','👞',49],['gardener','માળી','🌱',199],['pest','પેસ્ટ કંટ્રોલ','🐜',499],
   ['cook','રસોઇયા','🍳',399],['beauty','બ્યુટીશિયન','💄',299],['locksmith','ચાવીવાળો','🔑',149],['roofing','છત/પતરાં','🏠',299],
   ['glass','કાચકામ','🪟',249],['tiles','ટાઇલ્સ','🔲',299],['generator','ઇન્વર્ટર/જનરેટર','🔋',249],['solar','સોલાર','☀️',399],
-  ['movers','ઘરવખરી શિફ્ટિંગ','🚚',999],['pop','ઇન્ટિરિયર/POP','🛋️',499],['maid','ઘરકામ','🧽',199],['driver','ડ્રાઇવર','🚗',399],['puncture','ઘર બેઠા પંચર','🛵',149],['agent','એજન્ટ','🤝',199],['watchman','ચોકીદાર','💂',499],['lab','લેબોરેટરી (ઘરે સેમ્પલ)','🧪',199],['other','અન્ય કામ','➕',199]
+  ['movers','ઘરવખરી શિફ્ટિંગ','🚚',999],['pop','ઇન્ટિરિયર/POP','🛋️',499],['maid','ઘરકામ','🧽',199],['driver','ડ્રાઇવર','🚗',399],['puncture','ઘર બેઠા પંચર','🛵',149],['agent','એજન્ટ','🤝',199],['watchman','ચોકીદાર','💂',499],['photographer','ફોટોગ્રાફર','📸',999],['mandap','મંડપ ડેકોરેશન','🎪',1999],['laundry','લોન્ડ્રી / ઇસ્ત્રી','👕',99],['lab','લેબોરેટરી (ઘરે સેમ્પલ)','🧪',199],['other','અન્ય કામ','➕',199]
 ].map(([id, name, icon, visit]) => ({id, name, icon, visit}));
 const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
 /* બુકિંગ વખતે "શું તકલીફ છે?" નીચેનાં ઝડપી બટન — દરેક કામ મુજબ (છેલ્લે હંમેશાં "તાત્કાલિક") */
@@ -827,8 +831,56 @@ const CAT_CHIPS = {
   puncture:['ટુ-વ્હીલર પંચર','કાર પંચર','ટ્યૂબ બદલવી','હવા ભરવી','રસ્તામાં ફસાયા'],
   agent:['ડોક્યુમેન્ટ / ફોર્મ','લાઇટ બિલ / ગેસ','ભાડા કરાર','પાસપોર્ટ / આધાર','વીમો','બીજું કામ'],
   watchman:['દિવસની પાળી','રાતની પાળી','24 કલાક','સોસાયટી','દુકાન / ગોડાઉન','પ્રસંગ / પાર્ટી'],
+  photographer:['લગ્ન / સગાઈ','જન્મદિવસ','ફંક્શન / પ્રસંગ','પ્રી-વેડિંગ','વિડિયો શૂટિંગ','ડ્રોન','પાસપોર્ટ ફોટો'],
+  mandap:['લગ્ન મંડપ','સ્ટેજ ડેકોરેશન','ફૂલ ડેકોરેશન','લાઇટ ડેકોરેશન','ખુરશી / ટેબલ','સાઉન્ડ સિસ્ટમ','ભાવ માટે મુલાકાત'],
+  laundry:['કપડાં ધોવા','ઇસ્ત્રી','ડ્રાય ક્લીન','ઘરેથી લઈ જવા','ધાબળા / રજાઈ','સાડી પોલિશ'],
   lab:['બ્લડ ટેસ્ટ','સુગર','થાઇરોઇડ','આખા શરીરની તપાસ','પેશાબ ટેસ્ટ','ઘરેથી સેમ્પલ લેવું'],
   other:['રિપેર','નવું કામ','ફિટિંગ','તપાસ કરવી','ભાવ માટે મુલાકાત']};
+/* શોધ માટે વધારાના શબ્દો (ગુજરાતી, English, હિન્દી) — એક શબ્દ ઘણાં કામમાં હોઈ શકે, દા.ત. કપડાં → દરજી, લોન્ડ્રી, ઘરકામ */
+const CAT_KEYS = {
+  ac:'એસી એ.સી ac a.c air condition એર કંડિશનર ઠંડક ગેસ કૂલિંગ cooling split window કુલર cooler',
+  plumber:'પ્લમ્બર નળ પાઇપ ટાંકી ગટર લીક લીકેજ બાથરૂમ ટોઇલેટ સંડાસ મોટર પાણી plumber tap pipe leak drain toilet nal',
+  electrician:'ઇલેક્ટ્રિશિયન વીજળી લાઇટ બત્તી પંખો સ્વીચ બોર્ડ વાયરિંગ મીટર mcb fuse ફ્યુઝ શોર્ટ electrician light fan switch wiring bijli',
+  carpenter:'સુથાર ફર્નિચર લાકડું દરવાજો બારી કબાટ પલંગ ટેબલ ખુરશી carpenter furniture door wood suthar',
+  painter:'કલર રંગ પેઇન્ટ દીવાલ ઘર રંગવું વોટરપ્રૂફ painter paint colour color rang',
+  cleaning:'સફાઈ ક્લીનિંગ ડીપ ક્લીન કચરો કિચન બાથરૂમ સોફા ગાદલા cleaning clean safai',
+  mason:'કડિયા ચણતર પ્લાસ્ટર ઈંટ સિમેન્ટ બાંધકામ તિરાડ mason cement plaster construction kadiya',
+  welder:'વેલ્ડર વેલ્ડિંગ ગ્રીલ ગેટ લોખંડ રેલિંગ ફેબ્રિકેશન welder welding grill gate iron',
+  mechanic:'મિકેનિક બાઇક કાર સ્કૂટર એક્ટિવા ગાડી વાહન બ્રેક એન્જિન mechanic bike car scooter vehicle gadi',
+  appliance:'ફ્રિજ ફ્રીજ વોશિંગ મશીન માઇક્રોવેવ ગીઝર ઓવન ટીવી મિક્સર fridge washing machine microwave geyser appliance',
+  ro:'આરઓ ro પાણી ફિલ્ટર પ્યુરિફાયર purifier water filter',
+  cctv:'સીસીટીવી કેમેરા કમ્પ્યુટર લેપટોપ પ્રિન્ટર વાઇફાઇ નેટ ઇન્ટરનેટ cctv camera computer laptop printer wifi internet',
+  tailor:'દરજી કપડાં કપડા સીવવું સિલાઈ બ્લાઉઝ ચણિયાચોળી પડદા ઝિપ બટન ફિટિંગ tailor stitching kapda darji silai',
+  cobbler:'મોચી ચંપલ બૂટ જૂતા ચપ્પલ બેગ cobbler shoe chappal joota mochi',
+  gardener:'માળી બગીચો છોડ ઝાડ ઘાસ કુંડા ગાર્ડન gardener garden plant mali',
+  pest:'પેસ્ટ જીવાત વંદા ઉધઈ મચ્છર માખી ઉંદર માંકડ દવા pest control cockroach termite mosquito rat',
+  cook:'રસોઇયા રસોઈ જમવાનું ખાવાનું કૂક મહારાજ પ્રસંગ પાર્ટી cook food khana rasoi maharaj',
+  beauty:'બ્યુટીશિયન બ્યુટી પાર્લર મેકઅપ ફેશિયલ વેક્સ મહેંદી હેર વાળ beauty parlour makeup facial mehndi hair',
+  locksmith:'ચાવી તાળું તાળા લૉક લોક તિજોરી lock key locksmith chavi tala',
+  roofing:'છત પતરાં પતરા શેડ ધાબું લીકેજ roof sheet shed chhat',
+  glass:'કાચ અરીસો બારી એલ્યુમિનિયમ glass mirror window kach',
+  tiles:'ટાઇલ્સ ટાઇલ ફ્લોરિંગ માર્બલ ગ્રેનાઇટ tiles tile flooring marble',
+  generator:'ઇન્વર્ટર બેટરી જનરેટર લાઇટ જાય પાવર inverter battery generator power ups',
+  solar:'સોલાર સોલર પેનલ સૂર્ય વીજળી બિલ solar panel',
+  movers:'શિફ્ટિંગ ઘર બદલવું સામાન ટેમ્પો પેકિંગ movers packers shifting tempo',
+  pop:'પીઓપી pop ફોલ્સ સીલિંગ ઇન્ટિરિયર કિચન વોર્ડરોબ interior false ceiling modular',
+  maid:'ઘરકામ કામવાળી બાઈ વાસણ ઝાડુ પોતાં કપડાં કપડા ધોવા maid bai kaamwali jhadu pocha bartan',
+  driver:'ડ્રાઇવર ડ્રાઈવર ગાડી ચલાવવી ભાડે બહારગામ driver chauffeur',
+  puncture:'પંચર ટાયર ટ્યુબ હવા puncture tyre tire tube',
+  agent:'એજન્ટ ફોર્મ દસ્તાવેજ ડોક્યુમેન્ટ લાઇટ બિલ પાસપોર્ટ આધાર વીમો agent document form passport insurance',
+  watchman:'ચોકીદાર સિક્યુરિટી ગાર્ડ ચોકી રખેવાળ watchman security guard chowkidar',
+  photographer:'ફોટોગ્રાફર ફોટોગ્રાફી ફોટો વિડિયો વીડિયો કેમેરા શૂટિંગ લગ્ન આલ્બમ ડ્રોન photographer photo video shoot camera wedding album drone',
+  mandap:'મંડપ ડેકોરેશન ડેકોરેટર શણગાર સજાવટ સ્ટેજ તંબુ ટેન્ટ લગ્ન પ્રસંગ ફૂલ લાઇટિંગ સાઉન્ડ ડીજે mandap decoration decorator tent stage wedding flower dj sound',
+  laundry:'લોન્ડ્રી ધોબી ઇસ્ત્રી કપડાં કપડા ધોવા ડ્રાય ક્લીન laundry dhobi iron istri dry clean kapda',
+  lab:'લેબોરેટરી લેબ લોહી બ્લડ ટેસ્ટ રિપોર્ટ સુગર ડાયાબિટીસ થાઇરોઇડ સેમ્પલ lab laboratory blood test sugar sample',
+  other:'અન્ય બીજું other'};
+/* ગુજરાતી લખાણ સરખાવવા: ં/ઁ કાઢો, ી→િ, ૂ→ુ, નાના અક્ષર */
+const nz = t => String(t || '').toLowerCase().replace(/[ંઁ઼‌‍]/g, '').replace(/ી/g, 'િ').replace(/ૂ/g, 'ુ').replace(/[.,/()\-–—!?]/g, ' ').replace(/\s+/g, ' ').trim();
+function catSearch(q){ const Q = nz(q).split(' ').filter(w => w.length >= 2 || /[઀-૿]/.test(w)); if(!Q.length) return [];
+  const out = []; for(const c of catList()){ const name = nz(c.name), keys = nz((CAT_KEYS[c.id] || '') + ' ' + (CAT_CHIPS[c.id] || []).join(' ')); let sc = 0;
+    for(const w of Q){ if(name.includes(w)) sc += 3; else if(keys.split(' ').some(k => k.startsWith(w) || (w.length >= 3 && k.includes(w)) || (k.length >= 3 && w.startsWith(k)))) sc += 2; }
+    if(sc) out.push({c, sc}); }
+  return out.sort((a, b) => b.sc - a.sc).map(x => x.c); }
 const catChips = id => [...(CAT_CHIPS[id] || CAT_CHIPS.other), 'તાત્કાલિક'];
 /* એડમિન કામની યાદી બદલી શકે (settings.catEd = {id:{n,i,img,v,off}}, settings.catNew = [{id,name,icon,visit}]) */
 const CAT_BASE = CATS.map(c => ({...c}));
@@ -838,6 +890,20 @@ function applyCatEd(force){ if(!Store || !Store.ready) return; const st = Store.
   for(const b of CAT_BASE){ const o = E[b.id] || {}; CAT[b.id] = Object.assign(CAT[b.id] || {}, b, {name:o.n || b.name, icon:o.i || b.icon, img:o.img || '', visit:+o.v || b.visit, off:!!o.off && b.id !== 'other', base:true}); list.push(CAT[b.id]); }
   for(const n of (nw || [])){ if(!n || !n.id) continue; const o = E[n.id] || {}; CAT[n.id] = Object.assign(CAT[n.id] || {}, {id:n.id, name:o.n || n.name, icon:o.i || n.icon || '🛠️', img:o.img || '', visit:+o.v || +n.visit || 199, off:!!o.off, base:false}); list.splice(list.length - 1, 0, CAT[n.id]); }
   CATS.length = 0; list.filter(c => !c.off).forEach(c => CATS.push(c)); }
+/* એડમિન ગ્રાહક કે કારીગર વિભાગ બંધ કરી શકે — બંધ હોય તો ખૂલે જ નહીં */
+const ROLE_OFF_DEF = {customer:'ગ્રાહક વિભાગ હાલ થોડા સમય માટે બંધ છે. જલદી ફરી ચાલુ થશે — થઈ જશે!', karigar:'કારીગર વિભાગ હાલ થોડા સમય માટે બંધ છે. જલદી ફરી ચાલુ થશે — થઈ જશે!'};
+const roleOff = r => { if(typeof APP_MODE !== 'undefined' && APP_MODE === 'admin') return false; const st = Store.settings(); return r === 'customer' ? !!st.custOff : r === 'karigar' ? !!st.karOff : false; };
+const roleOffMsg = r => { const st = Store.settings(); return String((r === 'customer' ? st.custOffMsg : st.karOffMsg) || ROLE_OFF_DEF[r]); };
+function roleOffSheet(r){ modal(`<div style="text-align:center;font-size:52px">🔒</div><h3 style="text-align:center">${r === 'customer' ? 'ગ્રાહક' : 'કારીગર'} વિભાગ હાલ બંધ છે</h3><p style="text-align:center">${h(roleOffMsg(r))}</p>${contactBtns ? contactBtns() : ''}<button class="btn block" onclick="closeModal()">બરાબર</button>`); }
+const ARRIVE_DEF = 'કારીગર તમારા ઘરે આવી ગયેલ છે.\nકારીગર પર નજર રાખવી આપની જવાબદારી છે.';
+const arriveMsg = () => String(Store.settings().arriveMsg || ARRIVE_DEF);
+function arriveCheck(){ if(!S.session || S.session.role !== 'customer' || !Store.ready) return; const seen = LS.get('tj_arr_seen', []);
+  const b = bookingsOf(S.session.id).find(x => ['arrived', 'working'].includes(x.status) && x.timeline && x.timeline.arrived && Date.now() - x.timeline.arrived < 6 * 3600000 && !seen.includes(x.id)); if(!b) return;
+  LS.set('tj_arr_seen', [b.id, ...seen].slice(0, 50)); try{ beep(); }catch(e){}
+  const k = Store.get('karigars', b.karigarId);
+  modal(`<div style="text-align:center;font-size:54px">🏠</div><h3 style="text-align:center">કારીગર ઘરે આવી ગયા</h3>${k ? `<div class="row" style="justify-content:center;gap:10px">${avatar(k)}<b>${h(k.name)}</b></div>` : ''}
+    <div class="banner warn" style="margin-top:10px">⚠️ <div>${h(arriveMsg()).replace(/\n/g, '<br>')}</div></div><button class="btn pri block" onclick="closeModal()">સમજાયું</button>`); }
+const catIconH = id => CAT[id] && CAT[id].img ? `<img class="cimg" src="${h(CAT[id].img)}" alt="">` : catIcon(id);
 const catPic = c => c && c.img ? `<img class="cimg" src="${h(c.img)}" alt="">` : (c ? c.icon : '🛠️');
 /* "અન્ય કામ" માં કારીગરે લખેલું કામ = નવો પ્રકાર (id "x:લખેલું નામ") — ગ્રાહકની યાદીમાં આપમેળે ઉમેરાય */
 const isXCat = id => typeof id === 'string' && id.startsWith('x:');
@@ -846,11 +912,14 @@ const catIcon = id => CAT[id] ? CAT[id].icon : '🛠️';
 const catVisit = id => (CAT[id] || CAT.other).visit;
 const catMatch = (kc, bc) => kc === bc || (bc === 'other' && isXCat(kc)); // "અન્ય કામ" ની વિનંતી બધા જાતે-લખેલા કામવાળાને પણ જાય
 /* કારીગરના એક થી વધુ કામ: cats = [મુખ્ય, ...]; જૂના કારીગરમાં ફક્ત cat */
-const kCats = k => (k && Array.isArray(k.cats) && k.cats.length ? k.cats : [k && k.cat]).filter(Boolean);
+const xToCat = c => { if(!isXCat(c)) return c; const n = String(c.slice(2)).trim().toLowerCase(); const m = CATS.find(x => x.id !== 'other' && x.name.trim().toLowerCase() === n); return m ? m.id : c; };
+const kCats = k => [...new Set((k && Array.isArray(k.cats) && k.cats.length ? k.cats : [k && k.cat]).filter(Boolean).map(xToCat))];
 const kHas = (k, bc) => kCats(k).some(c => catMatch(c, bc));
 const kCatTxt = k => kCats(k).map(catName).join(', ') + (k && k.agentFor ? ' — ' + k.agentFor : '');
 const normWork = t => String(t || '').replace(/['"<>\\`]/g, '').trim().replace(/\s+/g, ' ').slice(0, 30);
-function xCats(){ return [...new Set(Store.all('karigars').filter(k => k.status === 'approved').flatMap(k => kCats(k).filter(isXCat)))].sort(); }
+function xCatsAll(){ return [...new Set(Store.all('karigars').filter(k => k.status !== 'blocked').flatMap(k => kCats(k).filter(isXCat)))].sort(); }
+const xOk = x => (Store.settings().xOk || []).includes(x);
+function xCats(){ return [...new Set(Store.all('karigars').filter(k => k.status === 'approved').flatMap(k => kCats(k).filter(isXCat)))].filter(xOk).sort(); }
 function catList(){ return [...CATS.filter(c => c.id !== 'other'), ...xCats().map(id => ({id, name:catName(id), icon:catIcon(id), visit:CAT.other.visit, x:true})), CAT.other]; }
 
 /* વિસ્તાર હવે જાતે લખાય અથવા નકશા/GPS થી પસંદ થાય — કોઈ શહેરની તૈયાર યાદી નથી */
@@ -877,8 +946,8 @@ const STEPL = ['સ્વીકાર્યું','રસ્તામાં','�
 const ACTIVE = ['searching','requested','accepted','onway','arrived','working','billed'];
 const statusPill = s => `<span class="pill ${s === 'done' ? 'ok' : (s === 'cancelled' || s === 'rejected') ? 'bad' : (s === 'searching' || s === 'requested') ? 'warn' : 'acc'}">${STATUS[s] || s}</span>`;
 
-const DEFAULT_SETTINGS = {refOn:true, refFriend:50, refMe:50, refMax:50, refMin:199, kRefOn:true, kRefJobs:5, kRefWaive:100, otpOn:false, commOn:false, upiOn:false, couponOn:false, radiusKm:25, commRate:10, dueLimit:500, adminUpi:'', adminPin:'1234', autoApprove:false, supportPhone:'', supportEmail:'', whatsapp:'', bizName:'થઈ જશે! (Thai Jashe!) સર્વિસીસ', bizAddr:'ગુજરાત', gstin:'',
-  groName:'ફરિયાદ અધિકારી, થઈ જશે!', groEmail:'', hours:'સવારે 8 થી રાત્રે 9 (સોમ–રવિ)', city:'ગુજરાત', policyDate:'13 ઑક્ટોબર 2026',
+const DEFAULT_SETTINGS = {refOn:true, refFriend:50, refMe:50, refMax:50, refMin:199, kRefOn:true, kRefJobs:5, kRefWaive:100, otpOn:false, commOn:false, upiOn:false, couponOn:false, radiusKm:25, commRate:10, dueLimit:500, adminUpi:'', adminPin:'1234', autoApprove:false, supportPhone:'', supportEmail:'thaijaishe@gmail.com', whatsapp:'', bizName:'થઈ જશે! (Thai Jashe!) સર્વિસીસ', bizAddr:'ગુજરાત', gstin:'',
+  groName:'ફરિયાદ અધિકારી, થઈ જશે!', groEmail:'thaijaishe@gmail.com', hours:'સવારે 8 થી રાત્રે 9 (સોમ–રવિ)', city:'ગુજરાત', policyDate:'13 ઑક્ટોબર 2026',
   logo:'tjf', coupons:[{code:'FIRST50', amount:50, cat:'', note:'કોઈ પણ કામ પર ₹50 ની છૂટ'}, {code:'AC100', amount:100, cat:'ac', note:'એસી સર્વિસ પર ₹100 ની છૂટ'}]};
 
 /* ---------- data store (local demo OR Firebase) ---------- */
@@ -1418,6 +1487,7 @@ function foldCards(){ if(!FOLD_VIEWS.includes(S.view)) return; S.fold = S.fold |
 function foldAll(on){ document.querySelectorAll('#app .wrap > .card.fold').forEach(c => { const k = c.firstElementChild.textContent.trim().slice(0, 40); S.fold[k] = !!on; c.classList.toggle('open', !!on); }); }
 function render(){
   try{ applyCatEd(); }catch(e){ console.warn('cat', e); }
+  try{ const r = S.session && S.session.role; if(r && r !== 'admin' && roleOff(r) && S.view !== 'role_off' && !/^info|^help/.test(S.view)){ S.view = 'role_off'; S.p = {r}; } }catch(e){}
   const app = $('#app'); const key = S.view + JSON.stringify(S.p); const same = key === S.renderKey;
   const keep = {}; const fid = document.activeElement && document.activeElement.id;
   let caret = null;
@@ -1426,7 +1496,7 @@ function render(){
   const scroller = same && $('.chat') ? $('.chat').scrollTop : null;
   const V = VIEWS[S.view] || VIEWS.welcome;
   let html; try{ html = V(S.p); }catch(e){ console.error(e); html = topbar('ભૂલ') + `<div class="wrap"><div class="banner bad">આ સ્ક્રીન ખોલી શકાઈ નહીં. <button class="btn sm" onclick="home()">હોમ</button></div></div>`; }
-  app.innerHTML = html; trTree(app); try{ foldCards(); }catch(e){}
+  app.innerHTML = html; trTree(app); try{ foldCards(); }catch(e){} try{ if(!$('#modal') || $('#modal').hidden) arriveCheck(); }catch(e){}
   S.renderKey = key;
   if(same){ for(const id in keep){ const el = document.getElementById(id); if(!el) continue; if('c' in keep[id]) el.checked = keep[id].c; else el.value = keep[id].v; }
     if(fid){ const el = document.getElementById(fid); if(el){ el.focus(); if(caret != null && el.setSelectionRange) try{ el.setSelectionRange(caret, caret); }catch(e){} } } }
@@ -1460,8 +1530,8 @@ VIEWS.welcome = () => `
   <div class="hero"><div class="tools">${themeBtn()}${langBtn(true)}</div>${logoSVG(96)}<h1>થઈ જશે<span class="pinbox"><svg class="pinmark" viewBox="0 -3 24 46" aria-label="!"><path d="M4.8 15.6 A9.6 9.6 0 1 1 19.2 15.6 L12 30 Z" fill="#1E2A78" stroke="#1E2A78" stroke-width="1.2" stroke-linejoin="round"/><circle cx="12" cy="10.6" r="3.6" fill="#F5B301"/><circle cx="12" cy="37.5" r="3.8" fill="#1E2A78"/></svg></span></h1><p style="font-family:var(--f-display);font-size:20px;font-weight:700;margin:-4px 0 0">Thai Jashe! &nbsp;•&nbsp; ${APP.slogan}</p><p class="tag">${APP.tag}</p>
     <span class="pill ${Store.mode === 'firebase' ? 'ok' : 'warn'}">${Store.mode === 'firebase' ? 'લાઇવ — Firebase જોડાયેલ' : 'ડેમો મોડ — ડેટા આ બ્રાઉઝરમાં જ'}</span></div>
   <div class="wrap">
-    <button class="role" onclick="startRole('customer')"><span class="ic" style="overflow:hidden"><svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1E2A78"/><path d="M7 34 L26 17 L45 34 L40 34 L40 54 L12 54 L12 34 Z" fill="#F5B301" stroke="#F5B301" stroke-width="3" stroke-linejoin="round"/><rect x="21" y="40" width="10" height="14" rx="2" fill="#1E2A78"/><path d="M36 8 h18 a6 6 0 0 1 6 6 v9 a6 6 0 0 1 -6 6 h-8 l-6 6 v-6 h-4 a6 6 0 0 1 -6 -6 v-9 a6 6 0 0 1 6 -6 z" fill="#FFFFFF"/><path d="M41.5 14.6 a3.6 3.6 0 1 1 5.2 3.2 c-1.3 .7 -1.7 1.4 -1.7 2.7" fill="none" stroke="#1E2A78" stroke-width="2.6" stroke-linecap="round"/><circle cx="45" cy="24.6" r="1.6" fill="#1E2A78"/></svg></span><div><b>મારે કારીગર જોઈએ છે</b><span>એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન સહિત ${CATS.length} પ્રકારના કામ</span></div></button>
-    <button class="role" onclick="startRole('karigar')"><span class="ic" style="overflow:hidden"><svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#F5B301"/><path d="M11 58 c0 -12 9 -18 19 -18 s19 6 19 18 z" fill="#1E2A78"/><path d="M24 40 l6 7 l6 -7" fill="#F5B301"/><circle cx="30" cy="29" r="9.5" fill="#1E2A78"/><path d="M18 25 a12 11 0 0 1 24 0 z" fill="#FFFFFF"/><rect x="15.5" y="23.6" width="29" height="4" rx="2" fill="#FFFFFF"/><rect x="28.4" y="13.6" width="3.2" height="10" rx="1.6" fill="#F5B301"/><g transform="translate(50 46) rotate(45)"><circle r="10.5" fill="#FFFFFF"/><rect x="-1.9" y="-2" width="3.8" height="10" rx="1.9" fill="#1E2A78"/><circle cx="0" cy="-3.6" r="4.6" fill="#1E2A78"/><rect x="-1.6" y="-9.4" width="3.2" height="5" fill="#FFFFFF"/></g></svg></span><div><b>હું કારીગર છું</b><span>નોંધણી કરો, ઘરે બેઠા કામ મેળવો, કમાણી કરો</span></div></button>
+    <button class="role ${roleOff('customer') ? 'roleoff' : ''}" onclick="startRole('customer')"><span class="ic" style="overflow:hidden"><svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1E2A78"/><path d="M7 34 L26 17 L45 34 L40 34 L40 54 L12 54 L12 34 Z" fill="#F5B301" stroke="#F5B301" stroke-width="3" stroke-linejoin="round"/><rect x="21" y="40" width="10" height="14" rx="2" fill="#1E2A78"/><path d="M36 8 h18 a6 6 0 0 1 6 6 v9 a6 6 0 0 1 -6 6 h-8 l-6 6 v-6 h-4 a6 6 0 0 1 -6 -6 v-9 a6 6 0 0 1 6 -6 z" fill="#FFFFFF"/><path d="M41.5 14.6 a3.6 3.6 0 1 1 5.2 3.2 c-1.3 .7 -1.7 1.4 -1.7 2.7" fill="none" stroke="#1E2A78" stroke-width="2.6" stroke-linecap="round"/><circle cx="45" cy="24.6" r="1.6" fill="#1E2A78"/></svg></span><div><b>મારે કારીગર જોઈએ છે</b><span>એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન સહિત ${CATS.length} પ્રકારના કામ</span></div></button>
+    <button class="role ${roleOff('karigar') ? 'roleoff' : ''}" onclick="startRole('karigar')"><span class="ic" style="overflow:hidden"><svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#F5B301"/><path d="M11 58 c0 -12 9 -18 19 -18 s19 6 19 18 z" fill="#1E2A78"/><path d="M24 40 l6 7 l6 -7" fill="#F5B301"/><circle cx="30" cy="29" r="9.5" fill="#1E2A78"/><path d="M18 25 a12 11 0 0 1 24 0 z" fill="#FFFFFF"/><rect x="15.5" y="23.6" width="29" height="4" rx="2" fill="#FFFFFF"/><rect x="28.4" y="13.6" width="3.2" height="10" rx="1.6" fill="#F5B301"/><g transform="translate(50 46) rotate(45)"><circle r="10.5" fill="#FFFFFF"/><rect x="-1.9" y="-2" width="3.8" height="10" rx="1.9" fill="#1E2A78"/><circle cx="0" cy="-3.6" r="4.6" fill="#1E2A78"/><rect x="-1.6" y="-9.4" width="3.2" height="5" fill="#FFFFFF"/></g></svg></span><div><b>હું કારીગર છું</b><span>નોંધણી કરો, ઘરે બેઠા કામ મેળવો, કમાણી કરો</span></div></button>
     ${refInCard()}
     ${installCard()}
     <h3 style="margin-top:6px">એપ કેવી રીતે ચાલે છે</h3>
@@ -1475,6 +1545,7 @@ VIEWS.welcome = () => `
     ${infoFoot()}
   </div>`;
 function startRole(r){
+  if(roleOff(r)) return roleOffSheet(r);
   if(S.session && S.session.role === r && (r === 'admin' || me())) return home();
   if(r === 'karigar' && S.pendingAuth) return go('k_register');
   if(r === 'customer' && S.pendingAuth) return go('c_login');
@@ -1523,6 +1594,9 @@ async function custLogin(){
   setSession({role:'customer', id:c.id}); home(); logAccess('login');
 }
 
+VIEWS.role_off = p => { const r = (S.session && S.session.role) || p.r || 'customer'; if(!roleOff(r)){ setTimeout(home, 0); return ''; }
+  return `<div class="hero" style="padding-top:18vh">${logoSVG(80)}<h1>${APP.gu}</h1></div><div class="wrap"><div class="card" style="text-align:center;align-items:center;gap:10px"><div style="font-size:56px">🔒</div>
+    <h2>${r === 'customer' ? 'ગ્રાહક' : 'કારીગર'} વિભાગ હાલ બંધ છે</h2><p>${h(roleOffMsg(r))}</p>${contactBtns()}<button class="btn" onclick="logout()">લૉગ આઉટ</button></div></div>`; };
 VIEWS.c_home = () => {
   const c = me(); if(!c){ if(Store.syncing) return `<div class="hero" style="padding-top:30vh">${logoSVG(72)}<h1>${APP.name}</h1><p class="muted">લોડ થાય છે…</p></div>`; setSession(null); return VIEWS.welcome(); }
   const st = Store.settings(); const act = bookingsOf(c.id).filter(b => ACTIVE.includes(b.status));
@@ -1531,27 +1605,37 @@ VIEWS.c_home = () => {
   return topbar(APP.name, {right:`<button class="chip" onclick="go('c_profile')">📍 ${h(areaName(c.area))}</button>`}) + `<div class="wrap">
     <div><p class="muted small">નમસ્તે, ${h(c.name)}</p><h2>આજે કયું કામ કરાવવું છે?</h2></div>
     ${act.map(b => `<button class="card" style="text-align:left;border:2px solid var(--accent)" onclick="go('c_track',{id:'${b.id}'})">
-      <div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
+      <div class="between"><b>${catIconH(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
       <span class="small muted">ચાલુ બુકિંગ · ટ્રેક કરવા ટેપ કરો</span></button>`).join('')}
-    <div class="search"><span>🔍</span><input id="c_q" placeholder="કામ શોધો — દા.ત. એસી, નળ, પંખો" oninput="filterCats(this.value)"></div>
+    <div class="search"><span>🔍</span><input id="c_q" placeholder="કોઈ પણ શબ્દ લખો — દા.ત. કપડાં, પંખો, નળ, લોહી ટેસ્ટ" oninput="filterCats(this.value)" onfocus="if(this.value)filterCats(this.value)"></div>
     <button class="quick qlite" onclick="go('c_quick')"><img class="q-rider" src="${RIDER[2]}" alt=""><span style="font-size:30px">⚡</span><div><b>ઝડપી બોલાવો</b><span class="small">કામ પસંદ કરો — નજીકના બધા કારીગરોને એકસાથે વિનંતી જશે</span></div></button>
     ${heroOffer()}
     ${trustStrip()}
     ${coupon ? `<div class="offer lite spin" style="--spc:#6C5CE7" id="offerbox">${offerInner(coupon, CPS.length, (S.ci || 0) % CPS.length)}</div>` : ''}
     ${refBanner()}
     <div class="between"><h3>બધા કામ</h3><span class="tiny muted">${catList().length} પ્રકાર</span></div>
-    <div class="grid" id="catgrid">${catList().map(x => `<button class="cat" data-n="${h(x.name + ' ' + x.id)}" onclick="go('c_cat',{cat:'${x.id}'})"><span class="e">${catPic(x)}</span>${h(x.name)}</button>`).join('')}</div>
+    <div id="cathint"></div><div class="grid" id="catgrid">${catList().map(x => `<button class="cat" data-id="${h(x.id)}" data-n="${h(x.name + ' ' + x.id)}" onclick="go('c_cat',{cat:'${x.id}'})"><span class="e">${catPic(x)}</span>${h(x.name)}</button>`).join('')}</div>
     ${(c.favs || []).length ? `<h3>❤️ મારા મનપસંદ કારીગરો</h3><div class="stack">${(c.favs || []).map(id => Store.get('karigars', id)).filter(k => k && k.status === 'approved').map(k => kCard(k, c.area)).join('')}</div>` : ''}
-    ${top.length ? `<h3>તમારી નજીકના ઓનલાઇન કારીગરો</h3><div class="stack">${top.map(k => kCard(k, c.area)).join('')}</div>` : ''}
+    <div id="kmatch"></div><div id="ktop">${top.length ? `<h3>તમારી નજીકના ઓનલાઇન કારીગરો</h3><div class="stack">${top.map(k => kCard(k, c.area)).join('')}</div>` : ''}</div>
     ${homeFooter()}
   </div>` + cNav();
 };
-function filterCats(q){ q = q.trim().toLowerCase(); document.querySelectorAll('#catgrid .cat').forEach(el => el.hidden = !!q && !el.dataset.n.toLowerCase().includes(q)); }
+function filterCats(q){ S.cq = q; const hint = $('#cathint'), G = $('#catgrid'); if(!G) return; const raw = q.trim();
+  const KM = $('#kmatch'), KT = $('#ktop');
+  if(!raw){ G.querySelectorAll('.cat').forEach(el => { el.hidden = false; el.style.order = ''; }); if(hint) hint.innerHTML = ''; if(KM) KM.innerHTML = ''; if(KT) KT.hidden = false; return; }
+  const L = catSearch(raw), rank = new Map(L.map((c, i) => [c.id, i]));
+  if(KM){ const cu = me() || {}, ids = L.map(c => c.id); const K = Store.all('karigars').filter(k => k.status === 'approved' && ids.some(id => kHas(k, id)))
+      .sort((a, b) => (b.online - a.online) || (ids.findIndex(id => kHas(a, id)) - ids.findIndex(id => kHas(b, id))) || distKm(cu.area, a.area) - distKm(cu.area, b.area)).slice(0, 8);
+    KM.innerHTML = L.length ? (K.length ? `<h3>"${h(raw)}" ના નજીકના કારીગરો (${K.length})</h3><div class="stack">${K.map(k => kCard(k, cu.area)).join('')}</div>` : `<p class="small muted">આ કામના કારીગર હજુ નોંધાયેલા નથી — ઉપરથી કામ પસંદ કરી "નજીકના બધાને વિનંતી" મોકલો.</p>`) : '';
+    if(KT) KT.hidden = true; }
+  G.querySelectorAll('.cat').forEach(el => { const r = rank.get(el.dataset.id); el.hidden = r === undefined; el.style.order = r === undefined ? '' : r; });
+  if(hint) hint.innerHTML = L.length ? `<div class="small" style="color:var(--ok);font-weight:700">🔎 "${h(raw)}" માટે ${L.length} કામ મળ્યાં — તમારું કામ પસંદ કરો</div>`
+    : `<div class="card" style="gap:8px"><b>"${h(raw)}" — આ કામ યાદીમાં મળ્યું નહીં</b><span class="small muted">"અન્ય કામ" માં વિનંતી મોકલો — નજીકના કારીગરને તમારું લખેલું કામ દેખાશે.</span><button class="btn pri" onclick="S.bkPre='${h(raw).replace(/'/g, '')}';go('c_book',{cat:'other',mode:'broadcast'})">➕ "${h(raw)}" માટે વિનંતી મોકલો</button></div>`; }
 function kCard(k, area){
   const km = distKm(area, k.area);
   return `<button class="card kitem ${k.online ? '' : 'off'}" onclick="go('c_karigar',{id:'${k.id}'})">${avatar(k)}
     <div class="grow stack" style="gap:3px"><div class="between"><span class="nm">${h(k.name)}</span><b class="num">${rs(k.visit)}</b></div>
-    <div class="meta"><span>${catIcon(k.cat)} ${h(kCatTxt(k))}</span><span class="star">★ ${avg(k).toFixed(1)}</span><span>${k.jobs || 0} કામ</span><span>${k.exp || 0} વર્ષ અનુભવ</span></div>
+    <div class="meta"><span>${catIconH(k.cat)} ${h(kCatTxt(k))}</span><span class="star">★ ${avg(k).toFixed(1)}</span><span>${k.jobs || 0} કામ</span><span>${k.exp || 0} વર્ષ અનુભવ</span></div>
     <div class="meta"><span>📍 ${h(areaName(k.area))} · ${km.toFixed(1)} કિમી</span>${k.online ? (busyNow(k) ? '<span class="pill acc">🔧 હાલ કામ પર</span>' : `<span class="pill ok">~${etaMin(km)} મિનિટમાં</span>`) : '<span class="pill">ઓફલાઇન</span>'}${k.sample ? '<span class="sample">નમૂનો</span>' : ''}</div></div></button>`;
 }
 
@@ -1571,7 +1655,7 @@ VIEWS.c_cat = p => {
     <div class="between"><h3>${ks.length} કારીગર</h3><div class="chips">${[['near','નજીક'],['rating','રેટિંગ'],['price','સસ્તું']].map(([v, l]) =>
       `<button class="chipb ${sort === v ? 'on' : ''}" onclick="S.p.sort='${v}';render()">${l}</button>`).join('')}</div></div>
     ${ks.length ? `<div class="stack">${ks.map(k => kCard(k, c.area)).join('')}</div>` :
-      `<div class="card" style="align-items:center;text-align:center"><div style="font-size:40px">${catIcon(p.cat)}</div><b>આ કામ માટે હજુ કોઈ કારીગર નોંધાયેલ નથી</b><p class="small muted">તમે ઓળખતા હો તે કારીગરને "હું કારીગર છું" માં નોંધણી કરવા કહો.</p></div>`}
+      `<div class="card" style="align-items:center;text-align:center"><div style="font-size:40px">${catIconH(p.cat)}</div><b>આ કામ માટે હજુ કોઈ કારીગર નોંધાયેલ નથી</b><p class="small muted">તમે ઓળખતા હો તે કારીગરને "હું કારીગર છું" માં નોંધણી કરવા કહો.</p></div>`}
   </div>` + cNav();
 };
 
@@ -1583,13 +1667,13 @@ VIEWS.c_karigar = p => {
   const fav = (c.favs || []).includes(k.id);
   return topbar(k.name, {right:`<button class="ib" aria-label="મનપસંદ" title="${fav ? 'મનપસંદમાંથી કાઢો' : 'મનપસંદમાં ઉમેરો'}" onclick="toggleFav('${k.id}')">${fav ? '❤️' : '🤍'}</button>`}) + `<div class="wrap">
     <div class="card"><div class="row">${avatar(k, 'lg')}<div class="grow stack" style="gap:2px"><h2>${h(k.name)}</h2>
-      <div class="meta"><span>${catIcon(k.cat)} ${h(kCatTxt(k))}</span><span class="pill ok">✔ વેરિફાઇડ</span>${policeOk(k) ? '<span class="pill ok">🛡️ પોલીસ વેરિફાઇડ</span>' : ''}${k.sample ? '<span class="sample">નમૂનો</span>' : ''}</div>
+      <div class="meta"><span>${catIconH(k.cat)} ${h(kCatTxt(k))}</span><span class="pill ok">✔ વેરિફાઇડ</span>${policeOk(k) ? '<span class="pill ok">🛡️ પોલીસ વેરિફાઇડ</span>' : ''}${k.sample ? '<span class="sample">નમૂનો</span>' : ''}</div>
       <div class="meta"><span>📍 ${h(areaName(k.area))} · ${km.toFixed(1)} કિમી</span></div></div></div>
       <div class="stats"><div><b class="star">★ ${avg(k).toFixed(1)}</b><span>${k.ratingCount || 0} રેટિંગ</span></div><div><b>${k.jobs || 0}</b><span>કામ પૂરા કર્યા</span></div><div><b>${k.exp || 0} વર્ષ</b><span>અનુભવ</span></div></div>
       <div class="flat between"><span>વિઝિટ ચાર્જ</span><b class="num">${rs(k.visit)}</b></div>
       <p class="tiny muted">અંતિમ બિલ કામ જોઈને કારીગર નક્કી કરશે. કામ ન કરાવો તો ફક્ત વિઝિટ ચાર્જ.</p></div>
     ${k.skills ? `<div class="card"><h3>કયા કામ કરે છે</h3><div class="chips">${k.skills.split(',').map(s => s.trim()).filter(Boolean).map(s => `<span class="pill">${h(s)}</span>`).join('')}</div>${k.about ? `<p class="small muted">${h(k.about)}</p>` : ''}</div>` : ''}
-    ${KC.length > 1 ? `<div class="card"><h3>કયા કામ માટે બોલાવવા છે?</h3><div class="chips">${KC.map(x => `<button class="chipb ${x === bc ? 'on' : ''}" onclick="S.p.bc='${x}';render()">${catIcon(x)} ${h(catName(x))}</button>`).join('')}</div></div>` : ''}
+    ${KC.length > 1 ? `<div class="card"><h3>કયા કામ માટે બોલાવવા છે?</h3><div class="chips">${KC.map(x => `<button class="chipb ${x === bc ? 'on' : ''}" onclick="S.p.bc='${x}';render()">${catIconH(x)} ${h(catName(x))}</button>`).join('')}</div></div>` : ''}
     ${rateCard(bc)}
     <div class="card"><h3>ગ્રાહકોના રિવ્યૂ</h3>${revs.length ? revs.map(b => `<div class="stack" style="gap:2px"><div class="between"><b class="small">${h(b.custName)}</b><span class="star small">${'★'.repeat(b.rating)}</span></div>${b.review ? `<p class="small">${h(b.review)}</p>` : ''}<span class="tiny muted">${ago(b.timeline && b.timeline.done)}</span></div>`).join('<hr>') : '<p class="small muted">હજુ કોઈ રિવ્યૂ નથી.</p>'}</div>
     <div class="two">
@@ -1601,7 +1685,7 @@ VIEWS.c_karigar = p => {
 
 VIEWS.c_book = p => {
   const c = me(); const k = p.kid && Store.get('karigars', p.kid); const cat = CAT[p.cat] || {id:p.cat, name:catName(p.cat), icon:catIcon(p.cat), visit:catVisit(p.cat)};
-  if(S.bkKey !== JSON.stringify(p)){ S.bkKey = JSON.stringify(p); S.bkGeo = null; S.bkSel = []; setTimeout(() => { if(S.view === 'c_book' && !S.bkGeo) takeHere(); }, 400); }
+  if(S.bkKey !== JSON.stringify(p)){ S.bkKey = JSON.stringify(p); S.bkGeo = null; S.bkSel = []; if(S.bkPre){ const t = S.bkPre; S.bkPre = ''; setTimeout(() => { const e = $('#bk_prob'); if(e && !e.value) e.value = t; }, 30); } setTimeout(() => { if(S.view === 'c_book' && !S.bkGeo) takeHere(); }, 400); }
   const visit = k ? k.visit : cat.visit;
   const chips = catChips(p.cat);
   const later = p.when === 'later';
@@ -1675,7 +1759,7 @@ VIEWS.c_track = p => {
   const waited = (Date.now() - ((b.timeline || {}).requested || b.createdAt)) / 1000;
   let body = '';
   if(b.status === 'searching'){
-    body = `<div class="card" style="text-align:center;align-items:center"><div class="radar"><span style="font-size:40px">${catIcon(b.cat)}</span></div>
+    body = `<div class="card" style="text-align:center;align-items:center"><div class="radar"><span style="font-size:40px">${catIconH(b.cat)}</span></div>
       <h3>નજીકના ${onlineN} ઓનલાઇન કારીગરોને વિનંતી મોકલી</h3><p class="small muted">${radiusKm()} કિમીની અંદરના કારીગરોને જ વિનંતી જાય છે. જે પહેલો સ્વીકારશે તેની વિગત અહીં દેખાશે.</p>${b.geo ? '' : '<p class="tiny muted">ચોક્કસ અંતર માટે બુકિંગ વખતે "મારું હાલનું લોકેશન" ઉમેરો.</p>'}</div>`;
   } else if(b.status === 'requested' || b.status === 'rejected'){
     body = `<div class="card">${k ? `<div class="row">${avatar(k)}<div class="grow"><b>${h(k.name)}</b><div class="small muted">${b.status === 'rejected' ? 'આ કારીગર હાલ આવી શકે તેમ નથી' : 'તમારી વિનંતી જોઈ રહ્યા છે…'}</div></div></div>` : ''}
@@ -1709,7 +1793,7 @@ VIEWS.c_track = p => {
   if(!(k && ['accepted','onway','arrived','working','billed'].includes(b.status))) body += `<button class="btn block" onclick="go('ticket_new',{bid:'${b.id}'})">🎧 આ બુકિંગ માટે મદદ / ફરિયાદ</button>`;
   if(['searching','requested','rejected','accepted','onway'].includes(b.status)) body += `<div class="card"><label class="f">બુકિંગ રદ કરવું છે?<select id="cn_reason">${['પ્લાન બદલાયો','કારીગર મોડું કરે છે','બીજે કામ કરાવી લીધું','ભૂલથી બુક થયું'].map(x => `<option value="${x}">${x}</option>`).join('')}</select></label><button class="btn bad block" onclick="custCancel('${b.id}')">બુકિંગ રદ કરો</button></div>`;
   return topbar('બુકિંગ ટ્રેક') + `<div class="wrap">
-    <div class="status-hero"><span class="small" style="opacity:.8">${catIcon(b.cat)} ${h(catName(b.cat))}</span><h2>${STATUS[b.status]}</h2>
+    <div class="status-hero"><span class="small" style="opacity:.8">${catIconH(b.cat)} ${h(catName(b.cat))}</span><h2>${STATUS[b.status]}</h2>
       ${si >= 0 ? `<div class="stepper">${STEPS.map((s, i) => `<div class="${i <= si ? 'on' : ''}"></div>`).join('')}</div><div class="stepl">${STEPL.map(l => `<span>${l}</span>`).join('')}</div>` : ''}</div>
     ${body}</div>` + cNav();
 };
@@ -1754,7 +1838,7 @@ function submitRating(id){
 
 VIEWS.c_bookings = () => { const c = me(); const list = bookingsOf(c.id);
   return topbar('મારા બુકિંગ') + `<div class="wrap">${list.length ? list.map(b => { const k = Store.get('karigars', b.karigarId);
-    return `<button class="card" style="text-align:left" onclick="go('c_track',{id:'${b.id}'})"><div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
+    return `<button class="card" style="text-align:left" onclick="go('c_track',{id:'${b.id}'})"><div class="between"><b>${catIconH(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
       <div class="meta"><span>${k ? h(k.name) : 'કારીગર શોધાય છે'}</span><span>${ago(b.createdAt)}</span>${b.bill && b.status === 'done' ? `<b class="num">${rs(b.bill.payable)}</b>` : ''}</div></button>`; }).join('')
     : `<div class="card" style="text-align:center;align-items:center"><div style="font-size:40px">📋</div><b>હજુ કોઈ બુકિંગ નથી</b><button class="btn pri" onclick="tab('c_home')">કામ બુક કરો</button></div>`}</div>` + cNav(); };
 
@@ -1810,8 +1894,10 @@ VIEWS.k_register = () => (Store.mode === 'firebase' && !S.pendingAuth) ? (setTim
     ${Store.mode === 'firebase' ? (S.pendingAuth.phoneV ? `<div class="flat between"><span>મોબાઇલ: <b class="num">+91 ${h(S.pendingAuth.mobile)}</b></span><span class="pill ok">✔ OTP થી ચકાસાયેલ</span></div>`
       : `<div class="flat between"><span class="small">Google: <b>${h(S.pendingAuth.email || '')}</b></span><span class="pill ok">✔ ચકાસાયેલ</span></div><label class="f">મોબાઇલ નંબર <span class="h">ગ્રાહક આ નંબર પર કૉલ કરશે</span><input id="kr_mob" inputmode="numeric" maxlength="10" value="${h(S.pendingAuth.mobile || '')}"></label>`)
       : `<div class="two"><label class="f">મોબાઇલ<input id="kr_mob" inputmode="numeric" maxlength="10"></label><label class="f">PIN બનાવો<input id="kr_pin" inputmode="numeric" maxlength="4" placeholder="4 આંકડા"></label></div>`}
-    <label class="f">ફોટો <span class="h">ગ્રાહકને વિશ્વાસ આવે તે માટે</span><input type="file" id="kr_photo" accept="image/*" onchange="readPhoto(this)"></label>
-    <div id="kr_prev"></div></div>
+    <label class="f">📷 પ્રોફાઇલ ફોટો <span class="h">ફરજિયાત — ગ્રાહકને દેખાશે, સારો ચોખ્ખો ફોટો મૂકો</span><input type="file" id="kr_photo" accept="image/*" onchange="readPhoto(this)"></label>
+    <div id="kr_prev">${photoData ? `<img src="${photoData}" style="width:72px;height:72px;border-radius:16px;object-fit:cover" alt=""> <span class="small" style="color:var(--ok)">✔ ફોટો ગોઠવાયો</span>` : ''}</div>
+    <label class="f">🤳 સેલ્ફી (હમણાં કેમેરાથી) <span class="h">ફરજિયાત — ઓળખ ચકાસવા, ફક્ત એડમિનને દેખાશે</span><input type="file" id="kr_self" accept="image/*" capture="user" onchange="readSelfie(this)"></label>
+    <div id="kr_self_pv">${S.selfie ? `<img src="${S.selfie}" style="width:72px;height:72px;border-radius:50%;object-fit:cover" alt=""> <span class="small" style="color:var(--ok)">✔ સેલ્ફી લીધી</span>` : ''}</div></div>
   <div class="card"><h3>તમારું કામ</h3>
     <label class="f">કામનો પ્રકાર <span class="h">એક થી વધુ પસંદ કરી શકો — પછી પ્રોફાઇલમાંથી બદલી શકાશે</span></label>${catPicker('kr', S.cp_kr || [])}
     ${refOn('karigar') ? `<label class="f">રેફરલ કોડ <span class="h">વૈકલ્પિક — કોઈ કારીગર મિત્રએ આપ્યો હોય તો</span><input id="kr_ref" maxlength="12" style="text-transform:uppercase" value="${h(S.refIn && /^KG/.test(S.refIn) ? S.refIn : '')}">${S.refIn && /^KG/.test(S.refIn) ? '<span class="tiny" style="color:var(--ok);font-weight:700">✔ મિત્રની લિંકથી કોડ આપમેળે ભરાયો</span>' : ''}</label>` : ''}
@@ -1832,9 +1918,9 @@ const AGENT_TYPES = ['દાડિયા / મજૂર', 'વર્કર / ક
 function catPicker(pf, sel, other = '', agent = ''){ S['cp_' + pf] = (sel || []).slice(); S['cpo_' + pf] = S['cpo_' + pf] || other; S['cpa_' + pf] = S['cpa_' + pf] || agent;
   return `<div class="catpick" id="${pf}_cp">${catPickInner(pf)}</div>`; }
 function catPickInner(pf){ const sel = S['cp_' + pf] || [];
-  return `<div class="cpgrid">${CATS.map(c => `<button type="button" class="cpb ${sel.includes(c.id) ? 'on' : ''}" onclick="catToggle('${pf}','${c.id}')"><span class="e">${c.icon}</span><span>${h(c.name)}</span>${sel.includes(c.id) ? `<i>${sel.indexOf(c.id) === 0 ? 'મુખ્ય' : '✔'}</i>` : ''}</button>`).join('')}</div>
+  return `<div class="cpgrid">${CATS.map(c => `<button type="button" class="cpb ${sel.includes(c.id) ? 'on' : ''}" onclick="catToggle('${pf}','${c.id}')"><span class="e">${catPic(c)}</span><span>${h(c.name)}</span>${sel.includes(c.id) ? `<i>${sel.indexOf(c.id) === 0 ? 'મુખ્ય' : '✔'}</i>` : ''}</button>`).join('')}</div>
     <p class="tiny muted" style="margin:6px 0 0">${sel.length ? `✔ ${sel.length} કામ પસંદ કર્યા — પહેલું પસંદ કરેલું "મુખ્ય" ગણાશે` : 'ઓછામાં ઓછું એક કામ પસંદ કરો'}</p>
-    ${sel.includes('other') ? `<label class="f">"અન્ય કામ" — તમારું કામ લખો <span class="h">ફરજિયાત — આ નામથી ગ્રાહકની યાદીમાં કામ ઉમેરાશે</span><input id="${pf}_other" maxlength="30" value="${h(S['cpo_' + pf] || '')}" oninput="S['cpo_${pf}']=this.value" placeholder="દા.ત. ડીશ ટીવી ફિટિંગ"></label>` : ''}
+    ${sel.includes('other') ? `<label class="f">"અન્ય કામ" — તમારું કામ લખો <span class="h">ફરજિયાત — એડમિન મંજૂર કરે પછી ગ્રાહકની યાદીમાં દેખાશે</span><input id="${pf}_other" maxlength="30" value="${h(S['cpo_' + pf] || '')}" oninput="S['cpo_${pf}']=this.value" placeholder="દા.ત. ડીશ ટીવી ફિટિંગ"></label>` : ''}
     ${sel.includes('agent') ? `<label class="f">શેના માટે એજન્ટ છો? <span class="h">ફરજિયાત</span><input id="${pf}_agent" maxlength="60" value="${h(S['cpa_' + pf] || '')}" oninput="S['cpa_${pf}']=this.value" placeholder="દા.ત. દાડિયા / મજૂર, જમીન-મકાન લે-વેચ"></label>
       <div class="chips">${AGENT_TYPES.map(t => `<button type="button" class="chipb" onclick="agentPick(this,'${pf}');S['cpa_${pf}']=$('#${pf}_agent').value">${t}</button>`).join('')}</div>` : ''}`; }
 function catToggle(pf, id){ const sel = S['cp_' + pf] = S['cp_' + pf] || []; const i = sel.indexOf(id); if(i >= 0) sel.splice(i, 1); else sel.push(id);
@@ -1848,7 +1934,7 @@ function catCollect(pf){ const sel = (S['cp_' + pf] || []).slice(); if(!sel.leng
   const u = [...new Set(cats)]; return {cats:u, cat:u[0], agentFor}; }
 function kPickSel(k){ const KC = kCats(k); return {sel:[...new Set(KC.map(c => isXCat(c) ? 'other' : c))], other:(KC.find(isXCat) || '').slice(2)}; }
 function krCatChange(){ const c = $('#kr_cat').value, box = $('#kr_catx'); S.krCat = c; if(!box) return; box.innerHTML = krCatBox(c); trTree(box); }
-function krCatBox(c){ return c === 'other' ? `<label class="f">તમારું કામ લખો <span class="h">ફરજિયાત — આ નામથી ગ્રાહકની કામની યાદીમાં નવું કામ ઉમેરાશે</span><input id="kr_other" maxlength="30" placeholder="દા.ત. ચોકીદાર, ફોટોગ્રાફર, ડેકોરેશન"></label>`
+function krCatBox(c){ return c === 'other' ? `<label class="f">તમારું કામ લખો <span class="h">ફરજિયાત — એડમિન મંજૂર કરે પછી ગ્રાહકની યાદીમાં દેખાશે</span><input id="kr_other" maxlength="30" placeholder="દા.ત. ચોકીદાર, ફોટોગ્રાફર, ડેકોરેશન"></label>`
     : c === 'agent' ? `<label class="f">શેના માટે એજન્ટ છો? <span class="h">ફરજિયાત</span><input id="kr_agent" maxlength="60" placeholder="દા.ત. દાડિયા / મજૂર, જમીન-મકાન લે-વેચ"></label>
       <div class="chips">${AGENT_TYPES.map(t => `<button type="button" class="chipb" onclick="agentPick(this)">${t}</button>`).join('')}</div>` : ''; }
 function agentPick(b, pf = 'kr'){ const i = $('#' + pf + '_agent'); if(!i) return; const t = b.textContent.trim(), cur = i.value.split(',').map(x => x.trim()).filter(Boolean);
@@ -1899,6 +1985,9 @@ function cropDone(ok){ const C = CROP, F = cropFrame(), cb = C.done; C.done = nu
     const g = out.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, out.width, out.height); g.drawImage(C.src, sx, sy, sw, sh, 0, 0, out.width, out.height); }
   closeModal(); if(cb) cb(out); }
 let photoData = '';
+async function readSelfie(inp){ const f = inp.files[0]; inp.value = ''; if(!f) return; if(!/^image\//.test(f.type)) return toast('ફક્ત ફોટો પસંદ કરો');
+  const cv = await cropImage(f, {aspect:1, round:true, outW:480}); if(!cv) return; S.selfie = cv.toDataURL('image/jpeg', .82);
+  const pv = $('#kr_self_pv'); if(pv) pv.innerHTML = `<img src="${S.selfie}" style="width:72px;height:72px;border-radius:50%;object-fit:cover" alt=""> <span class="small" style="color:var(--ok)">✔ સેલ્ફી લીધી</span>`; }
 async function readPhoto(inp){ const f = inp.files[0]; inp.value = ''; if(!f) return; if(!/^image\//.test(f.type)) return toast('ફક્ત ફોટો (JPG/PNG) પસંદ કરો');
   const cv = await cropImage(f, {aspect:1, round:true, outW:240}); if(!cv) return; photoData = cv.toDataURL('image/jpeg', .8);
   const pv = $('#kr_prev') || $('#kp_prev') || $('#cp_prev'); if(pv) pv.innerHTML = `<img src="${photoData}" style="width:72px;height:72px;border-radius:16px;object-fit:cover" alt=""> <span class="small" style="color:var(--ok)">✔ ફોટો ગોઠવાયો</span>`; }
@@ -1910,7 +1999,9 @@ async function karRegister(){
   if(!FBM && Store.all('karigars').some(k => k.mobile === mob)) return toast('આ નંબર પહેલેથી નોંધાયેલ છે — લૉગિન કરો');
   const CC = catCollect('kr'); if(!CC) return; const {cat, cats, agentFor} = CC;
   const rf = await refCheck(v('kr_ref'), 'karigar'); if(rf === false) return;
-  const kyc = await kycCollect('kr'); if(!kyc) return;
+  if(!photoData) return toast('📷 પ્રોફાઇલ ફોટો ફરજિયાત છે');
+  if(!S.selfie) return toast('🤳 સેલ્ફી ફરજિયાત છે — કેમેરાથી તમારો ફોટો લો');
+  const kyc = await kycCollect('kr'); if(!kyc) return; kyc.priv.selfie = S.selfie; kyc.docs.self = 1;
   if(!$('#kr_ok').checked) return toast('શરતો અને પ્રાઇવસી પોલિસી સ્વીકારો');
   const st = Store.settings(); const kid = FBM ? S.pendingAuth.uid : uid('k_');
   if(FBM){ toast('નોંધણી થઈ રહી છે… ફોટા અપલોડ થાય છે'); try{ await Store.fs.doc('users/' + kid).set({role:'karigar', mobile:mob, email:S.pendingAuth.email || '', createdAt:Date.now()}); }catch(e){ return toast(authErr(e)); }
@@ -1918,7 +2009,7 @@ async function karRegister(){
   const k = {id:kid, name:v('kr_name'), mobile:mob, email:(FBM && S.pendingAuth.email) || '', pin, cat, cats, agentFor, ...(rf ? {referredBy:rf.uid, refBy:rf.code} : {}), skills:v('kr_skills'), exp:+v('kr_exp') || 0, visit:+v('kr_visit') || catVisit(cat),
     area:areaVal('kr_area'), areaGeo:areaGeoVal('kr_area', 2), about:v('kr_about'), photo:photoData || '', status:st.autoApprove ? 'approved' : 'pending', online:false, ratingSum:0, ratingCount:0, jobs:0,
     earnings:0, commissionDue:0, commissionPaid:0, createdAt:Date.now(), aadhaar4:kyc.last4, aadhaarMasked:kyc.masked, kycDocs:kyc.docs, upi:v('kr_upi'), policeNo:kyc.policeNo, kycOk:false, consentAt:Date.now()};
-  Store.put('karigars', k); try{ await Store.saveKyc(k.id, kyc.priv); }catch(e){} photoData = ''; S.cp_kr = null; S.cpo_kr = S.cpa_kr = '';
+  Store.put('karigars', k); try{ await Store.saveKyc(k.id, kyc.priv); }catch(e){} photoData = ''; S.selfie = ''; S.cp_kr = null; S.cpo_kr = S.cpa_kr = '';
   if(rf) refJoin(k.id, k.name, rf, 'karigar'); setSession({role:'karigar', id:k.id}); S.pendingAuth = null;
   if(FBM) await FB.subscribe(); toast('નોંધણી થઈ ગઈ!'); home(); logAccess('register');
 }
@@ -1933,7 +2024,7 @@ VIEWS.k_home = () => {
   if(k.status === 'pending') banner = `<div class="banner warn">⏳ <div><b>પ્રોફાઇલ મંજૂરીની રાહમાં</b>એડમિન તમારી વિગત ચકાસીને મંજૂર કરશે, પછી કામ મળવાનું શરૂ થશે.${Store.mode === 'local' ? ' <button class="btn sm" onclick="Store.patch(\'karigars\', me().id, {status:\'approved\'})">ડેમો: જાતે મંજૂર કરો</button>' : ''}</div></div>`;
   if(k.status === 'blocked') banner = `<div class="banner bad">⛔ <div><b>તમારું ખાતું બંધ છે</b>વધુ માહિતી માટે એડમિનનો સંપર્ક કરો.</div></div>`;
   if(k.status === 'approved' && dueBlocked(k)) banner += `<button class="banner bad" style="text-align:left;width:100%" onclick="tab('k_wallet')">💰 <div><b>બાકી કમીશન ${rs(k.commissionDue)}</b>નવું કામ મેળવવા પહેલાં કમીશન ચૂકવો — અહીં ટેપ કરો</div></button>`;
-  return topbar('નમસ્તે, ' + k.name.split(' ')[0], {right:`<span class="chip">${catIcon(k.cat)} ${h(kCatTxt(k))}</span>`}) + `<div class="wrap">
+  return topbar('નમસ્તે, ' + k.name.split(' ')[0], {right:`<span class="chip">${catIconH(k.cat)} ${h(kCatTxt(k))}</span>`}) + `<div class="wrap">
     ${banner}
     ${k.status === 'approved' ? `<button class="toggle ${k.online ? 'is-on' : 'is-off'}" onclick="toggleOnline()"><span class="sw"><i></i></span><div><b>${k.online ? 'તમે ઓનલાઇન છો' : 'તમે ઓફલાઇન છો'}</b><span class="small">${k.online ? 'નવા કામની વિનંતીઓ આવશે' : 'કામ મેળવવા ઓનલાઇન થાઓ'}</span></div></button>` : ''}
     ${k.status === 'approved' && k.online ? locStatus(k) : ''}
@@ -1946,7 +2037,7 @@ VIEWS.k_home = () => {
 };
 function reqCard(b, k){
   const km = kmTo(k, b);
-  return `<div class="card"><div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))}</b><span class="pill ${b.status === 'requested' ? 'brand' : 'warn'}">${b.status === 'requested' ? 'ખાસ તમને' : 'બધાને — જલ્દી કરો'}</span></div>
+  return `<div class="card"><div class="between"><b>${catIconH(b.cat)} ${h(catName(b.cat))}</b><span class="pill ${b.status === 'requested' ? 'brand' : 'warn'}">${b.status === 'requested' ? 'ખાસ તમને' : 'બધાને — જલ્દી કરો'}</span></div>
     <div class="small">${h(b.problem)}</div><div class="meta"><span>📍 ${h(areaName(b.area))} · ${km.toFixed(1)} કિમી</span><span>🕑 ${fmtDT(b.when)}</span><span>${ago(b.createdAt)}</span>${custRatingPill(b.custId, b)}</div>
     <div class="two"><button class="btn bad" onclick="rejectReq('${b.id}')">ના પાડો</button><button class="btn ok" onclick="acceptReq('${b.id}')">સ્વીકારો</button></div></div>`;
 }
@@ -1984,7 +2075,7 @@ VIEWS.k_job = p => {
   if(b.status === 'done') act = billCard(b, 'karigar') + billBtns(b, 'karigar') + `<div class="banner ok">✔ <div><b>કામ પૂરું</b>${b.rating ? 'ગ્રાહકનું રેટિંગ: ' + '★'.repeat(b.rating) + (b.review ? ' — ' + h(b.review) : '') : 'ગ્રાહકના રેટિંગની રાહ'}</div></div>` + (b.kRating ? `<p class="small muted">તમે ગ્રાહકને ${'★'.repeat(b.kRating)} આપ્યા</p>` : kRateCard(b));
   if(b.status === 'cancelled') act = `<div class="banner bad">✕ <div><b>બુકિંગ રદ થયું</b>${h(b.cancelReason || '')}</div></div>`;
   return topbar('કામ · ' + b.custName) + `<div class="wrap">
-    <div class="status-hero"><span class="small" style="opacity:.8">${catIcon(b.cat)} ${h(catName(b.cat))}</span><h2>${STATUS[b.status]}</h2>
+    <div class="status-hero"><span class="small" style="opacity:.8">${catIconH(b.cat)} ${h(catName(b.cat))}</span><h2>${STATUS[b.status]}</h2>
       ${si >= 0 ? `<div class="stepper">${STEPS.map((s, i) => `<div class="${i <= si ? 'on' : ''}"></div>`).join('')}</div><div class="stepl">${STEPL.map(l => `<span>${l}</span>`).join('')}</div>` : ''}</div>
     <div class="card"><div class="between"><div><b>${h(b.custName)}</b> <span class="small">${custRatingPill(b.custId, b)}</span><div class="num">${h(b.custMobile)}</div></div><div class="row"><button class="btn sm" data-t="${h(b.custMobile)}" onclick="copyText(this.dataset.t)">કૉપિ</button><a class="btn sm ok" href="tel:${h(b.custMobile)}" title="ગ્રાહકને ફોન કરો">📞 ફોન</a></div></div>
       <div class="bill small"><span class="muted">સરનામું</span><span>${h(b.address)}, ${h(areaName(b.area))}</span><span class="muted">તકલીફ</span><span>${h(b.problem)}</span><span class="muted">સમય</span><span>${fmtDT(b.when)}</span></div>
@@ -2166,9 +2257,9 @@ VIEWS.a_bookings = p => { if(!isAdmin()) return VIEWS.welcome(); const f = p.f |
   const B = Store.all('bookings').filter(b => (f === 'active' || qOn || inRange(b.createdAt)) && (f === 'all' || (f === 'active' ? ACTIVE.includes(b.status) : b.status === f)) && (!p.cat || b.cat === p.cat))
     .filter(b => qMatch('ab', bSearchTxt(b))).sort((a, b) => b.createdAt - a.createdAt);
   const PG = pageList('ab' + f, B);
-  return topbar('બધા બુકિંગ') + `<div class="wrap">${f === 'active' ? '' : rangeBar()}${qBox('ab', 'બુકિંગ નં., ગ્રાહક, કારીગર, મોબાઇલ, સરનામું, તકલીફ, સ્થિતિ… કંઈ પણ')}${qOn && f !== 'active' ? '<p class="tiny muted">🔎 શોધ બધી તારીખમાં થાય છે (તારીખ ગાળો શોધ વખતે લાગુ નથી)</p>' : ''}${p.cat ? `<div class="chips"><button class="chipb on" onclick="S.p.cat='';render()">${catIcon(p.cat)} ${h(catName(p.cat))} ✕</button></div>` : ''}
+  return topbar('બધા બુકિંગ') + `<div class="wrap">${f === 'active' ? '' : rangeBar()}${qBox('ab', 'બુકિંગ નં., ગ્રાહક, કારીગર, મોબાઇલ, સરનામું, તકલીફ, સ્થિતિ… કંઈ પણ')}${qOn && f !== 'active' ? '<p class="tiny muted">🔎 શોધ બધી તારીખમાં થાય છે (તારીખ ગાળો શોધ વખતે લાગુ નથી)</p>' : ''}${p.cat ? `<div class="chips"><button class="chipb on" onclick="S.p.cat='';render()">${catIconH(p.cat)} ${h(catName(p.cat))} ✕</button></div>` : ''}
     ${(() => { const D = B.filter(b => b.status === 'done'), g = D.reduce((s, b) => s + (b.bill ? b.bill.gross : 0), 0), cm = D.reduce((s, b) => s + (b.commission || 0), 0); return `<div class="stats"><div><b>${B.length}</b><span>બુકિંગ</span></div><div><b>${rs(g)}</b><span>ધંધો (પૂરાં ${D.length})</span></div><div><b>${rs(cm)}</b><span>કમીશન</span></div></div>`; })()}<div class="chips">${[['all','બધા'],['active','ચાલુ'],['done','પૂરા'],['cancelled','રદ']].map(([v, l]) => `<button class="chipb ${f === v ? 'on' : ''}" onclick="S.p.f='${v}';render()">${l}</button>`).join('')}</div>
-    ${PG.items.map(b => { const k = Store.get('karigars', b.karigarId); return `<div class="card" style="cursor:pointer" onclick="go('a_booking',{id:'${b.id}'})"><div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
+    ${PG.items.map(b => { const k = Store.get('karigars', b.karigarId); return `<div class="card" style="cursor:pointer" onclick="go('a_booking',{id:'${b.id}'})"><div class="between"><b>${catIconH(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
       <div class="meta"><span>ગ્રાહક: ${h(b.custName)}</span><span>કારીગર: ${k ? h(k.name) : '—'}</span><span>${h(areaName(b.area))}</span><span>${ago(b.createdAt)}</span></div>${qHint('ab', bSearchTxt(b))}
       ${b.bill ? `<div class="meta"><span>બિલ ${rs(b.bill.gross)}</span>${b.bill.discount ? `<span>છૂટ ${rs(b.bill.discount)}</span>` : ''}${b.commission != null ? `<b style="color:var(--ok)">કમીશન ${rs(b.commission)}</b>` : ''}${b.rating ? `<span class="star">${'★'.repeat(b.rating)}</span>` : ''}</div>` : ''}</div>`; }).join('') || '<div class="card" style="text-align:center;color:var(--muted)">આ ગાળામાં કોઈ બુકિંગ નથી.</div>'}${PG.bar}</div>` + aNav(); };
 VIEWS.a_payments = () => { if(!isAdmin()) return VIEWS.welcome(); const P0 = Store.all('payments').filter(x => x.status === 'pending' || inRange(x.ts)).sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.ts - a.ts);
@@ -2186,6 +2277,10 @@ VIEWS.a_settings = () => { if(!isAdmin()) return VIEWS.welcome(); const st = Sto
   return topbar('સેટિંગ') + `<div class="wrap"><div class="card"><h3>ચાલુ / બંધ સ્વિચ</h3><p class="small muted">બંધ હોય ત્યારે બધા ગ્રાહક અને કારીગરને ફક્ત રોકડા ચુકવણી દેખાશે, કમીશન 0% રહેશે અને કૂપન નહીં દેખાય.</p>
     ${sw('as_commOn', st.commOn, 'એડમિન કમીશન', 'ચાલુ કરશો તો નીચેના દર પ્રમાણે દરેક કામ પર કમીશન લાગશે')}
     ${sw('as_upiOn', st.upiOn, 'UPI ચુકવણી', 'ચાલુ કરશો તો ગ્રાહકને UPI બટન અને કારીગરને UPI ID નું ખાનું દેખાશે')}
+    ${sw('as_custOn', !st.custOff, '👤 ગ્રાહક વિભાગ ચાલુ', 'બંધ = "મારે કારીગર જોઈએ છે" બટન લૉક — કોઈ ગ્રાહક ખોલી નહીં શકે (લૉગિન થયેલાને પણ "હાલ બંધ" દેખાશે)')}
+    <label class="f">ગ્રાહક વિભાગ બંધ હોય ત્યારે સંદેશ<input id="as_custMsg" maxlength="160" value="${h(st.custOffMsg || '')}" placeholder="${h(ROLE_OFF_DEF.customer)}"></label>
+    ${sw('as_karOn', !st.karOff, '👷 કારીગર વિભાગ ચાલુ', 'બંધ = "હું કારીગર છું" બટન લૉક — નવી નોંધણી અને કારીગર લૉગિન બંધ')}
+    <label class="f">કારીગર વિભાગ બંધ હોય ત્યારે સંદેશ<input id="as_karMsg" maxlength="160" value="${h(st.karOffMsg || '')}" placeholder="${h(ROLE_OFF_DEF.karigar)}"></label>
     ${sw('as_otpOn', st.otpOn, 'SMS OTP લૉગિન પણ', 'બંધ = ફક્ત Google લૉગિન (મફત). ચાલુ = Google ઉપરાંત મોબાઇલ OTP (દરેક SMS ના પૈસા, Blaze જરૂરી)')}
     ${sw('as_couponOn', st.couponOn, 'કૂપન / છૂટ', 'ચાલુ કરશો તો ગ્રાહકને કૂપન કોડનું ખાનું અને ઓફર દેખાશે')}
     <label class="f">વિનંતી કેટલા કિમી સુધી મોકલવી <span class="h">GPS અંતર (મૂળ 25)</span><input id="as_rad" inputmode="numeric" value="${h(st.radiusKm)}"></label></div>
@@ -2223,6 +2318,8 @@ VIEWS.a_settings = () => { if(!isAdmin()) return VIEWS.welcome(); const st = Sto
       </label><p class="small">હાલ <b>${(st.coupons || []).length}</b> કૂપન: ${(st.coupons || []).slice(0, 6).map(c => `<span class="pill ${c.off ? '' : 'ok'}">${h(c.code)} ₹${c.amount}</span>`).join(' ')}</p>
       <button class="btn ink block" onclick="go('a_coupons')">🎟️ કૂપન બનાવો / બદલો — કઈ સેવા, કયા ગ્રાહક માટે ›</button></div>
     ${trustEditor(st)}
+    <div class="card"><h3>🏠 કારીગર ઘરે પહોંચે ત્યારે ગ્રાહકને સંદેશ</h3><p class="tiny muted">કારીગર "પહોંચ્યો" દબાવે એટલે ગ્રાહકના ફોનમાં આ ચેતવણી (બોક્સ + સૂચના) આવશે. નવી લાઇન માટે Enter.</p>
+      <label class="f">સંદેશ<textarea id="as_arrMsg" rows="3" maxlength="200" placeholder="${h(ARRIVE_DEF)}">${h(st.arriveMsg || ARRIVE_DEF)}</textarea></label></div>
     <div class="card"><h3>🎁 રેફર એન્ડ અર્ન</h3>
       ${sw('as_refOn', st.refOn !== false, 'ગ્રાહક રેફરલ ચાલુ', 'ગ્રાહક મિત્રને કોડ મોકલે — મિત્રને પહેલા કામ પર છૂટ, મિત્રનું પહેલું કામ પૂરું થાય એટલે મોકલનારને બેલેન્સ')}
       <div class="two"><label class="f">મિત્રને છૂટ ₹<input id="as_rF" inputmode="numeric" value="${+st.refFriend || 0}"></label><label class="f">રેફર કરનારને ₹<input id="as_rM" inputmode="numeric" value="${+st.refMe || 0}"></label></div>
@@ -2243,6 +2340,8 @@ function saveSettings(){
   const rad = Math.round(+$('#as_rad').value || 0); if(rad < 1 || rad > 100) return toast('અંતર 1 થી 100 કિમી રાખો');
   Store.put('settings', {...Store.settings(), id:'main', otpOn:$('#as_otpOn').checked, commOn:$('#as_commOn').checked, upiOn:$('#as_upiOn').checked, couponOn:$('#as_couponOn').checked, radiusKm:rad, commRate:Math.max(0, +$('#as_rate').value || 0), dueLimit:Math.max(0, +$('#as_lim').value || 0), adminUpi:$('#as_upi').value.trim(),
     supportPhone:$('#as_sup').value.trim(), autoApprove:$('#as_auto').checked, adminPin:pin,
+    custOff:!$('#as_custOn').checked, karOff:!$('#as_karOn').checked, custOffMsg:$('#as_custMsg').value.replace(/[<>`]/g, '').trim(), karOffMsg:$('#as_karMsg').value.replace(/[<>`]/g, '').trim(),
+    arriveMsg:(($('#as_arrMsg').value || '').replace(/[<>`]/g, '').trim() === ARRIVE_DEF ? '' : ($('#as_arrMsg').value || '').replace(/[<>`]/g, '').trim()),
     footStyle:(document.querySelector('[name=as_ft]:checked') || {}).value || 'C', foot:footCollect(),
     heroOn:$('#as_heroOn').checked, heroCode:$('#as_hC').value.trim().toUpperCase(), heroTop:$('#as_hU').value.trim(), heroTitle:$('#as_hT').value.trim(), heroSub:$('#as_hS').value.trim(),
     refOn:$('#as_refOn').checked, refFriend:Math.max(0, +$('#as_rF').value || 0), refMe:Math.max(0, +$('#as_rM').value || 0), refMax:Math.max(0, +$('#as_rX').value || 0), refMin:Math.max(0, +$('#as_rN').value || 0),
@@ -2658,8 +2757,8 @@ const waNum = s => String(s || '').replace(/\D/g, '').slice(-10);
 function infoVals(){
   const st = Store.settings(), v = x => x ? h(x) : '';
   const mail = e => e ? `<a href="mailto:${h(e)}">${h(e)}</a>` : '';
-  return {biz:v(st.bizName), addr:v(st.bizAddr), gst:v(st.gstin), email:mail(st.supportEmail), phone:st.supportPhone ? `<a href="tel:${h(st.supportPhone)}">${h(st.supportPhone)}</a>` : '',
-    wa:st.whatsapp ? `<a target="_blank" rel="noopener" href="https://wa.me/91${waNum(st.whatsapp)}">${h(st.whatsapp)}</a>` : '', gro:v(st.groName), groEmail:mail(st.groEmail),
+  return {biz:v(st.bizName), addr:v(st.bizAddr), gst:v(st.gstin), email:mail(st.supportEmail || 'thaijaishe@gmail.com'), phone:st.supportPhone ? `<a href="tel:${h(st.supportPhone)}">${h(st.supportPhone)}</a>` : '',
+    wa:st.whatsapp ? `<a target="_blank" rel="noopener" href="https://wa.me/91${waNum(st.whatsapp)}">${h(st.whatsapp)}</a>` : '', gro:v(st.groName), groEmail:mail(st.groEmail || st.supportEmail || 'thaijaishe@gmail.com'),
     hours:v(st.hours), city:v(st.city), date:v(st.policyDate), comm:h(effRate()), due:rs(st.dueLimit), radius:h(radiusKm()), pay:payWord()};
 }
 function fillTokens(html){ const v = infoVals(), B = LANG === 'en' ? BLANK_EN : LANG === 'hi' ? BLANK_HI : BLANK, F = {comm:commOn(), upi:upiOn(), coupon:couponOn()};
@@ -2812,7 +2911,7 @@ function kycView(btn){ const im = btn.querySelector('img'); const src = im && im
 function kycAdminBox(k){ const d = Store.get('kyc', k.id);
   if(!d) return `<div class="banner warn">⚠️ <div><b>આધાર ફોટો હજુ મળ્યો નથી</b>${k.aadhaarMasked ? h(k.aadhaarMasked) : 'કારીગરને પ્રોફાઇલમાંથી KYC મોકલવા કહો.'}</div></div>`;
   return `<div class="flat stack" style="gap:8px"><div class="between"><b>આધાર: <span class="num">${h(d.aadhaarMasked || '—')}</span></b><span class="tiny muted">${dt(d.ts)}</span></div>
-    <div class="kycgrid">${kycImg(d.aadPhoto, 'આધાર આગળ')}${kycImg(d.aadBackPhoto, 'આધાર પાછળ')}${kycImg(d.polPhoto, 'પોલીસ સર્ટિફિકેટ')}</div>
+    <div class="kycgrid">${kycImg(d.selfie, '🤳 સેલ્ફી')}${kycImg(d.aadPhoto, 'આધાર આગળ')}${kycImg(d.aadBackPhoto, 'આધાર પાછળ')}${kycImg(d.polPhoto, 'પોલીસ સર્ટિફિકેટ')}</div>
     ${d.policeNo ? `<span class="small">પોલીસ સર્ટિ. નં.: <b>${h(d.policeNo)}</b></span>` : ''}
     <div class="row"><input id="ak_aadchk" inputmode="numeric" maxlength="14" placeholder="ઓરિજિનલ કાર્ડ પરથી નંબર લખી મેળવો" oninput="fmtAad(this)" style="flex:1;min-width:0"><button class="btn sm" onclick="kycMatch('${k.id}')">મેળવો</button></div>
     <span id="ak_aadres" class="small"></span><span class="tiny muted">પૂરો આધાર નંબર સંગ્રહ થતો નથી (UIDAI નિયમ) — ફક્ત ગુપ્ત hash થી મેળવી શકાય.</span></div>`; }
@@ -2863,7 +2962,7 @@ function loginTable(x){ const L = x.logins || []; const sd = sameDevice(x);
       ${L.map(l => `<tr><td>${dt(l.ts)}</td><td>${EVL[l.ev] || h(l.ev)}</td><td class="num">${h(l.ip)}</td><td>${h(l.dev)}${l.net ? ' · ' + h(l.net) : ''}</td><td class="num">${h(l.did)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">હજુ કોઈ લૉગ નથી (આ સુવિધા પહેલાં લૉગિન થયેલ).</p>'}
       <p class="tiny muted">IP ફોન તરફથી નોંધાય છે. કાયદાકીય પુરાવા માટે સર્વર-લૉગ (Firebase/Cloud Function) પણ રાખો.</p></div>`; }
 function bookingRow(b, who){ const k = Store.get('karigars', b.karigarId);
-  return `<button class="card" style="text-align:left" onclick="go('a_booking',{id:'${b.id}'})"><div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))} <span class="tiny muted num">${bNo(b)}</span></b>${statusPill(b.status)}</div>
+  return `<button class="card" style="text-align:left" onclick="go('a_booking',{id:'${b.id}'})"><div class="between"><b>${catIconH(b.cat)} ${h(catName(b.cat))} <span class="tiny muted num">${bNo(b)}</span></b>${statusPill(b.status)}</div>
     <div class="meta">${who !== 'c' ? `<span>ગ્રાહક: ${h(b.custName)}</span>` : ''}${who !== 'k' ? `<span>કારીગર: ${k ? h(k.name) : '—'}</span>` : ''}<span>${h(areaName(b.area))}</span><span>${dt(b.createdAt)}</span>
     ${b.bill ? `<b class="num">${rs(b.bill.gross)}</b>` : ''}${b.commission != null && b.status === 'done' ? `<span style="color:var(--ok)">કમીશન ${rs(b.commission)}</span>` : ''}${b.rating ? `<span class="star">★${b.rating}</span>` : ''}${b.sos ? '<span class="pill bad">SOS</span>' : ''}</div></button>`; }
 
@@ -2918,7 +3017,7 @@ VIEWS.a_karigar = p => { if(!isAdmin()) return VIEWS.welcome();
   return topbar(k.name, {back:true}) + `<div class="wrap">
     <div class="card"><div class="row">${avatar(k, 'lg')}<div class="grow stack" style="gap:3px"><h2>${h(k.name)}</h2>
       <div class="meta"><span class="pill ${st[1]}">${st[0]}</span>${k.online ? '<span class="pill ok">● ઓનલાઇન</span>' : `<span class="pill">છેલ્લે ${ago(k.lastSeen) || '—'}</span>`}${policeOk(k) ? '<span class="pill ok">પોલીસ વેરિફાઇડ</span>' : '<span class="pill warn">KYC બાકી</span>'}${k.sample ? '<span class="sample">નમૂનો</span>' : ''}</div>
-      <div class="meta"><span>${catIcon(k.cat)} ${h(kCatTxt(k))}</span><span>${h(k.mobile)}</span><span>📍 ${h(areaName(k.area))}</span></div></div></div>
+      <div class="meta"><span>${catIconH(k.cat)} ${h(kCatTxt(k))}</span><span>${h(k.mobile)}</span><span>📍 ${h(areaName(k.area))}</span></div></div></div>
       <div class="stats"><div><b>${k.jobs || 0}</b><span>કુલ કામ</span></div><div><b class="star">★ ${avg(k).toFixed(1)}</b><span>${k.ratingCount || 0} રેટિંગ</span></div><div><b style="color:var(--warn)">${rs(k.commissionDue)}</b><span>બાકી કમીશન</span></div></div>
       <span class="tiny muted">આ કારીગરનો રિપોર્ટ (ફોટો, ઓર્ડર, નકશો, લોકેશન, IP)</span>${exportBtns('k1', k.id)}</div>
     <div class="tabs">${tabs.map(([v, l]) => `<button class="${t === v ? 'on' : ''}" onclick="S.p.t='${v}';render()">${l}</button>`).join('')}</div>
@@ -2993,7 +3092,7 @@ VIEWS.a_booking = p => { if(!isAdmin()) return VIEWS.welcome(); const b = Store.
   const TL = Object.entries(tl).sort((x, y) => x[1] - y[1]); const TK = Store.all('tickets').filter(x => x.bookingId === b.id), AL = Store.all('alerts').filter(x => x.bookingId === b.id);
   const dest = b.geo || areaLL(b.area, b.areaGeo);
   return topbar('બુકિંગ ' + bNo(b), {back:true}) + `<div class="wrap">
-    <div class="card"><div class="between"><b>${catIcon(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
+    <div class="card"><div class="between"><b>${catIconH(b.cat)} ${h(catName(b.cat))}</b>${statusPill(b.status)}</div>
       ${kv([['ગ્રાહક', `${h(b.custName)} · <a href="tel:${h(b.custMobile)}">${h(b.custMobile)}</a> ${c ? `<button class="btn sm" onclick="go('a_customer',{id:'${c.id}'})">પ્રોફાઇલ</button>` : ''}`],
         ['કારીગર', k ? `${h(k.name)} · <a href="tel:${h(k.mobile)}">${h(k.mobile)}</a> <button class="btn sm" onclick="go('a_karigar',{id:'${k.id}'})">પ્રોફાઇલ</button>` : '—'],
         ['તકલીફ', h(b.problem)], ['સમય', fmtDT(b.when)], ['રીત', b.mode === 'broadcast' ? 'બધાને વિનંતી' : 'સીધું બુકિંગ'], ['સરનામું', h(b.address) + ', ' + h(areaName(b.area))],
@@ -3811,8 +3910,9 @@ function trTree(root){
 }
 const L2 = (gu, en) => LANG === 'en' ? en : LANG === 'hi' ? tr(gu) : gu;
 const LANGS = [['gu', 'ગુજરાતી', 'ગુ'], ['hi', 'हिन्दी', 'हि'], ['en', 'English', 'EN']];
-function setLang(l){ LANG = l; LS.set('tj_lang', l); document.documentElement.lang = l; S.renderKey = ''; closeModal(); render(); toast(l === 'en' ? 'English selected' : l === 'hi' ? 'हिन्दी भाषा चुनी गई' : 'ગુજરાતી ભાષા પસંદ કરી'); }
-function langSheet(){ modal(`<h3 data-notr>🌐 ભાષા · भाषा · Language</h3><div class="stack" data-notr>${LANGS.map(([id, nm]) => `<button class="btn block ${LANG === id ? 'pri' : ''}" onclick="setLang('${id}')">${LANG === id ? '✔ ' : ''}${nm}</button>`).join('')}</div>`); }
+function setLang(l){ if(l === 'auto'){ LS.del('tj_lang'); l = phoneLang(); } else LS.set('tj_lang', l); LANG = l; document.documentElement.lang = l; S.renderKey = ''; closeModal(); render(); toast(l === 'en' ? 'English selected' : l === 'hi' ? 'हिन्दी भाषा चुनी गई' : 'ગુજરાતી ભાષા પસંદ કરી'); }
+function langSheet(){ const auto = !LS.get('tj_lang', ''); modal(`<h3 data-notr>🌐 ભાષા · भाषा · Language</h3><div class="stack" data-notr>${LANGS.map(([id, nm]) => `<button class="btn block ${LANG === id ? 'pri' : ''}" onclick="setLang('${id}')">${LANG === id ? '✔ ' : ''}${nm}</button>`).join('')}
+    <button class="btn block ${auto ? 'ok' : ''}" onclick="setLang('auto')">${auto ? '✔ ' : ''}📱 ફોનની ભાષા મુજબ · Phone language</button></div>`); }
 const langBtn = full => `<button class="langb" data-notr onclick="langSheet()" aria-label="Language">🌐 ${full ? LANGS.find(x => x[0] === LANG)[1] : LANGS.find(x => x[0] === LANG)[2]}</button>`;
 const IX = () => LANG === 'en' ? INFO_EN : LANG === 'hi' ? INFO_HI : INFO;
 const themeBtn = () => `<button class="themeb" onclick="themeSheet()" aria-label="થીમ બદલો" title="થીમ બદલો">🎨</button>`;
@@ -4500,8 +4600,9 @@ function catsCard(){ const KC = catKCount(), A = allCatsAdmin(), off = A.filter(
   return `<div class="card"><div class="between"><h3>🛠️ બધાં કામ (${CATS.length})</h3><button class="btn sm ink" onclick="go('a_cats')">✏️ ફેરફાર / નવું ઉમેરો</button></div>
     <div class="acats">${(S.catAll ? CATS : CATS.slice(0, 12)).map(c => `<button onclick="catEdit('${c.id}')" title="ફેરફાર કરવા ટેપ કરો"><span class="e">${catPic(c)}</span><b>${h(c.name)}</b><span class="tiny muted">${KC[c.id] || 0} કારીગર · ₹${c.visit}</span></button>`).join('')}</div>
     ${CATS.length > 12 ? `<button class="btn sm block" onclick="S.catAll=!S.catAll;render()">${S.catAll ? '▲ ઓછાં બતાવો' : '▼ બધાં ' + CATS.length + ' કામ બતાવો'}</button>` : ''}
-    ${off.length ? `<p class="tiny muted">🗑️ ડિલીટ કરેલાં ${off.length} કામ ગ્રાહકને દેખાતાં નથી — "ફેરફાર" માં જઈ પાછાં લાવી શકો.</p>` : ''}</div>`; }
-VIEWS.a_cats = () => { if(!isAdmin()) return VIEWS.welcome(); const KC = catKCount(), A = allCatsAdmin(), on = A.filter(c => !c.off), off = A.filter(c => c.off), X = xCats();
+    ${off.length ? `<p class="tiny muted">🗑️ ડિલીટ કરેલાં ${off.length} કામ ગ્રાહકને દેખાતાં નથી — "ફેરફાર" માં જઈ પાછાં લાવી શકો.</p>` : ''}
+    ${(() => { const P = xCatsAll().filter(x => !xOk(x)); return P.length ? `<button class="banner warn" style="text-align:left;width:100%" onclick="go('a_cats')">⏳ <div><b>કારીગરોએ લખેલાં ${P.length} નવાં કામ મંજૂરી બાકી</b>${P.slice(0, 4).map(x => h(catName(x))).join(', ')} — જોવા ટેપ કરો</div></button>` : ''; })()}</div>`; }
+VIEWS.a_cats = () => { if(!isAdmin()) return VIEWS.welcome(); const KC = catKCount(), A = allCatsAdmin(), on = A.filter(c => !c.off), off = A.filter(c => c.off), X = xCatsAll().sort((a, b) => xOk(a) - xOk(b));
   const row = c => `<div class="card crow ${c.off ? 'off' : ''}"><span class="e">${catPic(c)}</span><div class="grow"><b>${h(c.name)}</b>${c.base ? '' : ' <span class="pill acc">નવું</span>'}${c.img ? ' <span class="pill">📷 ફોટો</span>' : ''}
       <div class="tiny muted">વિઝિટ ₹${c.visit} · ${KC[c.id] || 0} કારીગર${c.base && (c.name !== CAT_BASE.find(b => b.id === c.id).name) ? ' · મૂળ નામ: ' + h(CAT_BASE.find(b => b.id === c.id).name) : ''}</div></div>
       ${c.off ? `<button class="btn sm ok" onclick="catRestore('${c.id}')">↺ પાછું લાવો</button>` : `<button class="btn sm" onclick="catEdit('${c.id}')">✏️</button>${c.id === 'other' ? '' : `<button class="btn sm bad" onclick="catDel('${c.id}')">🗑️</button>`}`}</div>`;
@@ -4510,12 +4611,13 @@ VIEWS.a_cats = () => { if(!isAdmin()) return VIEWS.welcome(); const KC = catKCou
     <p class="tiny muted">ગ્રાહકની "બધા કામ" યાદીમાં આ જ ક્રમે દેખાય છે. ✏️ = નામ, ઇમોજી, ફોટો અને વિઝિટ ચાર્જ બદલો · 🗑️ = ગ્રાહકની યાદીમાંથી હટાવો (જૂનાં બુકિંગ સલામત રહે, ગમે ત્યારે પાછું લાવી શકો).</p>
     <h3>ચાલુ કામ (${on.length})</h3><div class="stack" style="gap:8px">${on.map(row).join('')}</div>
     ${off.length ? `<h3>🗑️ ડિલીટ કરેલાં (${off.length})</h3><div class="stack" style="gap:8px">${off.map(row).join('')}</div>` : ''}
-    ${X.length ? `<h3>✍️ કારીગરોએ જાતે લખેલાં કામ (${X.length})</h3><p class="tiny muted">"અન્ય કામ" માં કારીગરે લખેલાં કામ. ⬆️ = ગ્રાહકની યાદીમાં નવું કામ બનાવો · 🔀 = હાલના કોઈ કામમાં ભેળવો — બંનેમાં એ કારીગરો આપમેળે નવા કામમાં ખસી જશે.</p>
-      <div class="stack" style="gap:8px">${X.map(x => { const n = xKars(x).length; return `<div class="card crow"><span class="e">✍️</span><div class="grow"><b>${h(catName(x))}</b><div class="tiny muted">${n} કારીગર: ${xKars(x).slice(0, 3).map(k => h(k.name)).join(', ')}${n > 3 ? '…' : ''}</div></div>
-        <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:190px"><button class="btn sm ok" title="ચાલુ કામમાં ઉમેરો" onclick="xPromote('${h(x)}')">⬆️ ચાલુ કામમાં</button><button class="btn sm" title="હાલના કામમાં ભેળવો" onclick="xMerge('${h(x)}')">🔀</button><button class="btn sm" title="નામ બદલો" onclick="xRename('${h(x)}')">✏️</button><button class="btn sm bad" title="હટાવો" onclick="xDel('${h(x)}')">🗑️</button></div></div>`; }).join('')}</div>` : ''}
+    ${X.length ? `<h3>✍️ કારીગરોએ જાતે લખેલાં કામ (${X.length})</h3><p class="tiny muted">"અન્ય કામ" માં કારીગરે લખેલાં કામ — <b>એડમિન મંજૂરી વગર ગ્રાહકને દેખાતાં નથી</b>. ✅ = જેમ છે તેમ મંજૂર · ⬆️ = ગ્રાહકની યાદીમાં નવું કામ બનાવો (નામ, ફોટો, ચાર્જ સાથે) · 🔀 = હાલના કોઈ કામમાં ભેળવો — બંનેમાં એ કારીગરો આપમેળે નવા કામમાં ખસી જશે.</p>
+      <div class="stack" style="gap:8px">${X.map(x => { const n = xKars(x).length; return `<div class="card crow" style="${xOk(x) ? '' : 'border:2px solid var(--warn)'}"><span class="e">✍️</span><div class="grow"><b>${h(catName(x))}</b> ${xOk(x) ? '<span class="pill ok">✅ ગ્રાહકને દેખાય</span>' : '<span class="pill warn">⏳ મંજૂરી બાકી</span>'}<div class="tiny muted">${n} કારીગર: ${xKars(x).slice(0, 3).map(k => h(k.name)).join(', ')}${n > 3 ? '…' : ''}</div></div>
+        <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:190px">${xOk(x) ? `<button class="btn sm" title="ગ્રાહકથી છુપાવો" onclick="xAllow('${h(x)}',0)">⛔ છુપાવો</button>` : `<button class="btn sm ok" title="જેમ છે તેમ મંજૂર" onclick="xAllow('${h(x)}',1)">✅ મંજૂર</button>`}<button class="btn sm ok" title="ચાલુ કામમાં ઉમેરો" onclick="xPromote('${h(x)}')">⬆️ ચાલુ કામમાં</button><button class="btn sm" title="હાલના કામમાં ભેળવો" onclick="xMerge('${h(x)}')">🔀</button><button class="btn sm" title="નામ બદલો" onclick="xRename('${h(x)}')">✏️</button><button class="btn sm bad" title="હટાવો" onclick="xDel('${h(x)}')">🗑️</button></div></div>`; }).join('')}</div>` : ''}
   </div>` + aNav(); };
 let CED = null;
 /* કારીગરે લખેલું કામ (x:નામ) → નવું કામ / હાલનું કામ / નવું નામ / હટાવો — એ કારીગરોના cats આપમેળે બદલાય */
+function xAllow(x, on){ const st = Store.settings(), L = new Set(st.xOk || []); on ? L.add(x) : L.delete(x); Store.put('settings', {...st, id:'main', xOk:[...L]}); audit(on ? '✅ લખેલું કામ મંજૂર' : '⛔ લખેલું કામ છુપાવ્યું', catName(x)); toast(on ? 'મંજૂર — ગ્રાહકની યાદીમાં દેખાશે' : 'ગ્રાહકથી છુપાવ્યું'); render(); }
 const xKars = x => Store.all('karigars').filter(k => kCats(k).includes(x));
 function xRepl(x, to){ let n = 0; xKars(x).forEach(k => { let cs = [...new Set(kCats(k).map(c => c === x ? to : c).filter(Boolean))]; if(!cs.length) cs = ['other']; Store.patch('karigars', k.id, {cats:cs, cat:cs[0]}); n++; }); return n; }
 function xPromote(x){ catEdit(''); CED.from = x; $('#ced_n').value = catName(x); const t = $('#modal h3'); if(t) t.innerHTML = '⬆️ "' + h(catName(x)) + '" ને ચાલુ કામમાં ઉમેરો';
@@ -4626,7 +4728,7 @@ function renderOverlay(){
   const b = reqs[0]; const t0 = (b.timeline || {})[b.status] || b.createdAt; if(!S.seen.has(b.id)){ S.seen.add(b.id); Ring.start(b.id, Math.max(3000, REQ_WINDOW - (Date.now() - t0))); }
   const km = kmTo(k, b);
   ov.innerHTML = `<div class="sheet" role="dialog" aria-label="નવી વિનંતી"><div class="between"><span class="pill ${b.status === 'requested' ? 'brand' : 'warn'}">${b.status === 'requested' ? 'ખાસ તમને વિનંતી' : 'નવું કામ — નજીકમાં'}</span><b class="num" id="ov_cd">60</b></div>
-    <h2>${catIcon(b.cat)} ${h(catName(b.cat))}</h2><p>${h(b.problem)}</p>
+    <h2>${catIconH(b.cat)} ${h(catName(b.cat))}</h2><p>${h(b.problem)}</p>
     <div class="meta"><span>📍 ${h(areaName(b.area))} · ${km.toFixed(1)} કિમી</span><span>🕑 ${fmtDT(b.when)}</span><span>વિઝિટ ${rs(k.visit)}+</span>${custRatingPill(b.custId, b)}</div>
     <div class="bar"><i id="ov_bar" style="width:100%"></i></div>
     <div class="two"><button class="btn bad" onclick="rejectReq('${b.id}')">ના પાડો</button><button class="btn ok" style="padding:14px" onclick="acceptReq('${b.id}')">સ્વીકારો</button></div></div>`;
