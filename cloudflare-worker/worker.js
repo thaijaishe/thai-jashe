@@ -12,7 +12,7 @@
  */
 
 const catT = c => CAT[c] || (String(c || '').startsWith('x:') ? String(c).slice(2) : '');
-const CAT = {ac:'એસી રિપેર', plumber:'પ્લમ્બર', electrician:'ઇલેક્ટ્રિશિયન', carpenter:'સુથાર', painter:'કલરકામ', cleaning:'ઘર સફાઈ', mason:'કડિયા', welder:'વેલ્ડર',
+const CAT = {watchman:'ચોકીદાર', photographer:'ફોટોગ્રાફર', mandap:'મંડપ ડેકોરેશન', laundry:'લોન્ડ્રી / ઇસ્ત્રી', lab:'લેબોરેટરી (ઘરે સેમ્પલ)', ac:'એસી રિપેર', plumber:'પ્લમ્બર', electrician:'ઇલેક્ટ્રિશિયન', carpenter:'સુથાર', painter:'કલરકામ', cleaning:'ઘર સફાઈ', mason:'કડિયા', welder:'વેલ્ડર',
   mechanic:'બાઇક/કાર મિકેનિક', appliance:'ફ્રિજ/વોશિંગ મશીન', ro:'RO રિપેર', cctv:'CCTV/કમ્પ્યુટર', tailor:'દરજી', cobbler:'મોચી', gardener:'માળી', pest:'પેસ્ટ કંટ્રોલ',
   cook:'રસોઇયા', beauty:'બ્યુટીશિયન', locksmith:'ચાવીવાળો', roofing:'છત/પતરાં', glass:'કાચકામ', tiles:'ટાઇલ્સ', generator:'ઇન્વર્ટર/જનરેટર', solar:'સોલાર',
   movers:'ઘરવખરી શિફ્ટિંગ', pop:'ઇન્ટિરિયર/POP', maid:'ઘરકામ', driver:'ડ્રાઇવર', other:'અન્ય કામ', agent:'એજન્ટ', puncture:'ઘર બેઠા પંચર'};
@@ -114,7 +114,7 @@ async function notifyNearby(env, id, b){
   const st = await getDoc(env, 'settings/main') || {}, R = +st.radiusKm || 25, bp = b.geoR || areaLL(b.areaGeo), skip = new Set(b.rejectedBy || []);
   try{ (await busySet(env)).forEach(k => skip.add(k)); }catch(e){}
   // કારીગરના એક થી વધુ કામ (cats); "અન્ય કામ" ની વિનંતી જાતે લખેલા કામ (x:...) વાળાને પણ
-  const has = k => (Array.isArray(k.cats) && k.cats.length ? k.cats : [k.cat]).some(c => c === b.cat || (b.cat === 'other' && (c === 'other' || String(c || '').startsWith('x:'))));
+  const has = k => (Array.isArray(k.cats) && k.cats.length ? k.cats : [k.cat]).some(c => c === b.cat || (String(c || '').startsWith('x:') && CAT[b.cat] && String(c).slice(2).trim() === CAT[b.cat]) || (b.cat === 'other' && (c === 'other' || String(c || '').startsWith('x:'))));
   const ks = (await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true))})).filter(has);
   const ids = [];
   for(const k of ks){ if(skip.has(k.id)) continue; const p = await getDoc(env, `karigars/${k.id}/private/main`) || {};
@@ -150,7 +150,8 @@ async function doNotify(env, uid, d, ctx){
     }
     const kids = [b.karigarId, ...(uid !== b.custId && (b.rejectedBy || []).includes(uid) ? [uid] : [])].filter(Boolean);
     if(ctx && ctx.waitUntil) ctx.waitUntil(Promise.all(kids.map(k => refreshBusy(env, k)))); else await Promise.all(kids.map(k => refreshBusy(env, k)));
-    const to = uid === b.karigarId ? b.custId : b.karigarId; const msg = CUST_MSG[b.status]; if(!to || !msg) return {ok:true, sent:0};
+    const to = uid === b.karigarId ? b.custId : b.karigarId; let msg = CUST_MSG[b.status];
+    if(b.status === 'arrived' && to === b.custId){ const st = await getDoc(env, 'settings/main').catch(() => null) || {}; msg = '🏠 ' + String(st.arriveMsg || 'કારીગર તમારા ઘરે આવી ગયેલ છે. કારીગર પર નજર રાખવી આપની જવાબદારી છે.').replace(/\s*\n\s*/g, ' ').slice(0, 180) + ' — OTP આપો'; } if(!to || !msg) return {ok:true, sent:0};
     return {ok:true, sent:await push(env, await tokensOf(env, 'users', [to]), {type:'status', bookingId:id, title:'થઈ જશે! — ' + catT(b.cat), body:msg})};
   }
   if(type === 'refer'){   // રેફર એન્ડ અર્ન: કામ પૂરું થાય ત્યારે ઇનામ (ફક્ત સર્વર લખી શકે — કોઈ ગ્રાહક જાતે બેલેન્સ વધારી ન શકે)

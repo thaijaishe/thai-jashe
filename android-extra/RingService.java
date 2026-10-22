@@ -15,7 +15,7 @@ import androidx.core.app.NotificationCompat;
 /**
  * થઈ જશે! — એપ બંધ હોય ત્યારે નવી વિનંતીની રિંગ.
  * સૂચનાના અવાજ પર આધાર નહીં (ઘણા ફોન — Vivo/Oppo/Xiaomi — એપની સૂચનાનો અવાજ બંધ કરી દે છે),
- * એટલે આ નાની "foreground service" પોતે 60 સેકન્ડ રિંગ વગાડે (કૉલિંગ એપ જેવું), એલાર્મ અવાજ પર 80%.
+ * એટલે આ નાની "foreground service" પોતે 60 સેકન્ડ રિંગ વગાડે (કૉલિંગ એપ જેવું), એલાર્મ અવાજ પર 80%. Android 14+ માં "shortService" પ્રકાર (Play Store ના નિયમ મુજબ).
  * બંધ: સૂચના પરનું "બંધ કરો" બટન, એપ ખોલો, કામ સ્વીકારો કે 60 સેકન્ડ.
  */
 public class RingService extends Service {
@@ -63,7 +63,8 @@ public class RingService extends Service {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .build();
         try {
-            if (Build.VERSION.SDK_INT >= 29) startForeground(NOTE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            // Android 14+ : "shortService" — થોડી સેકન્ડની ચેતવણી માટેનો પ્રકાર (Google Play નિયમ મુજબ; 3 મિનિટથી ઓછું, રિંગ 60 સેકન્ડ)
+            if (Build.VERSION.SDK_INT >= 34) startForeground(NOTE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE);
             else startForeground(NOTE_ID, n);
         } catch (Exception e) {
             // foreground ન થઈ શક્યું — સૂચના બતાવો અને છતાં રિંગ વગાડો
@@ -72,6 +73,13 @@ public class RingService extends Service {
         RingtonePlugin.startRing(this, 60);   // એપની રિંગ, 80% અવાજ, 60 સેકન્ડ પછી આપમેળે બંધ (stopRing → આ service પણ બંધ)
         return START_NOT_STICKY;
     }
+
+    /** shortService નો સમય પૂરો — તરત બંધ (Android 14) */
+    @Override
+    public void onTimeout(int startId) { RingtonePlugin.stopRing(this); stopSelf(); }
+
+    /** shortService નો સમય પૂરો — તરત બંધ (Android 15+; @Override નહીં જેથી જૂના SDK સાથે પણ compile થાય) */
+    public void onTimeout(int startId, int fgsType) { RingtonePlugin.stopRing(this); stopSelf(); }
 
     @Override
     public void onDestroy() {
