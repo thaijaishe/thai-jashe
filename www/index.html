@@ -1414,7 +1414,10 @@ function initBack(){ const App = window.Capacitor && Capacitor.Plugins && Capaci
    1) એપનો દેખાવ/સુવિધા (વેબ ભાગ) વેબસાઇટ પરથી જ ખૂલે છે — GitHub પર અપડેટ કરો એટલે બધાને આપમેળે મળે.
    2) ફક્ત APK નો અંદરનો (native) ભાગ બદલાય ત્યારે GitHub Releases માં નવી APK — એપ પોતે પૂછે "અપડેટ કરો". */
 function ghRepo(){ if(window.TJ_GH_REPO) return window.TJ_GH_REPO; const m = location.hostname.match(/^([\w-]+)\.github\.io$/), seg = location.pathname.split('/').filter(Boolean)[0];
-  return m && seg ? m[1] + '/' + seg : ''; }
+  return m && seg ? m[1] + '/' + seg : 'thaijaishe/thai-jashe'; }
+/* APK સીધી ડાઉનલોડ લિંક — કોઈ પણ સાઇટ/પ્રિવ્યૂ પરથી ચાલે (GitHub Releases ની latest) */
+const apkUrl = () => window.TJ_APK_URL || 'https://github.com/' + ghRepo() + '/releases/latest/download/ThaiJashe.apk';
+const dlPage = () => (/\.github\.io$/.test(location.hostname) ? '' : 'https://thaijaishe.github.io/thai-jashe/') + 'download.html' + refQ();
 async function apkUpdateCheck(force){ const App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App; if(!isNative() || !App || !App.getInfo) return;
   try{ const info = await App.getInfo(), cur = +info.build || 0, repo = ghRepo(); if(!repo) return;
     let rel = LS.get('tj_rel', null); if(force || !rel || Date.now() - rel.at > 3 * 3600000){
@@ -3440,7 +3443,7 @@ function installCard(admin){
   const btn = INSTALL_EVT ? `<button class="btn pri" onclick="doInstall()">📲 હોમ સ્ક્રીન પર ઉમેરો</button>` : '';
   return `<div class="card" style="border:2px dashed var(--accent)"><b>📲 ${admin ? 'એડમિન પેનલ ફોનમાં રાખો' : 'ફોનમાં એપ રાખો'}</b>
     <span class="small muted">Play Store વગર — હોમ સ્ક્રીન પર "${admin ? 'TJ Admin' : 'થઈ જશે!'}" આઇકન આવી જશે અને એપની જેમ ખૂલશે.</span>
-    ${admin ? btn : `<div class="two">${btn || `<a class="btn pri" href="download.html${refQ()}">ઇન્સ્ટોલ કરવાની રીત</a>`}<a class="btn" href="download.html${refQ()}">Android APK</a></div>`}
+    ${admin ? btn : `<div class="two">${btn || `<a class="btn pri" href="${dlPage()}">ઇન્સ્ટોલ કરવાની રીત</a>`}<a class="btn" href="${apkUrl()}" download="ThaiJashe.apk" onclick="toast('⬇️ ThaiJashe.apk ડાઉનલોડ શરૂ થયું — નીચે સૂચનામાંથી ખોલી Install કરો')">⬇️ Android APK</a></div>`}
     ${!INSTALL_EVT ? `<span class="tiny muted">${ios ? 'iPhone: Safari માં શેર બટન → "Add to Home Screen"' : 'Chrome: ઉપર ⋮ મેનુ → "Add to Home screen" / "Install app"'}</span>` : ''}</div>`;
 }
 async function doInstall(){ const e = INSTALL_EVT; if(!e) return; e.prompt(); try{ await e.userChoice; }catch(x){} INSTALL_EVT = null; render(); }

@@ -51,7 +51,7 @@
 (function(){
   var apk = window.TJ_APK_URL;
   if(!apk){ var host = location.hostname, m = host.match(/^([^.]+)\.github\.io$/), repo = location.pathname.split('/').filter(Boolean)[0];
-    apk = m && repo ? 'https://github.com/' + m[1] + '/' + repo + '/releases/latest/download/ThaiJashe.apk' : 'ThaiJashe.apk'; }
+    apk = 'https://github.com/' + (window.TJ_GH_REPO || (m && repo ? m[1] + '/' + repo : 'thaijaishe/thai-jashe')) + '/releases/latest/download/ThaiJashe.apk'; }
   document.getElementById('apk').href = apk;
   var ref = ''; try{ ref = (new URLSearchParams(location.search).get('ref') || localStorage.getItem('tj_ref') || '').replace(/"/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12); }catch(e){}
   if(/^(TJ|KG)[A-Z0-9]{4,10}$/.test(ref)){ try{ localStorage.setItem('tj_ref', JSON.stringify(ref)); }catch(e){}
