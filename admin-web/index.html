@@ -402,7 +402,7 @@ function ago(ts){ if(!ts) return ''; const s = Math.max(0, (Date.now() - ts) / 1
   if(s < 86400) return Math.floor(s/3600) + ' કલાક પહેલાં'; return Math.floor(s/86400) + ' દિવસ પહેલાં'; }
 function fmtDT(v){ if(!v || v === 'now') return 'હમણાં જ'; try{ const d = new Date(v);
   return d.toLocaleDateString(LOC(), {day:'numeric', month:'short'}) + ', ' + d.toLocaleTimeString(LOC(), {hour:'2-digit', minute:'2-digit'}); }catch(e){ return v; } }
-function toast(t){ const el = $('#toast'); el.textContent = tr(String(t)); el.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => el.hidden = true, 2600); }
+function toast(t, ms){ const el = $('#toast'); el.textContent = tr(String(t)); el.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => el.hidden = true, ms || 2600); }
 function copyText(t){ try{ navigator.clipboard.writeText(t).then(() => toast('કૉપિ થયું: ' + t)).catch(() => toast(t)); }catch(e){ toast(t); } }
 let AC = null;
 function beep(){ try{ AC = AC || new (window.AudioContext || window.webkitAudioContext)();
@@ -1034,6 +1034,7 @@ const FB = {
       L('alerts', 'all', this.col('alerts'));
       L('payments', 'all', this.col('payments'));
       L('audit', 'range', this.col('audit').where('ts', '>=', from));
+      this.watchLogins();
     }
     return Promise.all(waits); },
   /* કારીગરના કામના પ્રકારની નવી વિનંતીઓ (status = searching) */
@@ -1053,6 +1054,13 @@ const FB = {
   listenDyn(k, path, id, n){
     this.dyn[k] = Store.fs.doc(path).onSnapshot(d => { if(d.exists){ const x = d.data(); delete x.custId; delete x.ts; this.setSide('bookings', id, x); } },
       e => { if(this.dyn[k] && n < 8) setTimeout(() => { if(this.dyn[k]) this.listenDyn(k, path, id, n + 1); }, Math.min(15000, 1500 * (n + 1))); }); },
+  /* એડમિન: છેલ્લા 2 દિવસના બધા લૉગિન લાઇવ — કોઈ ગ્રાહક/કારીગર લૉગિન થાય કે તરત IP સાથે દેખાય */
+  watchLogins(){ const from = Date.now() - 2 * 86400000;
+    this.subs.push(Store.fs.collectionGroup('logins').where('ts', '>=', from).onSnapshot(snap => { const touched = new Set();
+      snap.docChanges().forEach(ch => { if(ch.type !== 'added') return; const l = ch.doc.data(); if(!l || l.role === 'admin') return; const id = ch.doc.ref.parent.parent.id;
+        const col = Store.get('karigars', id) || l.role === 'karigar' ? 'karigars' : 'customers'; const sd = (this.side[col] = this.side[col] || {}); const cur = (sd[id] && sd[id].logins) || [];
+        if(cur.some(x => x.ts === l.ts && x.did === l.did)) return; sd[id] = {...(sd[id] || {}), logins:[l, ...cur].sort((a, b) => b.ts - a.ts), lastIp:l.ip || (sd[id] || {}).lastIp, lastLogin:l.ts}; touched.add(col); });
+      touched.forEach(c => this.recompute(c)); }, e => console.warn('logins live', e.code || e.message))); },
   /* એડમિન: લૉગિન અને લોકેશન લૉગ (અલગ subcollection, 1 વર્ષ) જરૂર પડે ત્યારે જ */
   /* એડમિન: બધાના ઈમેલ (users/{id}.email) — રિપોર્ટ/Excel/CSV માટે */
   async loadEmails(){ if(!isAdmin() || Date.now() - (this.emailsAt || 0) < 60000) return; this.emailsAt = Date.now();
@@ -1164,6 +1172,8 @@ async function fbAfterLogin(role, extra = {}){
     await Store.fs.doc('users/' + u.uid).set({role, mobile:mob, email:u.email || '', createdAt:Date.now()});
     await Store.fs.doc('customers/' + u.uid).set({name:extra.name, mobile:mob, email:u.email || '', area:extra.area || '', areaGeo:extra.areaGeo || null, address:extra.address || '', createdAt:Date.now(), ...(extra.rf ? {referredBy:extra.rf.uid, refBy:extra.rf.code} : {})}); S.pendingAuth = null;
     if(extra.rf) refJoin(u.uid, extra.name, extra.rf, 'customer'); }
+  if(cur === 'customer'){ try{ const cd = await Store.fs.doc('customers/' + u.uid).get(); // જૂનું ખાતું પણ ગ્રાહક યાદીમાં આવે
+      if(!cd.exists){ const um = String(ud.data().mobile || mob || ''); if(/^[6-9]\d{9}$/.test(um)) await Store.fs.doc('customers/' + u.uid).set({name:u.displayName || ('ગ્રાહક ' + um.slice(-4)), mobile:um, email:u.email || '', area:'', address:'', createdAt:ud.data().createdAt || Date.now()}); } }catch(e){ console.warn('cust doc', e); } }
   setSession({role, id:u.uid}); await FB.subscribe(); const d = me();
   if(d && (d.blocked || d.status === 'blocked') && role === 'customer'){ toast('આ ખાતું બંધ છે — મદદ માટે હેલ્પલાઇન પર સંપર્ક કરો'); await doLogout(); return false; }
   home(); logAccess('login'); if(window.Push) Push.init(); return true; }
@@ -2229,6 +2239,7 @@ VIEWS.a_home = () => {
     ${openAl.map(alertCard).join('')}
     ${openT.length ? `<button class="banner ${lateT ? 'bad' : 'acc'}" style="text-align:left;width:100%" onclick="tab('a_tickets')">🎧 <div><b>${openT.length} ખુલ્લી ફરિયાદ${lateT ? ' · ' + lateT + ' ને 24 કલાકથી જવાબ નથી' : ''}</b>જવાબ આપવા ટેપ કરો</div></button>` : ''}
     ${pendK || pendP ? `<div class="banner warn">🔔 <div><b>ધ્યાન આપવાનું</b>${pendK ? `<button class="btn sm" onclick="tab('a_karigars')">${pendK} કારીગર મંજૂરી</button> ` : ''}${pendP ? `<button class="btn sm" onclick="tab('a_payments')">${pendP} કમીશન ચૂકવણી</button>` : ''}</div></div>` : ''}
+    ${lgDashCard()}
     <div class="card"><h3>🔎 બધે શોધો</h3><div class="search"><span>🔍</span><input id="a_q" value="${h(S.aq || '')}" placeholder="નામ, મોબાઇલ, સરનામું, બુકિંગ નંબર, IP, આધાર છેલ્લા 4…" oninput="aSearch(this.value)" autocomplete="off"></div><div id="a_qres">${aSearchRes(S.aq || '')}</div></div>
     ${catsCard()}
     ${rangeBar()}
@@ -2652,7 +2663,7 @@ privacy:{icon:'🔒', title:'પ્રાઇવસી પોલિસી', body:
 <li><b>કારીગર:</b> નામ, મોબાઇલ, ફોટો, કામ, અનુભવ, વિસ્તાર, આધાર (ફક્ત છેલ્લા 4 આંકડા + ગુપ્ત hash), આધાર કાર્ડ અને પોલીસ સર્ટિફિકેટના ફોટા (ફક્ત એડમિન માટે), પોલીસ વેરિફિકેશન નંબર,{{?upi}} UPI ID,{{/upi}} કમાણી{{?comm}} અને કમીશન{{/comm}}નો હિસાબ.</li>
 <li><b>સૂચનાઓ (Push):</b> નવી વિનંતી/બુકિંગની સૂચના માટે ફોનનો સૂચના ટોકન (Firebase Cloud Messaging). નવી વિનંતી વખતે કારીગરના ફોનમાં 1 મિનિટ રિંગ વાગે છે.</li>
 <li><b>કારીગરનું લોકેશન:</b> ઓનલાઇન હોય ત્યારે GPS લોકેશન (દર 1 મિનિટે, અને ગ્રાહક તરફ જતી વખતે વધુ વાર) અને તેનો ઇતિહાસ.</li>
-<li><b>ટેકનિકલ માહિતી (બધા માટે):</b> લૉગિન/એપ ખોલવાનો સમય, IP સરનામું (અમારા સર્વર પર નોંધાય છે), ડિવાઇસ/બ્રાઉઝરનો પ્રકાર, ડિવાઇસ ID (એપે બનાવેલો રેન્ડમ નંબર), નેટવર્કનો પ્રકાર.</li>
+<li><b>ટેકનિકલ માહિતી (બધા માટે):</b> લૉગિન/એપ ખોલવાનો સમય, IP સરનામું અને તેના પરથી અંદાજિત શહેર / ઇન્ટરનેટ કંપની (અમારા સર્વર પર નોંધાય છે), ડિવાઇસ/બ્રાઉઝરનો પ્રકાર, ડિવાઇસ ID (એપે બનાવેલો રેન્ડમ નંબર), નેટવર્કનો પ્રકાર.</li>
 <li><b>ફરિયાદ અને SOS:</b> ટિકિટની વિગત, SOS વખતનું લોકેશન.</li>
 <li>અમે ફોનના સંપર્કો, SMS કે ગેલેરી વાંચતા નથી.</li></ul>
 <h3>2. શા માટે</h3>
@@ -2961,8 +2972,8 @@ const sameDevice = (x, col) => { const ids = new Set((x.logins || []).map(l => l
     .filter(([y]) => y.id !== x.id && (y.logins || []).some(l => ids.has(l.did))); };
 function loginTable(x){ const L = x.logins || []; const sd = sameDevice(x);
   return `${sd.length ? `<div class="banner warn">⚠️ <div><b>આ જ ફોન પરથી બીજાં ${sd.length} ખાતાં</b>${sd.map(([y, c]) => `<button class="btn sm" onclick="go('${c === 'karigars' ? 'a_karigar' : 'a_customer'}',{id:'${y.id}'})">${h(y.name)} (${c === 'karigars' ? 'કારીગર' : 'ગ્રાહક'})</button>`).join(' ')}</div></div>` : ''}
-    <div class="card"><h3>લૉગિન, IP અને ડિવાઇસ (${L.length})</h3>${L.length ? `<div class="tbl"><table><thead><tr><th>સમય</th><th>ઘટના</th><th>IP</th><th>ડિવાઇસ</th><th>ડિવાઇસ ID</th></tr></thead><tbody>
-      ${L.map(l => `<tr><td>${dt(l.ts)}</td><td>${EVL[l.ev] || h(l.ev)}</td><td class="num">${h(l.ip)}</td><td>${h(l.dev)}${l.net ? ' · ' + h(l.net) : ''}</td><td class="num">${h(l.did)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">હજુ કોઈ લૉગ નથી (આ સુવિધા પહેલાં લૉગિન થયેલ).</p>'}
+    <div class="card"><h3>લૉગિન, IP અને ડિવાઇસ (${L.length})</h3>${L.length ? `<div class="tbl"><table><thead><tr><th>સમય</th><th>ઘટના</th><th>IP</th><th>જગ્યા / નેટવર્ક</th><th>ડિવાઇસ</th><th>ડિવાઇસ ID</th></tr></thead><tbody>
+      ${L.map(l => `<tr><td>${dt(l.ts)}</td><td>${EVL[l.ev] || h(l.ev)}</td><td class="num">${h(l.ip)}</td><td>${h(lgPlace(l) || '—')}${l.isp ? '<br><span class="tiny muted">' + h(l.isp) + '</span>' : ''}</td><td>${h(l.dev)}${l.net ? ' · ' + h(l.net) : ''}</td><td class="num">${h(l.did)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">હજુ કોઈ લૉગ નથી (આ સુવિધા પહેલાં લૉગિન થયેલ).</p>'}
       <p class="tiny muted">IP ફોન તરફથી નોંધાય છે. કાયદાકીય પુરાવા માટે સર્વર-લૉગ (Firebase/Cloud Function) પણ રાખો.</p></div>`; }
 function bookingRow(b, who){ const k = Store.get('karigars', b.karigarId);
   return `<button class="card" style="text-align:left" onclick="go('a_booking',{id:'${b.id}'})"><div class="between"><b>${catIconH(b.cat)} ${h(catName(b.cat))} <span class="tiny muted num">${bNo(b)}</span></b>${statusPill(b.status)}</div>
@@ -3037,7 +3048,10 @@ function resetKPin(id){ const pin = String(1000 + Math.floor(Math.random() * 900
   modal(`<h2>નવો PIN: <span class="num">${pin}</span></h2><p class="small muted">આ PIN કારીગરને ફોન પર જણાવો. લૉગિન પછી બદલવાની સલાહ આપો.</p><button class="btn pri block" onclick="closeModal()">બરાબર</button>`); }
 
 VIEWS.a_customers = () => { if(!isAdmin()) return VIEWS.welcome(); const C0 = Store.all('customers'); const C = C0.filter(c => qMatch('ac', cSearchTxt(c))).sort((a, b) => (b.lastLogin || b.createdAt) - (a.lastLogin || a.createdAt)); const PG = pageList('ac', C);
-  return topbar('ગ્રાહકો (' + C0.length + ')', {back:true}) + `<div class="wrap">${qBox('ac', 'નામ, મોબાઇલ, ઈમેલ, સરનામું, વિસ્તાર, IP, કોડ… કંઈ પણ')}
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0); const t0 = d0.getTime();
+  return topbar('ગ્રાહકો (' + C0.length + ')', {back:true}) + `<div class="wrap">
+    <div class="stats clk">${[[C0.length, 'કુલ ગ્રાહક', ''], [C0.filter(c => (c.createdAt || 0) >= t0).length, 'આજે નવા', ''], [C0.filter(c => (c.lastLogin || 0) >= t0).length, 'આજે લૉગિન', "go('a_logins')"]].map(([n, l, on]) => `<div ${on ? `onclick="${on}"` : ''}><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+    ${qBox('ac', 'નામ, મોબાઇલ, ઈમેલ, સરનામું, વિસ્તાર, IP, કોડ… કંઈ પણ')}
     <button class="btn sm" onclick="exportCSV('customers')">⬇️ બધા ગ્રાહકો CSV</button>
     <div id="clist" class="stack">${PG.items.map(c => { const n = bookingsOf(c.id).length, r = custRating(c.id);
       return `<button class="card" style="text-align:left" data-n="${h(c.name + ' ' + c.mobile)}" onclick="go('a_customer',{id:'${c.id}'})"><div class="between"><b>${h(c.name)}</b>${c.blocked ? '<span class="pill bad">બંધ</span>' : ''}</div>
@@ -3176,11 +3190,51 @@ VIEWS.a_reports = () => { if(!isAdmin()) return VIEWS.welcome(); const B = Store
     <div class="card"><h3>Excel / CSV ડાઉનલોડ</h3><div class="links">${[['karigars','👷 કારીગરો (KYC, IP, લોકેશન)'],['customers','👥 ગ્રાહકો'],['bookings','📋 બધા બુકિંગ'],['payments','💰 કમીશન ચૂકવણી'],['tickets','🎧 ફરિયાદો'],['logins','🌐 IP / લૉગિન લૉગ'],['alerts','🆘 SOS'],['audit','🗂️ એડમિન લૉગ']]
       .map(([k, l]) => `<button onclick="exportCSV('${k}')">${l}</button>`).join('')}</div>
       <p class="tiny muted">ફાઇલ Excel માં ખુલશે. Android એપમાં ફાઇલ "શેર" થી સેવ / મોકલી શકાશે.</p></div></div>` + aNav(); };
+/* ================= 🌐 લૉગિન / IP લાઇવ (એડમિન) ================= */
+const lgPlace = l => [l.city, l.region, l.country].filter(Boolean).join(', ');
+const lgKey = l => (l.uid || '') + '|' + l.ts + '|' + (l.did || '');
+function loginFeed(){ const out = [];
+  [['customers', 'customer'], ['karigars', 'karigar']].forEach(([col, r]) => Store.all(col).forEach(x => (x.logins || []).forEach(l => out.push({...l, role:r, col, uid:x.id, name:x.name, mobile:x.mobile, email:x.email}))));
+  return out.sort((a, b) => b.ts - a.ts); }
+const lgToday = () => { const d0 = new Date(); d0.setHours(0, 0, 0, 0); return new Set(loginFeed().filter(l => l.role === 'customer' && l.ts >= d0.getTime()).map(l => l.uid)).size || ''; };
+function lgDashCard(){ const F = loginFeed().filter(l => l.role === 'customer').slice(0, 3);
+  return `<button class="card" style="text-align:left;width:100%" onclick="go('a_logins')"><div class="between"><b>🌐 છેલ્લાં ગ્રાહક લૉગિન</b><span class="pill">${lgToday() || 0} આજે</span></div>
+    ${F.length ? F.map(l => `<div class="small" style="margin-top:6px">🟢 <b>${h(l.name || '—')}</b> · ${h(l.mobile || '')} · <span class="num">IP ${h(l.ip || '—')}</span>${lgPlace(l) ? ' · 📍 ' + h(lgPlace(l)) : ''} <span class="muted">· ${ago(l.ts)}</span></div>`).join('') : '<div class="small muted">હજુ કોઈ લૉગિન નથી</div>'}
+    <div class="tiny muted" style="margin-top:6px">બધી વિગત (IP, જગ્યા, ફોન, નેટવર્ક) જોવા ટેપ કરો →</div></button>`; }
+function lgCard(l, F){ const sameDid = l.did ? new Set(F.filter(x => x.did === l.did && x.uid !== l.uid).map(x => x.uid + '|' + x.name)) : new Set();
+  const sameIp = l.ip ? new Set(F.filter(x => x.ip === l.ip && x.uid !== l.uid).map(x => x.name)) : new Set();
+  const ipOk = l.ip && /^[\d.:a-f]+$/i.test(l.ip), geo = isFinite(+l.lat) && isFinite(+l.lng) && l.lat !== '' && l.lat != null ? {lat:+l.lat, lng:+l.lng} : null;
+  const vw = l.col === 'karigars' ? 'a_karigar' : 'a_customer', fresh = Date.now() - l.ts < 10 * 60000;
+  return `<div class="card" style="${fresh ? 'border:2px solid var(--ok)' : ''}"><div class="between"><b>${l.role === 'customer' ? '👤' : '👷'} ${h(l.name || '—')} ${fresh ? '<span class="pill ok">હમણાં</span>' : ''}</b><span class="pill">${EVL[l.ev] || h(l.ev)}</span></div>
+    ${kv([['સમય', dt(l.ts) + ' <span class="muted">(' + ago(l.ts) + ')</span>'], ['મોબાઇલ', l.mobile ? `<a href="tel:${h(l.mobile)}">${h(l.mobile)}</a>` : '—'], l.email ? ['ઈમેલ', h(l.email)] : null,
+      ['IP', `<b class="num">${h(l.ip || '—')}</b>${ipOk ? ` <button class="btn sm" onclick="copyText('${h(l.ip)}')">📋</button> <a class="btn sm" target="_blank" rel="noopener" href="https://ipinfo.io/${h(l.ip)}">🔎 IP વિગત</a>` : ''}`],
+      ['જગ્યા (IP મુજબ)', h(lgPlace(l) || '—') + (l.postal ? ' · ' + h(l.postal) : '') + (geo ? ` · <a target="_blank" rel="noopener" href="${mapsUrl(geo)}">🗺️ નકશો</a>` : '')],
+      ['ઇન્ટરનેટ કંપની', h(l.isp || '—') + (l.asn ? ' <span class="muted">(AS' + h(l.asn) + ')</span>' : '')],
+      ['ફોન / બ્રાઉઝર', h(l.dev || '—')], ['નેટવર્ક', h(l.net || '—')], ['ભાષા', h(l.lang || '—')], l.tz ? ['સમય ઝોન', h(l.tz)] : null, ['ડિવાઇસ ID', `<span class="num">${h(l.did || '—')}</span>`],
+      ['નોંધ કોણે કરી', l.server ? '✅ સર્વર (સાચો IP)' : '📱 ફોન તરફથી']])}
+    ${l.ua ? `<details class="tiny muted"><summary>પૂરી ડિવાઇસ માહિતી (User-Agent)</summary>${h(l.ua)}</details>` : ''}
+    ${sameDid.size ? `<div class="banner warn small">⚠️ આ જ ફોન પરથી બીજાં ખાતાં: ${[...sameDid].map(x => h(x.split('|')[1] || '')).join(', ')}</div>` : ''}
+    ${sameIp.size ? `<div class="small muted">ℹ️ આ જ IP પરથી: ${[...sameIp].slice(0, 5).map(h).join(', ')}</div>` : ''}
+    <div class="two" style="margin-top:8px"><button class="btn sm" onclick="go('${vw}',{id:'${l.uid}'})">પ્રોફાઇલ જુઓ</button>${l.mobile ? `<a class="btn sm" href="tel:${h(l.mobile)}">📞 કૉલ</a>` : ''}</div></div>`; }
+VIEWS.a_logins = () => { if(!isAdmin()) return VIEWS.welcome();
+  if(Store.mode === 'firebase'){ const key = JSON.stringify(S.rg); if(S.lgLoaded !== key){ S.lgLoaded = key; FB.loadAllSubs().catch(e => { console.warn(e); S.lgLoaded = ''; }); } }
+  const f = S.lgF || 'customer', q = (S.lgQ || '').trim().toLowerCase();
+  const ALL = loginFeed(), F0 = ALL.filter(l => inRange(l.ts) && (f === 'all' || l.role === f) && (!q || [l.name, l.mobile, l.ip, l.city, l.region, l.isp, l.dev, l.did, l.email].join(' ').toLowerCase().includes(q)));
+  const PG = pageList('lg', F0, 30); const d0 = new Date(); d0.setHours(0, 0, 0, 0); const T = ALL.filter(l => l.ts >= d0.getTime() && l.role === 'customer');
+  return topbar('🌐 લૉગિન / IP રેકોર્ડ', {back:true}) + `<div class="wrap">
+    <p class="small muted">દરેક ગ્રાહક (અને કારીગર)નું લૉગિન, નોંધણી અને એપ ખોલ્યાનો રેકોર્ડ — IP, જગ્યા, ફોન અને નેટવર્ક સાથે. કોઈ અવાજ/સૂચના નથી, ફક્ત ડેટા.</p>
+    <div class="stats">${[[new Set(T.map(l => l.uid)).size, 'આજે ગ્રાહક લૉગિન'], [new Set(T.map(l => l.ip).filter(Boolean)).size, 'આજે અલગ IP'], [T.filter(l => l.ev === 'register').length, 'આજે નવી નોંધણી']].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+    <div class="chips">${[['customer', '👤 ગ્રાહક'], ['karigar', '👷 કારીગર'], ['all', 'બધા']].map(([v, l]) => `<button class="chipb ${f === v ? 'on' : ''}" onclick="S.lgF='${v}';S.pg.lg=0;render()">${l}</button>`).join('')}</div>
+    <div class="search" style="margin:10px 0"><span>🔍</span><input id="lg_q" value="${h(S.lgQ || '')}" placeholder="નામ, મોબાઇલ, IP, શહેર, ફોન…" onchange="S.lgQ=this.value;S.pg.lg=0;render()" autocomplete="off"></div>
+    ${rangeBar()}
+    <p class="small muted">${F0.length} લૉગ</p>
+    ${PG.items.map(l => lgCard(l, ALL)).join('') || '<div class="card small muted">આ ગાળામાં કોઈ લૉગિન નથી</div>'}${PG.bar}
+    <p class="tiny muted">જગ્યા IP પરથી અંદાજે છે (શહેર સુધી) — ચોક્કસ ઘરનું સરનામું નથી. આ માહિતી ફક્ત સુરક્ષા/છેતરપિંડી તપાસ માટે વાપરો.</p></div>` + aNav(); };
 VIEWS.a_audit = () => { if(!isAdmin()) return VIEWS.welcome(); const A0 = Store.all('audit').filter(a => inRange(a.ts)).sort((a, b) => b.ts - a.ts); const PGA = pageList('au', A0, 40), A = PGA.items;
   return topbar('એડમિન લૉગ', {back:true}) + `<div class="wrap"><p class="small muted">એડમિને કરેલી દરેક કાર્યવાહીનો રેકોર્ડ (IT નિયમો મુજબ ઓછામાં ઓછા 180 દિવસ રાખો).</p>${rangeBar()}
     <div class="card"><div class="tbl"><table><thead><tr><th>સમય</th><th>કાર્યવાહી</th><th>કોના પર</th><th>નોંધ</th></tr></thead><tbody>${A.map(a => `<tr><td>${dt(a.ts)}</td><td>${h(a.action)}</td><td>${h(((Store.get('karigars', a.target) || Store.get('customers', a.target) || {}).name) || a.target)}</td><td>${h(a.note)}</td></tr>`).join('') || '<tr><td colspan="4">આ ગાળામાં કંઈ નથી</td></tr>'}</tbody></table></div>${PGA.bar}</div></div>` + aNav(); };
 VIEWS.a_more = () => { if(!isAdmin()) return VIEWS.welcome(); const pp = Store.all('payments').filter(p => p.status === 'pending').length, al = Store.all('alerts').filter(a => a.status === 'open').length;
-  const it = [['a_ads','📣','જાહેરાત ફોટો બનાવો',''],['a_cats','🛠️','બધાં કામ (નામ / ફોટો / ડિલીટ)', CATS.length],['a_coupons','🎟️','કૂપન', (Store.settings().coupons || []).length],['a_export','📑','ડેટા રિપોર્ટ (PDF / Excel)',''],['a_customers','👥','ગ્રાહકો', Store.all('customers').length],['a_payments','💰','કમીશન ચૂકવણી', pp],['a_map','🗺️','લાઇવ નકશો', Store.all('karigars').filter(k => k.online && k.status === 'approved').length + ' ઓનલાઇન'],
+  const it = [['a_ads','📣','જાહેરાત ફોટો બનાવો',''],['a_cats','🛠️','બધાં કામ (નામ / ફોટો / ડિલીટ)', CATS.length],['a_coupons','🎟️','કૂપન', (Store.settings().coupons || []).length],['a_export','📑','ડેટા રિપોર્ટ (PDF / Excel)',''],['a_logins','🌐','લૉગિન / IP રેકોર્ડ', lgToday()],['a_customers','👥','ગ્રાહકો', Store.all('customers').length],['a_payments','💰','કમીશન ચૂકવણી', pp],['a_map','🗺️','લાઇવ નકશો', Store.all('karigars').filter(k => k.online && k.status === 'approved').length + ' ઓનલાઇન'],
     ['a_alerts','🆘','SOS એલર્ટ', al],['a_reports','📈','રિપોર્ટ / CSV',''],['a_audit','🗂️','એડમિન લૉગ',''],['a_refer','🎁','રેફરલ રિપોર્ટ',''],['a_settings','⚙️','સેટિંગ / કંપની વિગત',''],['theme','🎨','થીમ બદલો',''],['help','📜','પોલિસી અને મદદ પેજ','']];
   return topbar('વધુ') + `<div class="wrap"><div class="menu">${it.map(([v, i, l, n]) => `<button onclick="${v === 'theme' ? 'themeSheet()' : `go('${v}')`}"><span class="e">${i}</span><b>${l}</b>${n ? `<span class="pill ${v === 'a_alerts' || v === 'a_payments' ? 'bad' : ''}">${n}</span>` : ''}</button>`).join('')}</div>
     <button class="btn bad block" onclick="logout()">લૉગ આઉટ</button></div>` + aNav(); };
@@ -3252,11 +3306,11 @@ function demoEnrich(){
     const L = {lat:+(a[1] + j()).toFixed(6), lng:+(a[2] + j()).toFixed(6), acc:10 + i, ts:now - (k.online ? 60000 * (i % 4 + 1) : 86400000 * (i % 3 + 1))};
     const hist = [L, ...Array.from({length:6}, (_, n) => ({lat:+(a[1] + j() * 2).toFixed(6), lng:+(a[2] + j() * 2).toFixed(6), acc:20, ts:L.ts - (n + 1) * 3600000}))];
     const ip = ips[i % 5] + (10 + i) + '.' + (100 + i * 3);
-    const lg = [0, 1, 2].map(n => ({ts:now - n * 2 * 86400000 - i * 3600000, ev:n === 2 ? 'register' : 'login', ip, dev:devs[i % 4], did:'DSMPL' + i, net:'4g', lang:'gu-IN'}));
+    const lg = [0, 1, 2].map(n => ({ts:now - n * 2 * 86400000 - i * 3600000, ev:n === 2 ? 'register' : 'login', ip, dev:devs[i % 4], did:'DSMPL' + i, net:'4g', lang:'gu-IN', city:'Vadodara', region:'Gujarat', country:'IN', isp:['Reliance Jio', 'Bharti Airtel', 'Vodafone Idea'][i % 3], server:true}));
     Store.cache.karigars[k.id] = {...k, loc:L, locHist:hist, logins:lg, lastIp:ip, lastDev:devs[i % 4], lastLogin:lg[0].ts, lastSeen:k.lastSeen || L.ts,
       aadhaar4:String(1000 + i * 517).slice(-4), policeNo:i % 5 === 2 ? '' : 'PV/' + (2400 + i * 7), policeDate:i % 5 === 2 ? '' : '2026-0' + (1 + i % 8) + '-1' + (i % 9), kycOk:i % 5 !== 2, upi:'karigar' + (i + 1) + '@okaxis'}; ch = true; });
   Store.all('customers').filter(c => c.sample && !c.logins).forEach((c, i) => { const ip = '27.61.' + (40 + i) + '.' + (12 + i);
-    Store.cache.customers[c.id] = {...c, logins:[{ts:now - (i + 1) * 86400000, ev:'login', ip, dev:'Android 13 · Chrome', did:'DSMPLC' + i, net:'4g', lang:'gu-IN'}], lastIp:ip, lastDev:'Android 13 · Chrome', lastLogin:now - (i + 1) * 86400000,
+    Store.cache.customers[c.id] = {...c, logins:[{ts:now - (i + 1) * 86400000, ev:'login', ip, dev:'Android 13 · Chrome', did:'DSMPLC' + i, net:'4g', lang:'gu-IN', city:'Vadodara', region:'Gujarat', country:'IN', isp:'Reliance Jio', server:true}], lastIp:ip, lastDev:'Android 13 · Chrome', lastLogin:now - (i + 1) * 86400000,
       ratingSum:5 * (i + 2), ratingCount:i + 2, addrs:[{label:'ઘર', area:c.area, address:'12, શાંતિ નગર સોસાયટી'}]}; ch = true; });
   if(ch) Store.saveLocal();
 }
@@ -3707,7 +3761,7 @@ privacy:{icon:'🔒', title:'Privacy policy', body:`
 <li><b>Pros:</b> name, mobile, photo, service, experience, area, Aadhaar (last 4 digits + secret hash only), photos of the Aadhaar card and police certificate (admins only), police verification number,{{?upi}} UPI ID,{{/upi}} earnings{{?comm}} and commission{{/comm}} records.</li>
 <li><b>Notifications (push):</b> your phone’s notification token (Firebase Cloud Messaging) for new requests/bookings. For a new request the pro’s phone rings for 1 minute.</li>
 <li><b>Pro location:</b> GPS location while online (about every minute, more often while travelling to a customer) and its history.</li>
-<li><b>Technical data (everyone):</b> login/app-open time, IP address (recorded on our server), device/browser type, device ID (a random number created by the app), network type.</li>
+<li><b>Technical data (everyone):</b> login/app-open time, IP address and the approximate city / internet provider derived from it (recorded on our server), device/browser type, device ID (a random number created by the app), network type.</li>
 <li><b>Complaints and SOS:</b> ticket details, location at the time of SOS.</li><li>We do not read your contacts, SMS or gallery.</li></ul>
 <h3>2. Why</h3><ul><li>Finding a nearby pro, completing the booking, showing live tracking.</li><li>Safety of customers and pros, SOS, preventing fraud and multiple fake accounts (IP/device).</li><li>{{?comm}}Commission accounts, {{/comm}}bills, resolving complaints, legal duties (government/police requests).</li></ul>
 <h3>3. Who can see it</h3><ul><li>Only after a booking is accepted do the customer and pro see each other’s number and address. While on the way, the pro’s location is visible only to that customer.</li>
@@ -3815,7 +3869,7 @@ privacy:{icon:'🔒', title:'प्राइवेसी पॉलिसी', bo
 <li><b>कारीगर:</b> नाम, मोबाइल, फ़ोटो, काम, अनुभव, इलाका, आधार (सिर्फ़ आख़िरी 4 अंक + गुप्त hash), आधार कार्ड और पुलिस सर्टिफ़िकेट के फ़ोटो (सिर्फ़ एडमिन के लिए), पुलिस वेरिफ़िकेशन नंबर,{{?upi}} UPI ID,{{/upi}} कमाई{{?comm}} और कमीशन{{/comm}} का हिसाब।</li>
 <li><b>सूचनाएँ (Push):</b> नए अनुरोध/बुकिंग की सूचना के लिए फ़ोन का सूचना टोकन (Firebase Cloud Messaging)। नए अनुरोध पर कारीगर के फ़ोन में 1 मिनट रिंग बजती है।</li>
 <li><b>कारीगर की लोकेशन:</b> ऑनलाइन होने पर GPS लोकेशन (लगभग हर मिनट, ग्राहक की ओर जाते समय ज़्यादा बार) और उसका इतिहास।</li>
-<li><b>तकनीकी जानकारी (सबके लिए):</b> लॉगिन/ऐप खोलने का समय, IP पता (हमारे सर्वर पर दर्ज), डिवाइस/ब्राउज़र का प्रकार, डिवाइस ID (ऐप द्वारा बनाया गया रैंडम नंबर), नेटवर्क का प्रकार।</li>
+<li><b>तकनीकी जानकारी (सबके लिए):</b> लॉगिन/ऐप खोलने का समय, IP पता और उससे अनुमानित शहर / इंटरनेट कंपनी (हमारे सर्वर पर दर्ज), डिवाइस/ब्राउज़र का प्रकार, डिवाइस ID (ऐप द्वारा बनाया गया रैंडम नंबर), नेटवर्क का प्रकार।</li>
 <li><b>शिकायत और SOS:</b> टिकट का विवरण, SOS के समय की लोकेशन।</li><li>हम आपके कॉन्टैक्ट, SMS या गैलरी नहीं पढ़ते।</li></ul>
 <h3>2. क्यों</h3><ul><li>नज़दीकी कारीगर खोजना, बुकिंग पूरी करना, लाइव ट्रैकिंग दिखाना।</li><li>ग्राहक और कारीगर की सुरक्षा, SOS, धोखाधड़ी और एक से ज़्यादा झूठे खाते रोकना (IP/डिवाइस)।</li><li>{{?comm}}कमीशन का हिसाब, {{/comm}}बिल, शिकायत का निपटारा, कानूनी दायित्व (सरकारी/पुलिस माँग)।</li></ul>
 <h3>3. कौन देख सकता है</h3><ul><li>बुकिंग स्वीकार होने के बाद ही ग्राहक और कारीगर को एक-दूसरे का नंबर और पता दिखता है। रास्ते में होने पर कारीगर की लोकेशन सिर्फ़ उसी ग्राहक को दिखती है।</li>

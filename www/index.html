@@ -394,7 +394,7 @@ function ago(ts){ if(!ts) return ''; const s = Math.max(0, (Date.now() - ts) / 1
   if(s < 86400) return Math.floor(s/3600) + ' કલાક પહેલાં'; return Math.floor(s/86400) + ' દિવસ પહેલાં'; }
 function fmtDT(v){ if(!v || v === 'now') return 'હમણાં જ'; try{ const d = new Date(v);
   return d.toLocaleDateString(LOC(), {day:'numeric', month:'short'}) + ', ' + d.toLocaleTimeString(LOC(), {hour:'2-digit', minute:'2-digit'}); }catch(e){ return v; } }
-function toast(t){ const el = $('#toast'); el.textContent = tr(String(t)); el.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => el.hidden = true, 2600); }
+function toast(t, ms){ const el = $('#toast'); el.textContent = tr(String(t)); el.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => el.hidden = true, ms || 2600); }
 function copyText(t){ try{ navigator.clipboard.writeText(t).then(() => toast('કૉપિ થયું: ' + t)).catch(() => toast(t)); }catch(e){ toast(t); } }
 let AC = null;
 function beep(){ try{ AC = AC || new (window.AudioContext || window.webkitAudioContext)();
@@ -1026,6 +1026,7 @@ const FB = {
       L('alerts', 'all', this.col('alerts'));
       L('payments', 'all', this.col('payments'));
       L('audit', 'range', this.col('audit').where('ts', '>=', from));
+      this.watchLogins();
     }
     return Promise.all(waits); },
   /* કારીગરના કામના પ્રકારની નવી વિનંતીઓ (status = searching) */
@@ -1045,6 +1046,13 @@ const FB = {
   listenDyn(k, path, id, n){
     this.dyn[k] = Store.fs.doc(path).onSnapshot(d => { if(d.exists){ const x = d.data(); delete x.custId; delete x.ts; this.setSide('bookings', id, x); } },
       e => { if(this.dyn[k] && n < 8) setTimeout(() => { if(this.dyn[k]) this.listenDyn(k, path, id, n + 1); }, Math.min(15000, 1500 * (n + 1))); }); },
+  /* એડમિન: છેલ્લા 2 દિવસના બધા લૉગિન લાઇવ — કોઈ ગ્રાહક/કારીગર લૉગિન થાય કે તરત IP સાથે દેખાય */
+  watchLogins(){ const from = Date.now() - 2 * 86400000;
+    this.subs.push(Store.fs.collectionGroup('logins').where('ts', '>=', from).onSnapshot(snap => { const touched = new Set();
+      snap.docChanges().forEach(ch => { if(ch.type !== 'added') return; const l = ch.doc.data(); if(!l || l.role === 'admin') return; const id = ch.doc.ref.parent.parent.id;
+        const col = Store.get('karigars', id) || l.role === 'karigar' ? 'karigars' : 'customers'; const sd = (this.side[col] = this.side[col] || {}); const cur = (sd[id] && sd[id].logins) || [];
+        if(cur.some(x => x.ts === l.ts && x.did === l.did)) return; sd[id] = {...(sd[id] || {}), logins:[l, ...cur].sort((a, b) => b.ts - a.ts), lastIp:l.ip || (sd[id] || {}).lastIp, lastLogin:l.ts}; touched.add(col); });
+      touched.forEach(c => this.recompute(c)); }, e => console.warn('logins live', e.code || e.message))); },
   /* એડમિન: લૉગિન અને લોકેશન લૉગ (અલગ subcollection, 1 વર્ષ) જરૂર પડે ત્યારે જ */
   /* એડમિન: બધાના ઈમેલ (users/{id}.email) — રિપોર્ટ/Excel/CSV માટે */
   async loadEmails(){ if(!isAdmin() || Date.now() - (this.emailsAt || 0) < 60000) return; this.emailsAt = Date.now();
@@ -1156,6 +1164,8 @@ async function fbAfterLogin(role, extra = {}){
     await Store.fs.doc('users/' + u.uid).set({role, mobile:mob, email:u.email || '', createdAt:Date.now()});
     await Store.fs.doc('customers/' + u.uid).set({name:extra.name, mobile:mob, email:u.email || '', area:extra.area || '', areaGeo:extra.areaGeo || null, address:extra.address || '', createdAt:Date.now(), ...(extra.rf ? {referredBy:extra.rf.uid, refBy:extra.rf.code} : {})}); S.pendingAuth = null;
     if(extra.rf) refJoin(u.uid, extra.name, extra.rf, 'customer'); }
+  if(cur === 'customer'){ try{ const cd = await Store.fs.doc('customers/' + u.uid).get(); // જૂનું ખાતું પણ ગ્રાહક યાદીમાં આવે
+      if(!cd.exists){ const um = String(ud.data().mobile || mob || ''); if(/^[6-9]\d{9}$/.test(um)) await Store.fs.doc('customers/' + u.uid).set({name:u.displayName || ('ગ્રાહક ' + um.slice(-4)), mobile:um, email:u.email || '', area:'', address:'', createdAt:ud.data().createdAt || Date.now()}); } }catch(e){ console.warn('cust doc', e); } }
   setSession({role, id:u.uid}); await FB.subscribe(); const d = me();
   if(d && (d.blocked || d.status === 'blocked') && role === 'customer'){ toast('આ ખાતું બંધ છે — મદદ માટે હેલ્પલાઇન પર સંપર્ક કરો'); await doLogout(); return false; }
   home(); logAccess('login'); if(window.Push) Push.init(); return true; }
@@ -2453,7 +2463,7 @@ privacy:{icon:'🔒', title:'પ્રાઇવસી પોલિસી', body:
 <li><b>કારીગર:</b> નામ, મોબાઇલ, ફોટો, કામ, અનુભવ, વિસ્તાર, આધાર (ફક્ત છેલ્લા 4 આંકડા + ગુપ્ત hash), આધાર કાર્ડ અને પોલીસ સર્ટિફિકેટના ફોટા (ફક્ત એડમિન માટે), પોલીસ વેરિફિકેશન નંબર,{{?upi}} UPI ID,{{/upi}} કમાણી{{?comm}} અને કમીશન{{/comm}}નો હિસાબ.</li>
 <li><b>સૂચનાઓ (Push):</b> નવી વિનંતી/બુકિંગની સૂચના માટે ફોનનો સૂચના ટોકન (Firebase Cloud Messaging). નવી વિનંતી વખતે કારીગરના ફોનમાં 1 મિનિટ રિંગ વાગે છે.</li>
 <li><b>કારીગરનું લોકેશન:</b> ઓનલાઇન હોય ત્યારે GPS લોકેશન (દર 1 મિનિટે, અને ગ્રાહક તરફ જતી વખતે વધુ વાર) અને તેનો ઇતિહાસ.</li>
-<li><b>ટેકનિકલ માહિતી (બધા માટે):</b> લૉગિન/એપ ખોલવાનો સમય, IP સરનામું (અમારા સર્વર પર નોંધાય છે), ડિવાઇસ/બ્રાઉઝરનો પ્રકાર, ડિવાઇસ ID (એપે બનાવેલો રેન્ડમ નંબર), નેટવર્કનો પ્રકાર.</li>
+<li><b>ટેકનિકલ માહિતી (બધા માટે):</b> લૉગિન/એપ ખોલવાનો સમય, IP સરનામું અને તેના પરથી અંદાજિત શહેર / ઇન્ટરનેટ કંપની (અમારા સર્વર પર નોંધાય છે), ડિવાઇસ/બ્રાઉઝરનો પ્રકાર, ડિવાઇસ ID (એપે બનાવેલો રેન્ડમ નંબર), નેટવર્કનો પ્રકાર.</li>
 <li><b>ફરિયાદ અને SOS:</b> ટિકિટની વિગત, SOS વખતનું લોકેશન.</li>
 <li>અમે ફોનના સંપર્કો, SMS કે ગેલેરી વાંચતા નથી.</li></ul>
 <h3>2. શા માટે</h3>
@@ -2762,11 +2772,11 @@ function demoEnrich(){
     const L = {lat:+(a[1] + j()).toFixed(6), lng:+(a[2] + j()).toFixed(6), acc:10 + i, ts:now - (k.online ? 60000 * (i % 4 + 1) : 86400000 * (i % 3 + 1))};
     const hist = [L, ...Array.from({length:6}, (_, n) => ({lat:+(a[1] + j() * 2).toFixed(6), lng:+(a[2] + j() * 2).toFixed(6), acc:20, ts:L.ts - (n + 1) * 3600000}))];
     const ip = ips[i % 5] + (10 + i) + '.' + (100 + i * 3);
-    const lg = [0, 1, 2].map(n => ({ts:now - n * 2 * 86400000 - i * 3600000, ev:n === 2 ? 'register' : 'login', ip, dev:devs[i % 4], did:'DSMPL' + i, net:'4g', lang:'gu-IN'}));
+    const lg = [0, 1, 2].map(n => ({ts:now - n * 2 * 86400000 - i * 3600000, ev:n === 2 ? 'register' : 'login', ip, dev:devs[i % 4], did:'DSMPL' + i, net:'4g', lang:'gu-IN', city:'Vadodara', region:'Gujarat', country:'IN', isp:['Reliance Jio', 'Bharti Airtel', 'Vodafone Idea'][i % 3], server:true}));
     Store.cache.karigars[k.id] = {...k, loc:L, locHist:hist, logins:lg, lastIp:ip, lastDev:devs[i % 4], lastLogin:lg[0].ts, lastSeen:k.lastSeen || L.ts,
       aadhaar4:String(1000 + i * 517).slice(-4), policeNo:i % 5 === 2 ? '' : 'PV/' + (2400 + i * 7), policeDate:i % 5 === 2 ? '' : '2026-0' + (1 + i % 8) + '-1' + (i % 9), kycOk:i % 5 !== 2, upi:'karigar' + (i + 1) + '@okaxis'}; ch = true; });
   Store.all('customers').filter(c => c.sample && !c.logins).forEach((c, i) => { const ip = '27.61.' + (40 + i) + '.' + (12 + i);
-    Store.cache.customers[c.id] = {...c, logins:[{ts:now - (i + 1) * 86400000, ev:'login', ip, dev:'Android 13 · Chrome', did:'DSMPLC' + i, net:'4g', lang:'gu-IN'}], lastIp:ip, lastDev:'Android 13 · Chrome', lastLogin:now - (i + 1) * 86400000,
+    Store.cache.customers[c.id] = {...c, logins:[{ts:now - (i + 1) * 86400000, ev:'login', ip, dev:'Android 13 · Chrome', did:'DSMPLC' + i, net:'4g', lang:'gu-IN', city:'Vadodara', region:'Gujarat', country:'IN', isp:'Reliance Jio', server:true}], lastIp:ip, lastDev:'Android 13 · Chrome', lastLogin:now - (i + 1) * 86400000,
       ratingSum:5 * (i + 2), ratingCount:i + 2, addrs:[{label:'ઘર', area:c.area, address:'12, શાંતિ નગર સોસાયટી'}]}; ch = true; });
   if(ch) Store.saveLocal();
 }
@@ -3217,7 +3227,7 @@ privacy:{icon:'🔒', title:'Privacy policy', body:`
 <li><b>Pros:</b> name, mobile, photo, service, experience, area, Aadhaar (last 4 digits + secret hash only), photos of the Aadhaar card and police certificate (admins only), police verification number,{{?upi}} UPI ID,{{/upi}} earnings{{?comm}} and commission{{/comm}} records.</li>
 <li><b>Notifications (push):</b> your phone’s notification token (Firebase Cloud Messaging) for new requests/bookings. For a new request the pro’s phone rings for 1 minute.</li>
 <li><b>Pro location:</b> GPS location while online (about every minute, more often while travelling to a customer) and its history.</li>
-<li><b>Technical data (everyone):</b> login/app-open time, IP address (recorded on our server), device/browser type, device ID (a random number created by the app), network type.</li>
+<li><b>Technical data (everyone):</b> login/app-open time, IP address and the approximate city / internet provider derived from it (recorded on our server), device/browser type, device ID (a random number created by the app), network type.</li>
 <li><b>Complaints and SOS:</b> ticket details, location at the time of SOS.</li><li>We do not read your contacts, SMS or gallery.</li></ul>
 <h3>2. Why</h3><ul><li>Finding a nearby pro, completing the booking, showing live tracking.</li><li>Safety of customers and pros, SOS, preventing fraud and multiple fake accounts (IP/device).</li><li>{{?comm}}Commission accounts, {{/comm}}bills, resolving complaints, legal duties (government/police requests).</li></ul>
 <h3>3. Who can see it</h3><ul><li>Only after a booking is accepted do the customer and pro see each other’s number and address. While on the way, the pro’s location is visible only to that customer.</li>
@@ -3325,7 +3335,7 @@ privacy:{icon:'🔒', title:'प्राइवेसी पॉलिसी', bo
 <li><b>कारीगर:</b> नाम, मोबाइल, फ़ोटो, काम, अनुभव, इलाका, आधार (सिर्फ़ आख़िरी 4 अंक + गुप्त hash), आधार कार्ड और पुलिस सर्टिफ़िकेट के फ़ोटो (सिर्फ़ एडमिन के लिए), पुलिस वेरिफ़िकेशन नंबर,{{?upi}} UPI ID,{{/upi}} कमाई{{?comm}} और कमीशन{{/comm}} का हिसाब।</li>
 <li><b>सूचनाएँ (Push):</b> नए अनुरोध/बुकिंग की सूचना के लिए फ़ोन का सूचना टोकन (Firebase Cloud Messaging)। नए अनुरोध पर कारीगर के फ़ोन में 1 मिनट रिंग बजती है।</li>
 <li><b>कारीगर की लोकेशन:</b> ऑनलाइन होने पर GPS लोकेशन (लगभग हर मिनट, ग्राहक की ओर जाते समय ज़्यादा बार) और उसका इतिहास।</li>
-<li><b>तकनीकी जानकारी (सबके लिए):</b> लॉगिन/ऐप खोलने का समय, IP पता (हमारे सर्वर पर दर्ज), डिवाइस/ब्राउज़र का प्रकार, डिवाइस ID (ऐप द्वारा बनाया गया रैंडम नंबर), नेटवर्क का प्रकार।</li>
+<li><b>तकनीकी जानकारी (सबके लिए):</b> लॉगिन/ऐप खोलने का समय, IP पता और उससे अनुमानित शहर / इंटरनेट कंपनी (हमारे सर्वर पर दर्ज), डिवाइस/ब्राउज़र का प्रकार, डिवाइस ID (ऐप द्वारा बनाया गया रैंडम नंबर), नेटवर्क का प्रकार।</li>
 <li><b>शिकायत और SOS:</b> टिकट का विवरण, SOS के समय की लोकेशन।</li><li>हम आपके कॉन्टैक्ट, SMS या गैलरी नहीं पढ़ते।</li></ul>
 <h3>2. क्यों</h3><ul><li>नज़दीकी कारीगर खोजना, बुकिंग पूरी करना, लाइव ट्रैकिंग दिखाना।</li><li>ग्राहक और कारीगर की सुरक्षा, SOS, धोखाधड़ी और एक से ज़्यादा झूठे खाते रोकना (IP/डिवाइस)।</li><li>{{?comm}}कमीशन का हिसाब, {{/comm}}बिल, शिकायत का निपटारा, कानूनी दायित्व (सरकारी/पुलिस माँग)।</li></ul>
 <h3>3. कौन देख सकता है</h3><ul><li>बुकिंग स्वीकार होने के बाद ही ग्राहक और कारीगर को एक-दूसरे का नंबर और पता दिखता है। रास्ते में होने पर कारीगर की लोकेशन सिर्फ़ उसी ग्राहक को दिखती है।</li>
