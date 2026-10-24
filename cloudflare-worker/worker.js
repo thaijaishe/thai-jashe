@@ -125,13 +125,17 @@ async function notifyNearby(env, id, b){
 /* ---------- endpoints ---------- */
 async function doLog(env, uid, d, req){
   const ip = req.headers.get('CF-Connecting-IP') || '', now = Date.now(), cf = req.cf || {};
-  let role = null; if(d.role === 'admin' && await getDoc(env, 'admins/' + uid)) role = 'admin'; else { const u = await getDoc(env, 'users/' + uid); role = u ? u.role : null; }
+  let role = null, u = null; if(d.role === 'admin' && await getDoc(env, 'admins/' + uid)) role = 'admin'; else { u = await getDoc(env, 'users/' + uid); role = u ? u.role : null; }
   const e = {ts:now, ev:String(d.ev || 'login').slice(0, 20), ip, dev:String(d.dev || '').slice(0, 120), did:String(d.did || '').slice(0, 40), net:String(d.net || '').slice(0, 10),
-    lang:String(d.lang || '').slice(0, 20), ua:String(req.headers.get('User-Agent') || '').slice(0, 200), city:cf.city || '', region:cf.region || '', role:role || '', server:true};
+    lang:String(d.lang || '').slice(0, 20), ua:String(req.headers.get('User-Agent') || '').slice(0, 200), city:cf.city || '', region:cf.region || '', country:cf.country || '', postal:cf.postalCode || '', lat:cf.latitude || '', lng:cf.longitude || '',
+    tz:cf.timezone || '', isp:String(cf.asOrganization || '').slice(0, 80), asn:cf.asn || '', colo:cf.colo || '', role:role || '', server:true};
   await addDoc(env, `users/${uid}/logins`, e);
   const last = {lastIp:ip, lastDev:e.dev, lastLogin:now};
   if(role === 'karigar') await setMerge(env, `karigars/${uid}/private/main`, last);
-  if(role === 'customer') await setMerge(env, `customers/${uid}`, last);
+  if(role === 'customer'){ // લૉગિન થયેલ દરેક ગ્રાહક એડમિનની "ગ્રાહકો" યાદીમાં આવે જ — નોંધ ખૂટતી હોય તો અહીં બને
+    const cd = await getDoc(env, `customers/${uid}`), mob = String((u && u.mobile) || '');
+    const fix = cd && cd.name ? {} : {name:(cd && cd.name) || ('ગ્રાહક ' + (mob.slice(-4) || uid.slice(0, 4))), mobile:(cd && cd.mobile) || mob, email:(cd && cd.email) || (u && u.email) || '', createdAt:(cd && cd.createdAt) || (u && u.createdAt) || now};
+    await setMerge(env, `customers/${uid}`, {...fix, ...last}); }
   if(role === 'admin' && e.ev !== 'open') await addDoc(env, 'audit', {action:'એડમિન લૉગિન', target:'', note:`IP ${ip} · ${e.dev}`, ts:now, server:true});
   return {ok:true, ip};
 }
