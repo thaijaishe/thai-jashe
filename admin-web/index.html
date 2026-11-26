@@ -1178,10 +1178,14 @@ async function fbAfterLogin(role, extra = {}){
   if(d && (d.blocked || d.status === 'blocked') && role === 'customer'){ toast('આ ખાતું બંધ છે — મદદ માટે હેલ્પલાઇન પર સંપર્ક કરો'); await doLogout(); return false; }
   home(); logAccess('login'); if(window.Push) Push.init(); return true; }
 /* Google લૉગિન — મફત. Android એપમાં native Google પસંદગી (Capacitor Firebase Authentication), વેબસાઇટમાં popup */
+/* Android: પહેલાં નવી Credential Manager રીત; ફોનમાં ન ચાલે ("doesn't support credential manager" વગેરે) તો જૂની Google Sign-In રીત — અને પછી હંમેશા જૂની જ */
+async function gNative(P){ const isCancel = e => /cancel/i.test(String((e && (e.message || e.code)) || '')) && !/credential manager|not support/i.test(String((e && e.message) || ''));
+  if(LS.get('tj_gleg', 0) !== 1){ try{ return await P.signInWithGoogle(); }catch(e){ if(isCancel(e)) throw e; console.warn('credman', e); LS.set('tj_gleg', 1); } }
+  return await P.signInWithGoogle({useCredentialManager:false}); }
 async function googleLogin(role){
   if(S.gBusy) return; S.gBusy = true;
   try{ const P = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.FirebaseAuthentication;
-    if(P){ const r = await P.signInWithGoogle(); const tok = r && r.credential && r.credential.idToken; if(!tok) throw new Error('Google ટોકન ન મળ્યો');
+    if(P){ const r = await gNative(P); const tok = r && r.credential && r.credential.idToken; if(!tok) throw new Error('Google ટોકન ન મળ્યો');
       await Store.auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(tok)); }
     else { const pr = new firebase.auth.GoogleAuthProvider(); pr.setCustomParameters({prompt:'select_account'});
       try{ await Store.auth.signInWithPopup(pr); }catch(e){ if(e && /popup-blocked|operation-not-supported|web-storage/.test(e.code || '')){ LS.set('tj_gintent', role); return Store.auth.signInWithRedirect(pr); } throw e; } }
@@ -2165,7 +2169,7 @@ VIEWS.k_profile = () => { const k = me();
     <button class="btn pri block" onclick="saveKProfile()">સેવ કરો</button></div></div>${kRefCard(k)}
     ${!(k.kycDocs && k.kycDocs.aad) ? `<div class="card" style="border:2px solid var(--warn)"><h3>⚠️ આધાર અપલોડ બાકી</h3><p class="small muted">નવા નિયમ મુજબ આધાર નંબર અને ફોટો ફરજિયાત છે. ફક્ત એડમિન જોઈ શકે.</p>${kycFields('kp')}<button class="btn pri block" onclick="kycUpdate()">KYC મોકલો</button></div>` : ''}
     <div class="card"><h3>ચકાસણી (KYC)</h3><div class="meta"><span>આધાર: ${k.aadhaarMasked ? h(k.aadhaarMasked) : k.aadhaar4 ? 'XXXX XXXX ' + h(k.aadhaar4) : 'બાકી'}</span>${k.kycDocs && k.kycDocs.aad ? '<span class="pill ok">📎 આધાર ફોટો મોકલ્યો</span>' : ''}${k.kycDocs && k.kycDocs.pol ? '<span class="pill ok">📎 પોલીસ સર્ટિ. મોકલ્યું</span>' : ''}<span>પોલીસ વેરિફિકેશન: ${k.policeNo ? h(k.policeNo) : 'બાકી'}</span>${policeOk(k) ? '<span class="pill ok">🛡️ ચકાસાયેલ</span>' : '<span class="pill warn">એડમિન ચકાસણી બાકી</span>'}</div>
-      <p class="tiny muted">પોલીસ વેરિફિકેશન નજીકના પોલીસ સ્ટેશન / Gujarat Police Citizen First એપમાંથી કઢાવી એડમિનને બતાવો.</p></div>
+      ${polOff() ? '' : '<p class="tiny muted">પોલીસ વેરિફિકેશન નજીકના પોલીસ સ્ટેશન / Gujarat Police Citizen First એપમાંથી કઢાવી એડમિનને બતાવો.</p>'}</div>
     ${helpCard()}
     <button class="btn bad block" onclick="logout()">લૉગ આઉટ</button>
     ${delAccountCard()}</div>` + kNav(); };
@@ -2295,6 +2299,7 @@ VIEWS.a_settings = () => { if(!isAdmin()) return VIEWS.welcome(); const st = Sto
     <label class="f">ગ્રાહક વિભાગ બંધ હોય ત્યારે સંદેશ<input id="as_custMsg" maxlength="160" value="${h(st.custOffMsg || '')}" placeholder="${h(ROLE_OFF_DEF.customer)}"></label>
     ${sw('as_karOn', !st.karOff, '👷 કારીગર વિભાગ ચાલુ', 'બંધ = "હું કારીગર છું" બટન લૉક — નવી નોંધણી અને કારીગર લૉગિન બંધ')}
     <label class="f">કારીગર વિભાગ બંધ હોય ત્યારે સંદેશ<input id="as_karMsg" maxlength="160" value="${h(st.karOffMsg || '')}" placeholder="${h(ROLE_OFF_DEF.karigar)}"></label>
+    ${sw('as_polOn', !st.policeOff, '🛡️ પોલીસ વેરિફિકેશન ચાલુ', 'બંધ = કારીગર નોંધણીમાં પોલીસ સર્ટિફિકેટ નહીં માગે અને ગ્રાહકને "🛡️ પોલીસ વેરિફાઇડ" નિશાની નહીં દેખાય. ફરી ચાલુ કરો એટલે જૂની વિગત પાછી દેખાશે.')}
     ${sw('as_otpOn', st.otpOn, 'SMS OTP લૉગિન પણ', 'બંધ = ફક્ત Google લૉગિન (મફત). ચાલુ = Google ઉપરાંત મોબાઇલ OTP (દરેક SMS ના પૈસા, Blaze જરૂરી)')}
     ${sw('as_couponOn', st.couponOn, 'કૂપન / છૂટ', 'ચાલુ કરશો તો ગ્રાહકને કૂપન કોડનું ખાનું અને ઓફર દેખાશે')}
     <label class="f">વિનંતી કેટલા કિમી સુધી મોકલવી <span class="h">GPS અંતર (મૂળ 25)</span><input id="as_rad" inputmode="numeric" value="${h(st.radiusKm)}"></label></div>
@@ -2354,7 +2359,7 @@ function saveSettings(){
   const rad = Math.round(+$('#as_rad').value || 0); if(rad < 1 || rad > 100) return toast('અંતર 1 થી 100 કિમી રાખો');
   Store.put('settings', {...Store.settings(), id:'main', otpOn:$('#as_otpOn').checked, commOn:$('#as_commOn').checked, upiOn:$('#as_upiOn').checked, couponOn:$('#as_couponOn').checked, radiusKm:rad, commRate:Math.max(0, +$('#as_rate').value || 0), dueLimit:Math.max(0, +$('#as_lim').value || 0), adminUpi:$('#as_upi').value.trim(),
     supportPhone:$('#as_sup').value.trim(), autoApprove:$('#as_auto').checked, adminPin:pin,
-    custOff:!$('#as_custOn').checked, karOff:!$('#as_karOn').checked, custOffMsg:$('#as_custMsg').value.replace(/[<>`]/g, '').trim(), karOffMsg:$('#as_karMsg').value.replace(/[<>`]/g, '').trim(),
+    custOff:!$('#as_custOn').checked, karOff:!$('#as_karOn').checked, policeOff:!$('#as_polOn').checked, custOffMsg:$('#as_custMsg').value.replace(/[<>`]/g, '').trim(), karOffMsg:$('#as_karMsg').value.replace(/[<>`]/g, '').trim(),
     arriveMsg:(($('#as_arrMsg').value || '').replace(/[<>`]/g, '').trim() === ARRIVE_DEF ? '' : ($('#as_arrMsg').value || '').replace(/[<>`]/g, '').trim()),
     footStyle:(document.querySelector('[name=as_ft]:checked') || {}).value || 'C', foot:footCollect(),
     heroOn:$('#as_heroOn').checked, heroCode:$('#as_hC').value.trim().toUpperCase(), heroTop:$('#as_hU').value.trim(), heroTitle:$('#as_hT').value.trim(), heroSub:$('#as_hS').value.trim(),
@@ -2882,7 +2887,8 @@ function shareBooking(bid){
 function shareApp(){ const text = LANG === 'en' ? 'Thai Jashe! app for any job at home — AC, plumber, electrician, all in one place. Got a job? Thai Jashe!' : LANG === 'hi' ? 'घर के किसी भी काम के लिए "थई जशे!" ऐप — एसी, प्लंबर, इलेक्ट्रीशियन सब एक जगह। काम है? थई जशे!' : 'ઘરના કોઈ પણ કામ માટે "થઈ જશે!" એપ — એસી, પ્લમ્બર, ઇલેક્ટ્રિશિયન બધું એક જગ્યાએ. કામ છે? થઈ જશે!';
   if(navigator.share) navigator.share({title:'થઈ જશે!', text}).catch(() => {}); else copyText(text); }
 const safetyRow = b => `<div class="safety"><button onclick="sosSheet('${b.id}')" class="sos">🆘 SOS</button><button onclick="shareBooking('${b.id}')">📤 શેર</button><button onclick="go('ticket_new',{bid:'${b.id}'})">🎧 મદદ</button></div>`;
-const policeOk = k => !!(k && k.kycOk && (k.policeNo || k.policeV));
+const polOff = () => !!Store.settings().policeOff; // એડમિન સ્વિચ: પોલીસ વેરિફિકેશન હાલ પૂરતું બંધ
+const policeOk = k => !polOff() && !!(k && k.kycOk && (k.policeNo || k.policeV));
 /* ---------- KYC: આધાર (પૂરો નંબર ચકાસી ફક્ત masked + hash સંગ્રહ), આધાર ફોટો ફરજિયાત, પોલીસ સર્ટિફિકેટ ફોટો ---------- */
 const VH_D = [[0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],[3,4,0,1,2,8,9,5,6,7],[4,0,1,2,3,9,5,6,7,8],[5,9,8,7,6,0,4,3,2,1],[6,5,9,8,7,1,0,4,3,2],[7,6,5,9,8,2,1,0,4,3],[8,7,6,5,9,3,2,1,0,4],[9,8,7,6,5,4,3,2,1,0]];
 const VH_P = [[0,1,2,3,4,5,6,7,8,9],[1,5,7,6,2,8,3,0,9,4],[5,8,0,3,7,9,6,1,4,2],[8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,6,8,7,0],[4,2,8,6,5,7,3,9,0,1],[2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8]];
@@ -2903,8 +2909,8 @@ async function readDoc(inp, key){ const f = inp.files[0]; inp.value = ''; if(!f)
 function kycFields(p){ return `<label class="f">આધાર નંબર (પૂરા 12 આંકડા) <span class="h">ફરજિયાત</span><input id="${p}_aadn" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="1234 5678 9012" oninput="fmtAad(this)"></label>
     <label class="f">આધાર કાર્ડનો ફોટો (આગળની બાજુ) <span class="h">ફરજિયાત</span><input type="file" id="${p}_aadf" accept="image/*" onchange="readDoc(this,'${p}_aadf')"></label><div id="${p}_aadf_pv"></div>
     <label class="f">આધાર કાર્ડ પાછળની બાજુ <span class="h">વૈકલ્પિક</span><input type="file" id="${p}_aadb" accept="image/*" onchange="readDoc(this,'${p}_aadb')"></label><div id="${p}_aadb_pv"></div>
-    <label class="f">પોલીસ વેરિફિકેશન સર્ટિફિકેટ નંબર <span class="h">હોય તો</span><input id="${p}_pno"></label>
-    <label class="f">પોલીસ વેરિફિકેશન સર્ટિફિકેટનો ફોટો <span class="h">હોય તો — ફક્ત એડમિનને દેખાશે</span><input type="file" id="${p}_polf" accept="image/*" onchange="readDoc(this,'${p}_polf')"></label><div id="${p}_polf_pv"></div>`; }
+    ${polOff() ? '' : `<label class="f">પોલીસ વેરિફિકેશન સર્ટિફિકેટ નંબર <span class="h">હોય તો</span><input id="${p}_pno"></label>
+    <label class="f">પોલીસ વેરિફિકેશન સર્ટિફિકેટનો ફોટો <span class="h">હોય તો — ફક્ત એડમિનને દેખાશે</span><input type="file" id="${p}_polf" accept="image/*" onchange="readDoc(this,'${p}_polf')"></label><div id="${p}_polf_pv"></div>`}`; }
 async function kycCollect(p){
   const n = ($('#' + p + '_aadn').value || '').replace(/\D/g, '');
   if(n.length !== 12) return toast('આધારના પૂરા 12 આંકડા લખો'), null;
