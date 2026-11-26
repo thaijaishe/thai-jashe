@@ -57,6 +57,42 @@ html::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 .sk-glow{animation:skGlow 3s ease-in-out infinite}.sk-fire{animation:skFire 3s ease-in-out infinite alternate}
 .sky.jump .sk-hero{animation:skJump .6s ease}
 @media (prefers-reduced-motion:reduce){.sky *{animation:none!important}}
+
+/* ===== એડમિન લૉગિન — બે ભાગ (આખી સ્ક્રીન) ===== */
+#app:has(.alog){padding:0!important;max-width:none!important}
+.alog{--a1:#7C6CF0;--a2:#A78BFA;--a3:#FBBF24;--s1:#F3EEFF;--s2:#E4DAFF;--sink:#3B2A8C;--rbg:#FBF8F3;min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:1fr;background:var(--rbg)}
+@media (min-width:860px){.alog{grid-template-columns:1fr 1fr}}
+.alog-corner{position:fixed;top:calc(12px + var(--sat));right:14px;z-index:30;display:flex;gap:8px}
+.alog-corner>*{background:var(--surface)!important;color:var(--ink)!important;border:1px solid var(--line)!important;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.alog-side{position:relative;color:var(--sink);padding:40px 28px;align-items:center;text-align:center;background:linear-gradient(150deg,var(--s1),var(--s2));overflow:hidden;display:flex;flex-direction:column;gap:12px;justify-content:center}
+.alog-side::before,.alog-side::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.12)}
+.alog-side::before{width:420px;height:420px;right:-140px;top:-140px;background:rgba(255,255,255,.55)}.alog-side::after{width:300px;height:300px;left:-100px;bottom:-100px;background:color-mix(in srgb,var(--a3) 28%,transparent)}
+.alog-side .lg{display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;z-index:1}
+.alog-side .lg svg{width:96px;height:96px;border-radius:16px;box-shadow:0 6px 18px rgba(60,40,140,.2)}
+.alog-side h1{font-family:var(--f-display);font-size:34px;margin:0;line-height:1.15}.alog-side h1 small{display:block;font-size:13px;font-weight:700;opacity:.8;letter-spacing:.08em}
+.alog-side p{margin:0;opacity:.9;font-size:15px;position:relative;z-index:1;max-width:380px}
+.alog-feat{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;position:relative;z-index:1;margin-top:6px}
+.alog-feat div{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.9);box-shadow:0 4px 12px rgba(60,40,140,.06);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;font-weight:700}
+.alog-feat i{font-style:normal;font-size:16px;width:28px;height:28px;display:grid;place-items:center;background:var(--s1);border-radius:50%}
+.alog-safe{margin-top:6px;position:relative;z-index:1;font-size:12px;opacity:.8}
+@media (max-width:859px){.alog-side{padding:calc(64px + var(--sat)) 18px 26px;gap:10px}.alog-side .lg svg{width:72px;height:72px}.alog-side h1{font-size:26px}.alog-feat div{font-size:12px}.alog-safe{display:none}.alog-side::after{width:150px;height:150px;left:-60px;bottom:-60px}.alog-side::before{width:260px;height:260px;right:-100px;top:-100px}}
+.alog-form{padding:30px 22px;display:flex;align-items:center;justify-content:center}
+.alog-box{width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px}
+.alog-form h2{margin:0;font-size:24px}.alog-form .sub{margin:-6px 0 6px;color:var(--muted);font-size:14px}
+.alog-in{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:14px;padding:0 12px;background:var(--surface2);transition:border-color .15s,box-shadow .15s}
+.alog-in:focus-within{border-color:var(--a2);box-shadow:0 0 0 4px color-mix(in srgb,var(--a2) 18%,transparent)}
+.alog-in span{font-size:18px;opacity:.75}.alog-in input{flex:1;border:0!important;background:transparent!important;box-shadow:none!important;padding:12px 0;font-size:16px;outline:0;min-width:0}
+.alog-in input:focus,.alog-in input:focus-visible{outline:0!important;box-shadow:none!important;border:0!important}
+.alog-in button{border:0;background:none;font-size:18px;cursor:pointer;padding:6px}
+.alog-lbl{font-size:13px;font-weight:800;color:var(--muted);margin-bottom:-6px}
+.alog-go{border:0;border-radius:14px;padding:13px;font-size:17px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.15);cursor:pointer;background:linear-gradient(135deg,var(--a1),var(--a2));box-shadow:0 10px 24px color-mix(in srgb,var(--a2) 35%,transparent);transition:transform .12s}
+.alog-go:active{transform:scale(.98)}
+.alog-link{align-self:flex-end;border:0;background:none;color:var(--a1);font-weight:800;font-size:14px;cursor:pointer;padding:0;margin-top:-4px}
+.alog-note{font-size:12px;color:var(--muted);text-align:center}
+.alog-inst{display:flex;align-items:center;gap:12px;border-top:1px dashed var(--line);padding-top:14px;margin-top:6px}
+.alog-inst i{font-style:normal;font-size:22px;width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:color-mix(in srgb,var(--a3) 20%,transparent);flex:none}
+.alog-inst div{flex:1;font-size:13px;line-height:1.35}.alog-inst b{display:block;font-size:14px}
+.alog-inst button{border:0;border-radius:999px;padding:9px 14px;font-weight:800;cursor:pointer;background:var(--a3);color:#1a1300;white-space:nowrap}
 </style>
 <title>Thai Jashe! Admin</title>
 <meta name="theme-color" content="#0F1640">
@@ -2356,11 +2392,25 @@ async function saveKProfile(){ const k = me(); const CC = catCollect('kp'); if(!
   if(photoData){ p.photo = photoData; photoData = ''; } Store.patch('karigars', k.id, p); S.cp_kp = null; S.cpo_kp = S.cpa_kp = ''; FB.reqCat = null; if(Store.mode === 'firebase') FB.watchReq(); S.pfOpen = false; toast('સેવ થયું'); render(); }
 
 /* ================= ADMIN ================= */
-VIEWS.a_login = () => topbar('એડમિન લૉગિન', {back:APP_MODE !== 'admin'}) + `<div class="wrap"><div class="hero" style="padding-top:18px">${logoSVG(80)}<h1 style="font-size:30px">થઈ જશે! એડમિન</h1><p class="tag">ફક્ત અધિકૃત એડમિન માટે — કારીગર, ગ્રાહક, બુકિંગ, કમીશન અને રિપોર્ટ</p></div>${Store.mode === 'firebase' ? `<div class="card">
-  <label class="f">એડમિન ઈમેલ<input id="al_em" type="email" autocomplete="username"></label><label class="f">પાસવર્ડ<input id="al_pw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()"></label>
-  <button class="btn pri block" onclick="adminLogin()">લૉગિન</button><button class="btn sm" onclick="adminReset()">પાસવર્ડ ભૂલી ગયા?</button>
-  <p class="tiny muted">ફક્ત Firebase ના <b>admins</b> સંગ્રહમાં જેનો UID હોય તે જ ખૂલશે.</p></div>${installCard(true)}</div>` : `<div class="card"><label class="f">એડમિન PIN<input id="al_pin" type="password" inputmode="numeric" onkeydown="if(event.key==='Enter')adminLogin()"></label>
-  <button class="btn pri block" onclick="adminLogin()">લૉગિન</button>${Store.mode === 'local' ? '<p class="tiny muted">ડેમો PIN: 1234 (સેટિંગમાં બદલો)</p>' : ''}</div>${installCard(true)}</div>`}`;
+function adminInstallRow(){ if(window.Capacitor || isStandalone() || !/^https?:$/.test(location.protocol) || (window.claude && window.claude.use)) return '';
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  return `<div class="alog-inst"><i>📲</i><div><b>એડમિન પેનલ ફોનમાં રાખો</b><span class="muted">${INSTALL_EVT ? 'હોમ સ્ક્રીન પર "TJ Admin" આઇકન — એપની જેમ ખૂલશે' : ios ? 'Safari → શેર → "Add to Home Screen"' : 'Chrome ⋮ મેનુ → "Install app"'}</span></div>${INSTALL_EVT ? '<button onclick="doInstall()">ઉમેરો</button>' : ''}</div>`; }
+function alPw(b){ const i = $('#al_pw') || $('#al_pin'); if(!i) return; i.type = i.type === 'password' ? 'text' : 'password'; b.textContent = i.type === 'password' ? '👁️' : '🙈'; }
+VIEWS.a_login = () => { const fb = Store.mode === 'firebase';
+  return `<div class="alog"><div class="alog-corner">${APP_MODE !== 'admin' ? '<button class="ib" onclick="back()" aria-label="પાછા">‹</button>' : ''}${themeBtn()}${langBtn()}</div>
+  <div class="alog-side"><div class="lg">${logoSVG(54)}<h1><small>THAI JASHE!</small>એડમિન પેનલ</h1></div>
+    <p>આખી એપ એક જગ્યાએથી સંભાળો — ફક્ત અધિકૃત એડમિન માટે.</p>
+    <div class="alog-feat"><div><i>👷</i>કારીગર મંજૂરી</div><div><i>📋</i>બુકિંગ અને બિલ</div><div><i>💰</i>કમીશન રિપોર્ટ</div></div>
+    <div class="alog-safe">🔒 સુરક્ષિત લૉગિન · દરેક લૉગિનની નોંધ રહે છે</div></div>
+  <div class="alog-form"><div class="alog-box"><h2>ફરી સ્વાગત છે 👋</h2><p class="sub">${fb ? 'તમારા એડમિન ઈમેલ અને પાસવર્ડથી લૉગિન કરો' : 'એડમિન PIN લખો'}</p>
+   ${fb ? `<div class="alog-lbl">એડમિન ઈમેલ</div><label class="alog-in"><span>✉️</span><input id="al_em" type="email" autocomplete="username" placeholder="name@gmail.com"></label>
+    <div class="alog-lbl">પાસવર્ડ</div><label class="alog-in"><span>🔒</span><input id="al_pw" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"><button type="button" onclick="alPw(this)" aria-label="પાસવર્ડ બતાવો">👁️</button></label>
+    <button class="alog-link" onclick="adminReset()">પાસવર્ડ ભૂલી ગયા?</button>
+    <button class="alog-go" onclick="adminLogin()">લૉગિન →</button>
+    <p class="alog-note">ફક્ત Firebase ના <b>admins</b> સંગ્રહમાં જેનો UID હોય તે જ ખૂલશે.</p>`
+   : `<div class="alog-lbl">એડમિન PIN</div><label class="alog-in"><span>🔢</span><input id="al_pin" type="password" inputmode="numeric" placeholder="••••" onkeydown="if(event.key==='Enter')adminLogin()"><button type="button" onclick="alPw(this)" aria-label="PIN બતાવો">👁️</button></label>
+    <button class="alog-go" onclick="adminLogin()">લૉગિન →</button>${Store.mode === 'local' ? '<p class="alog-note">ડેમો PIN: 1234 (સેટિંગમાં બદલો)</p>' : ''}`}
+   ${adminInstallRow()}</div></div></div>`; };
 async function adminReset(){ const em = $('#al_em').value.trim(); if(!em) return toast('ઈમેલ લખો'); try{ await Store.auth.sendPasswordResetEmail(em); toast('પાસવર્ડ બદલવાની લિંક ઈમેલ પર મોકલી'); }catch(e){ toast(authErr(e)); } }
 async function adminLogin(){
   if(Store.mode === 'firebase'){ const em = $('#al_em').value.trim(), pw = $('#al_pw').value; if(!em || !pw) return toast('ઈમેલ અને પાસવર્ડ લખો');
