@@ -45,6 +45,64 @@
   --bg:#130E22; --surface:#1D1633; --surface2:#251C40; --ink:#F2EEFC; --muted:#B4AAD2; --line:#372C5E; --brand:#C7B6FF; --brand-ink:#130E22; --accent:#F5B301; --accent-ink:#1A1300; --accent-soft:#3A3010; --ok:#5AD293; --ok-soft:#13301F; --warn:#F5B04A; --warn-soft:#3A2A10; --bad:#FF8A8A; --bad-soft:#3A1717; --bar:#3D2C90; --bar-ink:#FFFFFF; --ok-solid:#17804A; --bad-solid:#C62E2E; --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.3); color-scheme:dark;}
 :root[data-theme="black"]{
   --bg:#000000; --surface:#101010; --surface2:#1A1A1A; --ink:#F5F5F5; --muted:#A8A8A8; --line:#2C2C2C; --brand:#FFD34D; --brand-ink:#000000; --accent:#F5B301; --accent-ink:#1A1300; --accent-soft:#2E2508; --ok:#4FCB86; --ok-soft:#0E2617; --warn:#F5B04A; --warn-soft:#2E2108; --bad:#FF8A8A; --bad-soft:#2E1111; --bar:#141414; --bar-ink:#FFFFFF; --ok-solid:#17804A; --bad-solid:#C62E2E; --shadow:0 0 0 1px #262626; color-scheme:dark;}
+
+/* ===== 💧 પાણી / Liquid Glass — રંગ મૂળ થીમ જેવા જ, ફક્ત કાચ/પાણીની અસર ===== */
+:root[data-theme="glass"]{
+  --bg:#F2F4F8; --surface:#FFFFFF; --surface2:#F7F8FB; --ink:#161A33; --muted:#5D6480; --line:#E0E4EE;
+  --brand:#1E2A78; --brand-ink:#FFFFFF; --accent:#F5B301; --accent-ink:#1A1300; --accent-soft:#FFF4D1;
+  --ok:#0E7A3E; --ok-soft:#E3F5EA; --warn:#955400; --warn-soft:#FFF0D9; --bad:#B42323; --bad-soft:#FDE7E7;
+  --bar:#1E2A78; --bar-ink:#FFFFFF; --ok-solid:#13834A; --bad-solid:#C62E2E;
+  --shadow:0 1px 2px rgba(22,26,51,.06),0 8px 24px rgba(22,26,51,.08);
+  --gl1:rgba(255,255,255,.80); --gl2:rgba(255,255,255,.56); --glbd:rgba(255,255,255,.9); --glhi:rgba(255,255,255,1); --glsh:rgba(22,26,51,.10);
+  --glbar:linear-gradient(180deg,rgba(30,42,120,.90),rgba(30,42,120,.78)); --glnav:linear-gradient(140deg,rgba(255,255,255,.90),rgba(255,255,255,.74));
+  --water:radial-gradient(40% 30% at 10% 12%,rgba(30,42,120,.16) 0,transparent 70%),radial-gradient(36% 28% at 92% 22%,rgba(245,179,1,.20) 0,transparent 72%),
+    radial-gradient(44% 32% at 82% 84%,rgba(80,150,255,.16) 0,transparent 72%),radial-gradient(40% 30% at 8% 90%,rgba(245,179,1,.12) 0,transparent 70%),linear-gradient(160deg,#F5F7FB,#EEF1F7);}
+:root[data-theme="glassd"]{
+  --bg:#0E1120; --surface:#171B2E; --surface2:#1D2238; --ink:#EEF0F8; --muted:#9AA1BD; --line:#2A3050;
+  --brand:#8FA0FF; --brand-ink:#0E1120; --accent:#F5B301; --accent-ink:#1A1300; --accent-soft:#3A3010;
+  --ok:#4FCB86; --ok-soft:#14301F; --warn:#F0A63A; --warn-soft:#3A2A10; --bad:#FF8A8A; --bad-soft:#3A1717;
+  --bar:#26318A; --bar-ink:#FFFFFF; --ok-solid:#17804A; --bad-solid:#C62E2E;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); color-scheme:dark;
+  --gl1:rgba(32,38,64,.78); --gl2:rgba(23,27,46,.58); --glbd:rgba(255,255,255,.12); --glhi:rgba(255,255,255,.16); --glsh:rgba(0,0,0,.35);
+  --glbar:linear-gradient(180deg,rgba(38,49,138,.90),rgba(38,49,138,.76)); --glnav:linear-gradient(140deg,rgba(30,35,60,.92),rgba(23,27,46,.84));
+  --water:radial-gradient(40% 30% at 10% 12%,rgba(60,80,200,.28) 0,transparent 70%),radial-gradient(36% 28% at 92% 22%,rgba(245,179,1,.12) 0,transparent 72%),
+    radial-gradient(44% 32% at 82% 84%,rgba(40,90,200,.22) 0,transparent 72%),linear-gradient(160deg,#10142A,#0B0E1C);}
+:root[data-theme^="glass"],:root[data-theme^="glass"] body{background:transparent}
+:root[data-theme^="glass"]::before{content:"";position:fixed;inset:-25%;z-index:-1;background:var(--water);animation:tjwater 22s ease-in-out infinite alternate;pointer-events:none}
+@keyframes tjwater{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-4%,3%,0) scale(1.06)}100%{transform:translate3d(3%,-3%,0) scale(1.03)}}
+@media (prefers-reduced-motion:reduce){:root[data-theme^="glass"]::before{animation:none}}
+:root[data-theme^="glass"] body::before,:root[data-theme^="glass"] body::after{background:var(--bar);opacity:.9}
+/* ફક્ત સફેદ બૉક્સ કાચ જેવાં (રંગીન બૉક્સના રંગ એમ જ) */
+:root[data-theme^="glass"] :is(.card,.role,.stats>div,.sheet){
+  background:linear-gradient(140deg,var(--gl1),var(--gl2));-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);
+  border:1px solid var(--glbd);box-shadow:inset 0 1px 0 var(--glhi),0 8px 26px var(--glsh)}
+:root[data-theme^="glass"] :is(.card,.role,.ez-card){border-radius:22px}
+:root[data-theme^="glass"] :is(.banner,.flat,.rf-ban,.status-hero,.pill){box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 18px var(--glsh)}
+/* ઉપરની પટ્ટી — એ જ ઘાટો વાદળી, કાચ જેવો */
+:root[data-theme^="glass"] .top{background:var(--glbar);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.18),0 6px 18px var(--glsh)}
+:root[data-theme^="glass"] .top .ib,:root[data-theme^="glass"] .top .chip{box-shadow:inset 0 1px 0 rgba(255,255,255,.35);border-radius:999px}
+/* નીચેનું મેનુ — iPhone જેવું તરતું */
+:root[data-theme^="glass"] .bnav{left:12px;right:12px;bottom:calc(10px + var(--sab));padding-bottom:0;border-radius:30px;border:1px solid var(--glbd);max-width:520px;margin:0 auto;
+  background:var(--glnav);-webkit-backdrop-filter:blur(24px) saturate(190%);backdrop-filter:blur(24px) saturate(190%);box-shadow:inset 0 1px 0 var(--glhi),0 12px 32px var(--glsh)}
+:root[data-theme^="glass"] .bnav button{border-radius:24px;margin:5px 2px;transition:background .2s,transform .15s}
+:root[data-theme^="glass"] .bnav button.on{background:var(--accent-soft)}
+:root[data-theme^="glass"] .bnav button:active{transform:scale(.94)}
+:root[data-theme^="glass"] #app{padding-bottom:calc(86px + var(--sab))}
+/* બટન — રંગ એ જ, ઉપર પાણીના ટીપા જેવી ચમક */
+:root[data-theme^="glass"] .btn{border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 4px 12px var(--glsh);transition:transform .15s}
+:root[data-theme^="glass"] .btn:not(.pri):not(.ok):not(.bad):not(.ink):not(.wa){background:linear-gradient(140deg,var(--gl1),var(--gl2));-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+:root[data-theme^="glass"] .btn.pri{background:linear-gradient(180deg,#FFD24D,#F5B301 60%,#E9A800)}
+:root[data-theme^="glass"] .btn:active,:root[data-theme^="glass"] .ez-btn:active{transform:scale(.96)}
+:root[data-theme^="glass"] :is(.ez-btn,.ez-on,.ez-say){box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 6px rgba(0,0,0,.12),0 6px 18px var(--glsh)}
+:root[data-theme^="glass"] .ez-pad button{border-radius:50%;aspect-ratio:1/1;max-width:84px;margin:auto;width:100%;background:linear-gradient(140deg,var(--gl1),var(--gl2));border:1px solid var(--glbd);box-shadow:inset 0 1px 0 var(--glhi),0 4px 12px var(--glsh)}
+/* ઇનપુટ, ચિપ */
+:root[data-theme^="glass"] :is(input,select,textarea){border-radius:16px;background:linear-gradient(140deg,var(--gl1),var(--gl2))}
+:root[data-theme^="glass"] .search input{border-radius:999px}
+:root[data-theme^="glass"] .chipb{border-radius:999px;box-shadow:inset 0 1px 0 var(--glhi)}
+/* પોપઅપ */
+:root[data-theme^="glass"] :is(#overlay,#modal){-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+:root[data-theme^="glass"] .sheet{border-radius:28px}
+:root[data-theme^="glass"] #toast{border-radius:999px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 *{box-sizing:border-box} [hidden]{display:none!important}
 .gbtn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff!important;color:#1F1F1F!important;border:1.5px solid #747775!important;font-weight:600;padding:13px}
 .ordiv{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}.ordiv::before,.ordiv::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -386,7 +444,8 @@ const LS = {
 };
 const THEMES = [['light','લાઇટ',['#F2F4F8','#1E2A78','#F5B301','#FFFFFF']],['dark','ડાર્ક',['#0E1120','#26318A','#F5B301','#171B2E']],
   ['saffron','કેસરી',['#FFF6EC','#A33E09','#FFB020','#FFFFFF']],['green','હરિયાળી',['#EFF6F1','#0E5A37','#F5B301','#FFFFFF']],['ocean','દરિયાઈ',['#EDF5F7','#0A5262','#FFB703','#FFFFFF']],
-  ['purple','જાંબલી રાત',['#130E22','#3D2C90','#F5B301','#1D1633']],['black','કાળી (AMOLED)',['#000000','#141414','#F5B301','#101010']]];
+  ['purple','જાંબલી રાત',['#130E22','#3D2C90','#F5B301','#1D1633']],['black','કાળી (AMOLED)',['#000000','#141414','#F5B301','#101010']],
+  ['glass','💧 પાણી (iPhone જેવી)',['#F2F4F8','#1E2A78','#F5B301','#FFFFFF']],['glassd','💧 પાણી ડાર્ક',['#0E1120','#26318A','#F5B301','#171B2E']]];
 let THEME = (t => THEMES.some(x => x[0] === t) ? t : 'light')(LS.get('tj_theme', 'light'));
 function applyTheme(){ try{ const r = document.documentElement; if(THEME === 'light') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', THEME);
   const m = document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', THEMES.find(x => x[0] === THEME)[2][1]); }catch(e){} }
