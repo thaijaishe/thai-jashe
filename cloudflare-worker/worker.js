@@ -13,7 +13,7 @@
 
 const catT = c => CAT[c] || (String(c || '').startsWith('x:') ? String(c).slice(2) : '');
 const CAT = {watchman:'ચોકીદાર', photographer:'ફોટોગ્રાફર', mandap:'મંડપ ડેકોરેશન', laundry:'લોન્ડ્રી / ઇસ્ત્રી', lab:'લેબોરેટરી (ઘરે સેમ્પલ)', ac:'એસી રિપેર', plumber:'પ્લમ્બર', electrician:'ઇલેક્ટ્રિશિયન', carpenter:'સુથાર', painter:'કલરકામ', cleaning:'ઘર સફાઈ', mason:'કડિયા', welder:'વેલ્ડર',
-  mechanic:'બાઇક/કાર મિકેનિક', appliance:'ફ્રિજ/વોશિંગ મશીન', ro:'RO રિપેર', cctv:'CCTV/કમ્પ્યુટર', tailor:'દરજી', cobbler:'મોચી', gardener:'માળી', pest:'પેસ્ટ કંટ્રોલ',
+  mechanic:'બાઇક/કાર મિકેનિક', appliance:'ફ્રિજ/વોશિંગ મશીન', ro:'RO રિપેર', cctv:'સીસીટીવી કેમેરા', computer:'કમ્પ્યુટર / લેપટોપ', gas:'ગેસ સર્વિસ', tailor:'દરજી', cobbler:'મોચી', gardener:'માળી', pest:'પેસ્ટ કંટ્રોલ',
   cook:'રસોઇયા', beauty:'બ્યુટીશિયન', locksmith:'ચાવીવાળો', roofing:'છત/પતરાં', glass:'કાચકામ', tiles:'ટાઇલ્સ', generator:'ઇન્વર્ટર/જનરેટર', solar:'સોલાર',
   movers:'ઘરવખરી શિફ્ટિંગ', pop:'ઇન્ટિરિયર/POP', maid:'ઘરકામ', driver:'ડ્રાઇવર', other:'અન્ય કામ', agent:'એજન્ટ', puncture:'ઘર બેઠા પંચર'};
 /* વિસ્તાર: કોઈ તૈયાર શહેર-યાદી નથી — નકશા/GPS થી પસંદ થયેલ areaGeo વપરાય */
@@ -114,7 +114,7 @@ async function notifyNearby(env, id, b){
   const st = await getDoc(env, 'settings/main') || {}, R = +st.radiusKm || 25, bp = b.geoR || areaLL(b.areaGeo), skip = new Set(b.rejectedBy || []);
   try{ (await busySet(env)).forEach(k => skip.add(k)); }catch(e){}
   // કારીગરના એક થી વધુ કામ (cats); "અન્ય કામ" ની વિનંતી જાતે લખેલા કામ (x:...) વાળાને પણ
-  const has = k => (Array.isArray(k.cats) && k.cats.length ? k.cats : [k.cat]).some(c => c === b.cat || (String(c || '').startsWith('x:') && CAT[b.cat] && String(c).slice(2).trim() === CAT[b.cat]) || (b.cat === 'other' && (c === 'other' || String(c || '').startsWith('x:'))));
+  const has = k => (Array.isArray(k.cats) && k.cats.length ? k.cats : [k.cat]).some(c => c === b.cat || (b.cat === 'computer' && c === 'cctv' && (k.createdAt || 0) < 1795690000000) || (String(c || '').startsWith('x:') && CAT[b.cat] && String(c).slice(2).trim() === CAT[b.cat]) || (b.cat === 'other' && (c === 'other' || String(c || '').startsWith('x:'))));
   const ks = (await query(env, {from:[{collectionId:'karigars'}], where:and(eq('status', 'approved'), eq('online', true))})).filter(has);
   const ids = [];
   for(const k of ks){ if(skip.has(k.id)) continue; const p = await getDoc(env, `karigars/${k.id}/private/main`) || {};
